@@ -5,7 +5,7 @@ desktop bergaya hardware profesional. Target akhirnya setara fitur inti
 VirtualDJ/Traktor/Serato: dua deck (bisa empat), mixer, efek, remixer/sampler,
 library, rekaman, kontroler MIDI, dan sistem template/skin.
 
-> **Status: Fase 4 selesai.** Shell Tauri + React, deteksi perangkat, test tone,
+> **Status: Fase 5 selesai.** Dua deck, hot cue, loop, beat jump, sync, platter, mixer 2 channel,
 > **decoder Symphonia**, **Deck A dengan play/pause/seek/cue**, **waveform +
 > beatgrid interaktif**, **pitch fader/key lock/keyshift**, **deteksi BPM/key**,
 > dan **mixer channel strip (EQ/filter/fader/crossfader) + limiter master + cue

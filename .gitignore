@@ -30,5 +30,6 @@ coverage/
 
 # docs
 /docs/schema.ts
- 
+
+# md
 CLAUDE.md

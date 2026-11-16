@@ -3,6 +3,27 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-16
+
+### Added — Fase 5: Dua Deck Penuh
+- Engine membuka dua deck (A/B) dengan ring buffer terpisah; mixer memiliki dua channel strip, crossfader penuh, dan routing master/cue terpisah.
+- Hot cue 8 slot per deck: set/trigger/hapus, posisi atomik, warna per slot.
+- Loop: auto loop berbasis BPM (1/32..32 beat), manual IN/OUT, halve/double, beat jump (±1/±4/±8 beat), loop roll via drag.
+- Jog wheel/platter virtual: cincin progress, piringan berputar, mode Vinyl (scratch via seek) dan CDJ (pitch bend sementara).
+- Sync BPM + penyesuaian fase ketukan ke deck lain (`sync_decks`).
+- Bend per deck untuk jog wheel CDJ.
+- UI Deck B, platter, hot cue pads, loop, beat jump, sync; MixerPanel dua channel.
+
+### Changed
+- `DeckStatus` menambah `hotCues`, `loopActive`, `loopStartSecs`, `loopEndSecs`, `loopBeats`, `bend`.
+- `MixerParams` kini memakai `channels[2]` alih-alih field datar channel A.
+- Semua command deck menerima `deck: 0 | 1` (default 0); `get_deck_status`/`get_waveform` juga.
+- Versi aplikasi naik ke 0.5.0 (Rust, Tauri, npm).
+
+### Notes
+- Loop pada batas menggunakan fade 2 ms untuk mengurangi klik; pencocokan fase worker/callback bersifat perkiraan.
+- Belum ada scratch audio reverse true; mode vinyl memakai seek relatif.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added — Fase 4: Mixer, Limiter, dan Cue Bus
