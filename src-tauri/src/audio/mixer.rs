@@ -512,11 +512,8 @@ impl Mixer {
         let mut master_l = tone;
         let mut master_r = tone;
         let mut cue_l = 0.0_f32;
-        let mut cue_r = 0.0_f32;
-
-        for index in 0..DECK_CHANNELS {
-            let ((left, right), cue) =
-                self.channels[index].process(inputs[index].0, inputs[index].1);
+        let mut cue_r = 0.0_f32;        for (index, input) in inputs.iter().enumerate().take(DECK_CHANNELS) {
+            let ((left, right), cue) = self.channels[index].process(input.0, input.1);
             self.cross_gain[index] +=
                 (self.target_cross[index] - self.cross_gain[index]) * self.cross_coefficient;
             master_l += left * self.cross_gain[index];
