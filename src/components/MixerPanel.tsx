@@ -25,7 +25,7 @@ const FALLBACK: MixerParams = {
       filter: 0,
       fader: 1,
       pfl: false,
-      assign: "thru",
+      assign: "a",
     },
     {
       lowDb: 0,
@@ -37,7 +37,7 @@ const FALLBACK: MixerParams = {
       filter: 0,
       fader: 1,
       pfl: false,
-      assign: "thru",
+      assign: "b",
     },
   ],
   crossfader: 0.5,

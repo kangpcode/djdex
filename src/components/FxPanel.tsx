@@ -43,7 +43,7 @@ function updateSlot(
 export function FxPanel() {
   const fx = useFxStore((state) => state.status);
   const refreshFx = useFxStore((state) => state.refresh);
-  const updateFx = useFxStore((state) => state.update);
+
   const clearFxError = useFxStore((state) => state.clearError);
   const fxError = useFxStore((state) => state.error);
 
