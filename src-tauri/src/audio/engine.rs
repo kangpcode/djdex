@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use crate::audio::deck::{Deck, DeckReader, DeckStatus};
 use crate::audio::device::{find_output_device, host_label, sample_format_label};
 use crate::audio::gain::{db_to_linear, linear_to_db};
+use crate::audio::fx::{FxControls, FxParams, FxSlotUpdate};
 use crate::audio::mixer::{Mixer, MixerControls, MixerParams, MixerUpdate};
 use crate::error::AudioError;
 
@@ -129,6 +130,7 @@ struct RtState {
     tone_freq: AtomicU32,
     tone_gain: AtomicU32,
     mixer: MixerControls,
+    fx: FxControls,
     peak: AtomicU32,
     master_peak_l: AtomicU32,
     master_peak_r: AtomicU32,
@@ -156,6 +158,7 @@ impl RtState {
             tone_freq: AtomicU32::new(frequency.to_bits()),
             tone_gain: AtomicU32::new(db_to_linear(gain_db).to_bits()),
             mixer: MixerControls::new(),
+            fx: FxControls::new(),
             peak: AtomicU32::new(0.0_f32.to_bits()),
             master_peak_l: AtomicU32::new(0.0_f32.to_bits()),
             master_peak_r: AtomicU32::new(0.0_f32.to_bits()),
@@ -376,6 +379,16 @@ impl AudioEngine {
 
     pub fn apply_mixer(&self, update: MixerUpdate) {
         self.rt.mixer.apply(update);
+    }
+
+    // ---- FX (Fase 6) ------------------------------------------------------
+
+    pub fn fx_status(&self) -> FxParams {
+        self.rt.fx.params()
+    }
+
+    pub fn apply_fx(&self, update: FxSlotUpdate) {
+        self.rt.fx.apply(&update);
     }
 
     fn stop(&mut self) {
@@ -615,7 +628,8 @@ fn render_block<T>(
     let started = Instant::now();
     let channels = channels.max(1);
     let params = rt.mixer.params();
-    mixer.configure(&params);
+    let fx_params = rt.fx.params();
+    mixer.configure(&params, &fx_params);
     let split_cue = params.split_cue && channels == 2;
     let enabled = rt.tone_enabled.load(Ordering::Relaxed);
     let frequency = load_f32(&rt.tone_freq).clamp(TONE_MIN_HZ, TONE_MAX_HZ);
