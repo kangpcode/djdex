@@ -133,8 +133,15 @@ pub struct MixerParams {
 
 impl Default for MixerParams {
     fn default() -> Self {
+        let mut channels = [ChannelParams::default(); DECK_CHANNELS];
+        if DECK_CHANNELS > 0 {
+            channels[0].assign = ChannelAssign::A;
+        }
+        if DECK_CHANNELS > 1 {
+            channels[1].assign = ChannelAssign::B;
+        }
         Self {
-            channels: [ChannelParams::default(); DECK_CHANNELS],
+            channels,
             crossfader: 0.5,
             crossfader_curve: CrossfaderCurve::Smooth,
             crossfader_reverse: false,
