@@ -5,3 +5,4 @@
 pub mod biquad;
 pub mod eq;
 pub mod filter;
+pub mod fx;
