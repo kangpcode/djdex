@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DJDeX",
+  "version": "0.5.0",
+  "identifier": "com.kangpcode.djdex",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "DJDeX By Kangpcode",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1280,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "theme": "Dark",
+        "backgroundColor": "#04060a"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Music",
+    "shortDescription": "Virtual DJ workstation",
+    "longDescription": "DJDeX By Kangpcode - dua deck (hingga empat), mixer, efek, remixer, library, dan audio engine Rust real-time.",
+    "copyright": "Copyright (c) 2026 Kangpcode",
+    "resources": []
+  }
+}

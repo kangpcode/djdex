@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Frontend build
+dist/
+*.local
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+target/
+
+# Logs & editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Test/coverage artifacts
+coverage/
+*.profraw

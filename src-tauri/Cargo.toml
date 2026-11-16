@@ -1,0 +1,81 @@
+[package]
+name = "djdex"
+version = "0.5.0"
+description = "DJDeX By Kangpcode - real-time audio engine and desktop shell"
+authors = ["Kangpcode"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.88"
+repository = "https://github.com/kangpcode/djdex"
+default-run = "djdex"
+
+[lib]
+name = "djdex_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Shell desktop + IPC
+tauri = { version = "2", features = [] }
+
+# Serialisasi settings/status ke frontend
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+
+# Audio I/O real-time (WASAPI / CoreAudio / ALSA-PipeWire)
+cpal = "0.18.2"
+
+# Decoding media (MP3, FLAC, WAV, OGG/Vorbis, AAC/M4A, AIFF, ALAC)
+symphonia = { version = "0.5.4", default-features = false, features = [
+  "aac",
+  "adpcm",
+  "aiff",
+  "alac",
+  "flac",
+  "isomp4",
+  "mp3",
+  "ogg",
+  "pcm",
+  "vorbis",
+  "wav",
+] }
+
+# Analisis spektral (key detection, fase 3)
+rustfft = "6.4"
+
+# Dialog file picker native (Windows/macOS/Linux)
+tauri-plugin-dialog = "2"
+
+# Error handling terstruktur
+thiserror = "2.0.21"
+anyhow = "1.0.104"
+
+# Sinkronisasi non-RT (status/parameter), RT tetap memakai atomic
+parking_lot = "0.13.0"
+
+# Command queue UI -> audio host
+crossbeam-channel = "0.5.17"
+
+# Ring buffer SPSC untuk decode -> audio (dipakai mulai Fase 2)
+rtrb = "0.4.1"
+
+[features]
+default = []
+# ASIO hanya untuk Windows dan membutuhkan ASIO SDK (lihat docs/BUILD_PER_OS.md).
+asio = ["cpal/asio"]
+
+[profile.dev]
+# Engine audio tetap responsif walau build debug: optimasi level dasar.
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "unwind"
+strip = "symbols"
