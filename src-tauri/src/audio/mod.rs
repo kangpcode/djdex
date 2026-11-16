@@ -5,6 +5,7 @@ pub mod deck;
 pub mod decoder;
 pub mod device;
 pub mod engine;
+pub mod fx;
 pub mod gain;
 pub mod limiter;
 pub mod mixer;
