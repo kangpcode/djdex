@@ -527,59 +527,6 @@ impl Mixer {
         let _ = ();
     }
 
-    #[allow(dead_code)]
-    pub fn configure_mixer_only(&mut self, params: &MixerParams) {
-        self.configure(params, &FxParams::default());
-    }
-
-    fn _old_configure_placeholder(&mut self) {
-        let _ = ();
-    }
-
-    pub fn _unused(&mut self) {
-    }
-
-    fn _skip(&mut self) {}
-
-    pub fn configure_unused(&mut self, params: &MixerParams) {
-        let _ = params;
-    }
-
-    // placeholder below replaced
-    pub fn _noop(&self) {}
-
-    pub fn configure2(&mut self, params: &MixerParams) {
-        self.configure(params, &FxParams::default());
-    }
-
-    #[deprecated]
-    pub fn old_configure(&mut self, _params: &MixerParams) {}
-
-    pub fn configure_backup(&mut self, params: &MixerParams, _fx: &FxParams) {
-        self.configure(params, _fx);
-    }
-
-    pub fn _x(&mut self) {}
-
-            let channel = &params.channels[index];
-            self.channels[index].configure(channel);
-            self.target_cross[index] = crossfader_gain(
-                params.crossfader,
-                params.crossfader_curve,
-                channel.assign,
-                params.crossfader_reverse,
-            );
-        }
-
-        self.limiter.set_enabled(params.limiter_enabled);
-        self.target_master = params.master_volume;
-        self.target_cue = params.cue_volume;
-
-        let balance = params.master_balance.clamp(-1.0, 1.0);
-        self.balance_l = if balance <= 0.0 { 1.0 } else { 1.0 - balance };
-        self.balance_r = if balance >= 0.0 { 1.0 } else { 1.0 + balance };
-        self.cue_mix = params.cue_mix;
-    }
 
     #[inline]
     pub fn process(&mut self, deck_a: (f32, f32), deck_b: (f32, f32), tone: f32) -> MixerFrame {
