@@ -9,6 +9,7 @@ use parking_lot::Mutex;
 use crate::analysis::waveform::WaveformDto;
 use crate::audio::deck::{Deck, DeckStatus};
 use crate::audio::engine::{AudioEngine, EngineStatus};
+use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
 use crate::error::AudioError;
 
@@ -198,6 +199,23 @@ impl AppState {
         self.with_engine(|engine| {
             engine.apply_mixer(update);
             Ok(engine.mixer_status())
+        })
+    }
+
+    // ---- FX (Fase 6) ------------------------------------------------------
+
+    pub fn fx_status(&self) -> FxParams {
+        self.engine
+            .lock()
+            .as_ref()
+            .map(AudioEngine::fx_status)
+            .unwrap_or_default()
+    }
+
+    pub fn set_fx(&self, update: FxSlotUpdate) -> Result<FxParams, AudioError> {
+        self.with_engine(|engine| {
+            engine.apply_fx(update);
+            Ok(engine.fx_status())
         })
     }
 }

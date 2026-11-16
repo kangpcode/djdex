@@ -107,13 +107,6 @@ pub struct FxChainParams {
     pub slots: [FxSlotParams; 3],
 }
 
-impl Default for FxChainParams {
-    fn default() -> Self {
-        Self {
-            slots: [FxSlotParams::default(); 3],
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -121,13 +114,6 @@ pub struct FxParams {
     pub chains: [FxChainParams; 3],
 }
 
-impl Default for FxParams {
-    fn default() -> Self {
-        Self {
-            chains: [FxChainParams::default(); 3],
-        }
-    }
-}
 
 pub struct FxChain {
     sample_rate: f32,
@@ -490,7 +476,3 @@ impl FxSlot {
     }
 }
 
-// Helper untuk konversi tipe dari kode atomik.
-pub fn fx_type_from_code(code: u32) -> FxType {
-    FxType::from_code(code)
-}

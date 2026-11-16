@@ -9,6 +9,7 @@ use crate::analysis::waveform::WaveformDto;
 use crate::audio::deck::DeckStatus;
 use crate::audio::device::{list_output_devices, AudioDeviceInfo};
 use crate::audio::engine::{AudioEngine, EngineStatus, StartRequest};
+use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
 use crate::state::AppState;
 
@@ -293,6 +294,18 @@ pub fn get_mixer_status(state: State<'_, AppState>) -> MixerParams {
 #[tauri::command]
 pub fn set_mixer(state: State<'_, AppState>, update: MixerUpdate) -> IpcResult<MixerParams> {
     state.set_mixer(update).map_err(|err| err.to_string())
+}
+
+// ---- FX (Fase 6) ---------------------------------------------------------
+
+#[tauri::command]
+pub fn get_fx_status(state: State<'_, AppState>) -> FxParams {
+    state.fx_status()
+}
+
+#[tauri::command]
+pub fn set_fx(state: State<'_, AppState>, update: FxSlotUpdate) -> IpcResult<FxParams> {
+    state.set_fx(update).map_err(|err| err.to_string())
 }
 
 /// Ambil waveform track aktif (downsample di Rust agar payload ringan).

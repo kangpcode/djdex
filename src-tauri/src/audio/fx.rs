@@ -4,7 +4,9 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use serde::{Deserialize, Serialize};
 
-use crate::dsp::fx::{FxChainParams, FxParams, FxSlotParams, FxType};
+use crate::dsp::fx::{FxChainParams, FxSlotParams, FxType};
+
+pub use crate::dsp::fx::FxParams;
 
 fn store_f32(slot: &AtomicU32, value: f32) {
     slot.store(value.to_bits(), Ordering::Relaxed);
@@ -25,12 +27,6 @@ pub struct FxSlotUpdate {
     pub p1: Option<f32>,
     pub p2: Option<f32>,
     pub p3: Option<f32>,
-}
-
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
-pub struct FxUpdate {
-    pub slot: Option<FxSlotUpdate>,
 }
 
 struct FxSlotControls {

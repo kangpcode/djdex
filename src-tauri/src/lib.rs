@@ -48,6 +48,8 @@ pub fn run() {
             commands::get_waveform,
             commands::get_mixer_status,
             commands::set_mixer,
+            commands::get_fx_status,
+            commands::set_fx,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan aplikasi DJDeX");

@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::audio::limiter::Limiter;
 use crate::dsp::eq::{EqSettings, ThreeBandEq};
 use crate::dsp::filter::DjFilter;
-use crate::dsp::fx::{FxChain, FxChainParams, FxParams};
+use crate::dsp::fx::{FxChain, FxParams};
 
 const GAIN_SMOOTHING_SECONDS: f32 = 0.01;
 pub const DECK_CHANNELS: usize = 2;
@@ -674,7 +674,7 @@ mod tests {
             cue_volume: 1.0,
             ..MixerParams::default()
         };
-        mixer.configure(&params);
+        mixer.configure(&params, &FxParams::default());
         let frame = mixer.process((0.5, -0.5), (0.2, -0.2), 0.0);
         assert_eq!(frame.head_l, 0.0);
         assert_eq!(frame.head_r, 0.0);
@@ -689,7 +689,7 @@ mod tests {
             ..MixerParams::default()
         };
         params.channels[1].pfl = true;
-        mixer.configure(&params);
+        mixer.configure(&params, &FxParams::default());
 
         let mut head_peak = 0.0_f32;
         for _ in 0..128 {
@@ -710,7 +710,7 @@ mod tests {
             limiter_enabled: true,
             ..MixerParams::default()
         };
-        mixer.configure(&params);
+        mixer.configure(&params, &FxParams::default());
 
         let mut peak = 0.0_f32;
         for index in 0..9_600 {

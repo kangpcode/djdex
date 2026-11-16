@@ -147,6 +147,51 @@ export interface MixerUpdate {
   splitCue?: boolean;
 }
 
+export type FxType =
+  | "bypass"
+  | "delay"
+  | "echo"
+  | "reverb"
+  | "flanger"
+  | "phaser"
+  | "chorus"
+  | "bitcrusher"
+  | "gater"
+  | "trans"
+  | "roll"
+  | "brake"
+  | "filter-sweep"
+  | "noise"
+  | "wah";
+
+export interface FxSlotParams {
+  fxType: FxType;
+  enabled: boolean;
+  wet: number;
+  p1: number;
+  p2: number;
+  p3: number;
+}
+
+export interface FxChainParams {
+  slots: [FxSlotParams, FxSlotParams, FxSlotParams];
+}
+
+export interface FxParams {
+  chains: [FxChainParams, FxChainParams, FxChainParams];
+}
+
+export interface FxSlotUpdate {
+  chain: number;
+  slot: number;
+  fxType?: FxType;
+  enabled?: boolean;
+  wet?: number;
+  p1?: number;
+  p2?: number;
+  p3?: number;
+}
+
 /** Pasangan min/max diratakan: [min0, max0, min1, max1, ...]. */
 export interface WaveformData {
   trackId: number;
@@ -270,6 +315,12 @@ export const ipc = {
 
   setMixer: (update: MixerUpdate) =>
     invokeCommand<MixerParams>("set_mixer", { update }),
+
+  // FX (Fase 6)
+  getFxStatus: () => invokeCommand<FxParams>("get_fx_status"),
+
+  setFx: (update: FxSlotUpdate) =>
+    invokeCommand<FxParams>("set_fx", { update }),
 };
 
 /** Ubah error apa pun menjadi pesan yang layak ditampilkan. */

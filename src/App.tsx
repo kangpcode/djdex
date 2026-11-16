@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { AudioEnginePanel } from "./components/AudioEnginePanel";
+import { FxPanel } from "./components/FxPanel";
 import { DeckPanel } from "./components/DeckPanel";
 import { Header } from "./components/Header";
 import { MixerPanel } from "./components/MixerPanel";
@@ -142,6 +143,8 @@ export default function App() {
             <MixerPanel />
             <DeckPanel deck={1} />
           </div>
+
+          <FxPanel />
 
           <div className="grid gap-5 lg:grid-cols-2">
             <AudioEnginePanel />
