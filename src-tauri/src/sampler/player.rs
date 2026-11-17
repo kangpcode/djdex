@@ -700,12 +700,7 @@ impl SamplerController {
     pub fn status(&self) -> SamplerStatus {
         let active_bank = *self.active_bank.read();
         let banks = self.banks.read();
-        let bank_names = [
-            banks[0].name.clone(),
-            banks[1].name.clone(),
-            banks[2].name.clone(),
-            banks[3].name.clone(),
-        ];
+        let bank_names: [String; BANK_COUNT] = std::array::from_fn(|i| banks[i].name.clone());
 
         let mut playing_states: [(bool, f32); PADS_PER_BANK] = [(false, 0.0); PADS_PER_BANK];
         for (i, state) in self.pad_states.iter().enumerate() {
