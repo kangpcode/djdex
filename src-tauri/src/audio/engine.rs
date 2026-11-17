@@ -358,6 +358,14 @@ impl AudioEngine {
         &self.preview
     }
 
+    pub fn recorder(&self) -> &Arc<RecorderController> {
+        &self.recorder
+    }
+
+    pub fn broadcast(&self) -> &Arc<BroadcastController> {
+        &self.broadcast
+    }
+
     pub fn load_track(
         &self,
         slot: usize,
