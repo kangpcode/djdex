@@ -4,6 +4,7 @@
 //! bisa diganti/dimatikan dari command. Mutex ini TIDAK pernah dipakai di jalur
 //! audio real-time.
 
+use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::analysis::waveform::WaveformDto;
@@ -15,11 +16,46 @@ use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
 use crate::audio::resampler::StereoResampler;
 use crate::error::AudioError;
+use crate::library::db::{
+    CrateItem, HistoryItem, LibraryDb, LibraryTrack, PlaylistItem, SmartFilter, TrackQuery,
+};
+use crate::library::preview::PreviewStatus;
+use crate::library::scanner::{ScanProgress, ScannerManager};
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 
-#[derive(Default)]
 pub struct AppState {
     engine: Mutex<Option<AudioEngine>>,
+    library: Arc<LibraryDb>,
+    scanner: ScannerManager,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        let db_path = default_db_path();
+        let db = Arc::new(
+            LibraryDb::new(db_path).unwrap_or_else(|_| LibraryDb::in_memory().unwrap()),
+        );
+        let scanner = ScannerManager::new(Arc::clone(&db));
+        Self {
+            engine: Mutex::new(None),
+            library: db,
+            scanner,
+        }
+    }
+}
+
+fn default_db_path() -> std::path::PathBuf {
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        std::path::PathBuf::from(appdata).join("djdex").join("djdex_library.db")
+    } else if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home)
+            .join(".local")
+            .join("share")
+            .join("djdex")
+            .join("djdex_library.db")
+    } else {
+        std::path::PathBuf::from("djdex_library.db")
+    }
 }
 
 impl AppState {
@@ -87,7 +123,16 @@ impl AppState {
     // ---- Deck (Fase 2–5) -------------------------------------------------
 
     pub fn load_track(&self, slot: usize, path: String) -> Result<DeckStatus, AudioError> {
-        self.with_engine(|engine| engine.load_track(slot, path))
+        let status = self.with_engine(|engine| engine.load_track(slot, path.clone()))?;
+        if let Ok(tracks) = self.library.get_tracks(TrackQuery {
+            search: Some(path.clone()),
+            ..Default::default()
+        }) {
+            if let Some(t) = tracks.iter().find(|t| t.file_path == path) {
+                let _ = self.library.add_to_history(t.id, slot);
+            }
+        }
+        Ok(status)
     }
 
     pub fn deck_play(&self, slot: usize) -> Result<DeckStatus, AudioError> {
@@ -421,5 +466,154 @@ impl AppState {
             engine.sampler().import_pack(std::path::Path::new(&zip_path))?;
             Ok(engine.sampler().status())
         })
+    }
+
+    // ---- Library, Crates, Playlists, and Cue Preview (Fase 8) -------------
+
+    pub fn get_library_tracks(&self, query: TrackQuery) -> Result<Vec<LibraryTrack>, AudioError> {
+        self.library.get_tracks(query)
+    }
+
+    pub fn scan_library_folder(&self, folder_path: String) -> Result<ScanProgress, AudioError> {
+        let path = std::path::PathBuf::from(folder_path);
+        self.scanner.start_scan(path)?;
+        Ok(self.scanner.progress())
+    }
+
+    pub fn start_batch_analyze(
+        &self,
+        track_ids: Option<Vec<i64>>,
+    ) -> Result<ScanProgress, AudioError> {
+        self.scanner.start_batch_analyze(track_ids)?;
+        Ok(self.scanner.progress())
+    }
+
+    pub fn get_scan_progress(&self) -> ScanProgress {
+        self.scanner.progress()
+    }
+
+    pub fn create_crate(&self, name: String, color: Option<String>) -> Result<i64, AudioError> {
+        self.library.create_crate(&name, color.as_deref())
+    }
+
+    pub fn delete_crate(&self, id: i64) -> Result<(), AudioError> {
+        self.library.delete_crate(id)
+    }
+
+    pub fn list_crates(&self) -> Result<Vec<CrateItem>, AudioError> {
+        self.library.list_crates()
+    }
+
+    pub fn add_track_to_crate(&self, crate_id: i64, track_id: i64) -> Result<(), AudioError> {
+        self.library.add_track_to_crate(crate_id, track_id)
+    }
+
+    pub fn remove_track_from_crate(&self, crate_id: i64, track_id: i64) -> Result<(), AudioError> {
+        self.library.remove_track_from_crate(crate_id, track_id)
+    }
+
+    pub fn create_playlist(
+        &self,
+        name: String,
+        smart_filter: Option<SmartFilter>,
+    ) -> Result<i64, AudioError> {
+        self.library.create_playlist(&name, smart_filter)
+    }
+
+    pub fn delete_playlist(&self, id: i64) -> Result<(), AudioError> {
+        self.library.delete_playlist(id)
+    }
+
+    pub fn list_playlists(&self) -> Result<Vec<PlaylistItem>, AudioError> {
+        self.library.list_playlists()
+    }
+
+    pub fn add_track_to_playlist(&self, playlist_id: i64, track_id: i64) -> Result<(), AudioError> {
+        self.library.add_track_to_playlist(playlist_id, track_id)
+    }
+
+    pub fn remove_track_from_playlist(
+        &self,
+        playlist_id: i64,
+        track_id: i64,
+    ) -> Result<(), AudioError> {
+        self.library.remove_track_from_playlist(playlist_id, track_id)
+    }
+
+    pub fn import_playlist(&self, file_path: String) -> Result<i64, AudioError> {
+        let p = std::path::Path::new(&file_path);
+        let ext = p
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        if ext == "pls" {
+            crate::library::playlist::import_pls(p, &self.library)
+        } else {
+            crate::library::playlist::import_m3u(p, &self.library)
+        }
+    }
+
+    pub fn export_playlist(&self, playlist_id: i64, dest_path: String) -> Result<(), AudioError> {
+        let tracks = self.library.get_tracks(TrackQuery {
+            playlist_id: Some(playlist_id),
+            ..Default::default()
+        })?;
+        let p = std::path::Path::new(&dest_path);
+        crate::library::playlist::export_m3u(playlist_id, p, &tracks)
+    }
+
+    pub fn update_track_rating(&self, track_id: i64, rating: u32) -> Result<(), AudioError> {
+        self.library.update_rating(track_id, rating)
+    }
+
+    pub fn update_track_color(
+        &self,
+        track_id: i64,
+        color: Option<String>,
+    ) -> Result<(), AudioError> {
+        self.library.update_color(track_id, color.as_deref())
+    }
+
+    pub fn delete_library_track(&self, track_id: i64) -> Result<(), AudioError> {
+        self.library.delete_track(track_id)
+    }
+
+    pub fn get_library_history(&self, limit: usize) -> Result<Vec<HistoryItem>, AudioError> {
+        self.library.get_history(limit)
+    }
+
+    pub fn preview_play(
+        &self,
+        file_path: String,
+        start_secs: f64,
+    ) -> Result<PreviewStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.preview().play(file_path, start_secs)?;
+            Ok(engine.preview().status())
+        })
+    }
+
+    pub fn preview_stop(&self) -> Result<PreviewStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.preview().stop();
+            Ok(engine.preview().status())
+        })
+    }
+
+    pub fn preview_seek(&self, seconds: f64) -> Result<PreviewStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.preview().seek(seconds);
+            Ok(engine.preview().status())
+        })
+    }
+
+    pub fn preview_status(&self) -> PreviewStatus {
+        let guard = self.engine.lock();
+        if let Some(engine) = guard.as_ref() {
+            engine.preview().status()
+        } else {
+            PreviewStatus::default()
+        }
     }
 }
