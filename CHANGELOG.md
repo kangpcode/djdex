@@ -3,6 +3,39 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-11-17
+
+### Added — Fase 7: Remixer/Sampler + Step Sequencer
+
+- Mesin Sampler real-time lock-free `src-tauri/src/sampler/`:
+  - Voice pool hingga 32 voice simultan dengan interpolasi sub-sampel linear, per-pad volume, semitone pitch-shift (-24..+24 st), BPM tempo sync, dan mute group cut-off anti-clash (misal closed/open hi-hat).
+  - Mode pad lengkap: `OneShot`, `Loop`, `Hold` (berhenti saat dilepas), `Stutter` (retrigger instan ke 0), `DrumPad`, dan `CuePad`.
+  - 4 Bank Kit pabrikan bawaan (`EDM Festival`, `Hip-Hop 808`, `House Classic`, `DJ Scratches & FX`) dengan 16 pad per bank yang langsung siap dimainkan seketika aplikasi dibuka tanpa memerlukan aset audio eksternal.
+  - Generator instrumen dan efek DJ matematis murni `sampler/synth.rs`: Kick 808 & punchy kick, Snare, Hi-Hats, Clap multi-transient, Tom/Conga, Turntable vinyl scratch (baby scratch, chirp, transform), DJ Siren, Laser zap, Airhorn blast, dan Synth chord stab.
+  - Step Sequencer 16-step (`sampler/sequencer.rs`): 4 track terdedikasi (Kick, Snare, Hi-Hat, Perc), memori 4 pattern per bank, pengaturan swing groove (0% - 75%), sinkronisasi tempo ke Master BPM, dan clocking frame-accurate langsung di audio callback tanpa alokasi heap.
+  - Pemotongan audio langsung dari Deck: fitur `capture_deck_to_pad` untuk memotong 1–16 ketukan atau loop aktif dari Deck A/Deck B langsung menjadi sample pad baru menggunakan Symphonia decoder dan resampler otomatis.
+  - Dukungan impor file audio eksternal (WAV, MP3, FLAC, OGG, AAC) ke pad mana pun via dialog file native.
+  - Sistem ekspor dan impor Sample Pack format `.zip` (`sampler/bank.rs`) lengkap dengan manifest JSON dan file audio WAV standar via crate `zip` & `hound`.
+- Integrasi audio engine & mixer:
+  - Mixer master bus sekarang menerima input stereo sampler secara kontinu sebelum master limiter, dilengkapi master volume dan fade-out click-free.
+  - State atomik `AtomicPadState` untuk polling UI berkecepatan tinggi tanpa overhead lock.
+- Komponen antarmuka & store React:
+  - Store Zustand `useSamplerStore` dengan polling berkala, aksi pemicu pad, konfigurasi parameter pad, dan manajemen sequencer.
+  - Komponen `SamplerPanel`:
+    - Pemilih 4 bank dengan badge neon dan judul kit.
+    - Grid responsif 16 pad atau 8 pad dengan visual glowing saat dipicu, animasi ring progress, serta indikator mode & mute group.
+    - Drawer/inspektor detail pad: penamaan, mode pemicu, mute group, slider volume & pitch semitone, toggle sync tempo, tombol muat file audio, dan pemotong bagian track dari Deck A/Deck B.
+    - Sub-view 16-Step Sequencer interaktif: tombol Start/Stop dengan LED berkedip, kontrol BPM & Swing, pemilih pattern 1–4, 16 step button dengan penanda ketukan, dan playhead vertikal real-time.
+    - Tombol MUTE ALL, kontrol Master Sampler Volume, serta ekspor/impor pack ZIP.
+  - Integrasi tab navigasi bawah di `App.tsx` (`Remixer / Sampler & Sequencer`, `FX Chains & Auto DJ`, `Audio Output & Diagnostics`, atau `Show All Panels`).
+  - Shortcut keyboard global: angka `1`–`8` memicu Pad 1–8 secara instan.
+- 6 unit test baru untuk Sampler, Synth, Sequencer, dan Bank ZIP pack roundtrip; total 59 unit test Rust lulus 100%.
+
+### Changed
+
+- Versi aplikasi dinaikkan ke `0.7.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, dan UI footer).
+- `Mixer::process` diperluas untuk menerima kanal stereo sampler tanpa alokasi memori.
+
 ## [0.6.0] - 2026-11-17
 
 ### Added — Fase 6: FX Chain dan Auto DJ
