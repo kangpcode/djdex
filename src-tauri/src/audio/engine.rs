@@ -682,6 +682,8 @@ fn build_output<T>(
     mut decks: [DeckReader; DECK_COUNT],
     mut sampler_rt: SamplerRt,
     mut preview_rt: PreviewPlayerRt,
+    mut recorder_rt: RecorderProducer,
+    mut broadcast_rt: BroadcastProducer,
 ) -> Result<Stream, AudioError>
 where
     T: SizedSample + FromSample<f32> + Send + 'static,
@@ -707,6 +709,8 @@ where
                     &mut decks,
                     &mut sampler_rt,
                     &mut preview_rt,
+                    &mut recorder_rt,
+                    &mut broadcast_rt,
                     &mut mixer,
                 );
             },
@@ -731,6 +735,8 @@ fn render_block<T>(
     decks: &mut [DeckReader; DECK_COUNT],
     sampler: &mut SamplerRt,
     preview: &mut PreviewPlayerRt,
+    recorder: &mut RecorderProducer,
+    broadcast: &mut BroadcastProducer,
     mixer: &mut Mixer,
 ) where
     T: SizedSample + FromSample<f32>,
@@ -817,6 +823,10 @@ fn render_block<T>(
 
         let mut out_left = soft_clip(mix.master_l);
         let mut out_right = soft_clip(mix.master_r);
+
+        // Rekam dan broadcast master mix stereo murni (lock-free)
+        recorder.push(out_left, out_right);
+        broadcast.push(out_left, out_right);
 
         // Perangkat stereo: split cue menaruh cue di L dan master di R.
         if split_cue {
