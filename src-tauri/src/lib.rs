@@ -10,6 +10,7 @@ mod error;
 pub mod library;
 pub mod midi;
 pub mod sampler;
+pub mod skin;
 mod state;
 
 use state::AppState;
