@@ -153,12 +153,12 @@ export function SamplerPanel() {
           </div>
         </div>
 
-        {/* Bank Selector: 8 Full Banks (A - H) */}
+        {/* Bank Selector: 12 Full Banks (A - L) */}
         <div className="flex items-center gap-1 flex-wrap">
           <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mr-0.5">
             Bank:
           </span>
-          {["A", "B", "C", "D", "E", "F", "G", "H"].map((b, idx) => {
+          {["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"].map((b, idx) => {
             const isSelected = activeBank === idx;
             const bankName = status?.bankNames[idx] ?? `Bank ${b}`;
             return (
@@ -167,14 +167,14 @@ export function SamplerPanel() {
                 type="button"
                 onClick={() => void selectBank(idx)}
                 title={`${b}: ${bankName}`}
-                className={`group relative rounded border px-2 py-1 text-[11px] font-bold transition ${
+                className={`group relative rounded border px-2 py-1 text-[10.5px] font-bold transition ${
                   isSelected
                     ? "border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(0,229,255,0.3)]"
                     : "border-line bg-deck-900 text-ink-muted hover:border-deck-700 hover:text-ink"
                 }`}
               >
                 <span>{b}</span>
-                <span className="ml-1 hidden text-[8.5px] font-normal opacity-70 lg:inline">
+                <span className="ml-1 hidden text-[8px] font-normal opacity-70 xl:inline">
                   {bankName.split(" ")[0]}
                 </span>
               </button>
