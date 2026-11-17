@@ -141,7 +141,7 @@ impl BroadcastController {
         let connect_requested = Arc::clone(&self.connect_requested);
         let disconnect_requested = Arc::clone(&self.disconnect_requested);
         let bytes_sent = Arc::clone(&self.bytes_sent);
-        let start_time = Arc::clone(&start_time);
+        let start_time = Arc::clone(&self.start_time);
         let last_error = Arc::clone(&self.last_error);
         let active_config = Arc::clone(&self.active_config);
         let sample_rate = self.sample_rate;
