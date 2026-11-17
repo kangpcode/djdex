@@ -17,6 +17,9 @@ use crate::library::db::{
 };
 use crate::library::preview::PreviewStatus;
 use crate::library::scanner::ScanProgress;
+use crate::midi::{
+    DjAction, KeyboardBinding, MidiLearnStatus, MidiMapping, MidiPortInfo, MidiStatus,
+};
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 use crate::state::AppState;
 
@@ -646,4 +649,133 @@ pub fn preview_seek(state: State<'_, AppState>, seconds: f64) -> IpcResult<Previ
 #[tauri::command]
 pub fn get_preview_status(state: State<'_, AppState>) -> PreviewStatus {
     state.preview_status()
+}
+
+// ---- MIDI & Keyboard (Fase 9) --------------------------------------------
+
+#[tauri::command]
+pub fn list_midi_inputs(state: State<'_, AppState>) -> IpcResult<Vec<MidiPortInfo>> {
+    state.list_midi_inputs()
+}
+
+#[tauri::command]
+pub fn list_midi_outputs(state: State<'_, AppState>) -> IpcResult<Vec<MidiPortInfo>> {
+    state.list_midi_outputs()
+}
+
+#[tauri::command]
+pub fn connect_midi_device(
+    state: State<'_, AppState>,
+    input_index: Option<usize>,
+    output_index: Option<usize>,
+) -> IpcResult<MidiStatus> {
+    state.connect_midi_device(input_index, output_index)
+}
+
+#[tauri::command]
+pub fn disconnect_midi_device(state: State<'_, AppState>) -> MidiStatus {
+    state.disconnect_midi_device()
+}
+
+#[tauri::command]
+pub fn get_midi_status(state: State<'_, AppState>) -> MidiStatus {
+    state.get_midi_status()
+}
+
+#[tauri::command]
+pub fn start_midi_learn(state: State<'_, AppState>, action: DjAction) -> MidiLearnStatus {
+    state.start_midi_learn(action)
+}
+
+#[tauri::command]
+pub fn cancel_midi_learn(state: State<'_, AppState>) -> MidiLearnStatus {
+    state.cancel_midi_learn()
+}
+
+#[tauri::command]
+pub fn get_midi_mappings(state: State<'_, AppState>) -> Vec<MidiMapping> {
+    state.get_midi_mappings()
+}
+
+#[tauri::command]
+pub fn set_midi_mapping(state: State<'_, AppState>, mapping: MidiMapping) -> IpcResult<()> {
+    state.set_midi_mapping(mapping);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_midi_mapping(state: State<'_, AppState>, id: String) -> IpcResult<bool> {
+    Ok(state.remove_midi_mapping(&id))
+}
+
+#[tauri::command]
+pub fn clear_midi_mappings(state: State<'_, AppState>) -> IpcResult<()> {
+    state.clear_midi_mappings();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn load_midi_preset(state: State<'_, AppState>, name: String) -> IpcResult<MidiStatus> {
+    state.load_midi_preset(&name)
+}
+
+#[tauri::command]
+pub fn save_midi_preset(state: State<'_, AppState>, name: String) -> IpcResult<MidiStatus> {
+    state.save_midi_preset(&name)
+}
+
+#[tauri::command]
+pub fn list_midi_presets(state: State<'_, AppState>) -> Vec<String> {
+    state.list_midi_presets()
+}
+
+#[tauri::command]
+pub fn get_keyboard_mappings(state: State<'_, AppState>) -> Vec<KeyboardBinding> {
+    state.get_keyboard_mappings()
+}
+
+#[tauri::command]
+pub fn set_keyboard_mapping(
+    state: State<'_, AppState>,
+    binding: KeyboardBinding,
+) -> IpcResult<()> {
+    state.set_keyboard_mapping(binding);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_keyboard_mapping(
+    state: State<'_, AppState>,
+    key: String,
+    ctrl: Option<bool>,
+    shift: Option<bool>,
+    alt: Option<bool>,
+) -> IpcResult<bool> {
+    Ok(state.remove_keyboard_mapping(
+        &key,
+        ctrl.unwrap_or(false),
+        shift.unwrap_or(false),
+        alt.unwrap_or(false),
+    ))
+}
+
+#[tauri::command]
+pub fn reset_keyboard_mappings(state: State<'_, AppState>) -> Vec<KeyboardBinding> {
+    state.reset_keyboard_mappings()
+}
+
+#[tauri::command]
+pub fn handle_keyboard_shortcut(
+    state: State<'_, AppState>,
+    key: String,
+    ctrl: Option<bool>,
+    shift: Option<bool>,
+    alt: Option<bool>,
+) -> IpcResult<Option<DjAction>> {
+    state.handle_keyboard_shortcut(
+        &key,
+        ctrl.unwrap_or(false),
+        shift.unwrap_or(false),
+        alt.unwrap_or(false),
+    )
 }
