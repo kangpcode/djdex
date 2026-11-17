@@ -12,7 +12,7 @@ use super::manifest::SkinManifest;
 pub const FACTORY_SKIN_CLASSIC: &str = "classic-club";
 pub const FACTORY_SKIN_BATTLE: &str = "battle-scratch";
 pub const FACTORY_SKIN_REMIX: &str = "producer-remix";
-pub const FACTORY_SKIN_FOUR_DECK: &str = "four-deck-pro";
+pub const FACTORY_SKIN_TOUR: &str = "tour-pro";
 
 /// Manajer utama sistem skin & tata letak aplikasi DJDeX.
 #[derive(Debug, Clone)]
@@ -91,7 +91,7 @@ impl SkinManager {
         if id == FACTORY_SKIN_CLASSIC
             || id == FACTORY_SKIN_BATTLE
             || id == FACTORY_SKIN_REMIX
-            || id == FACTORY_SKIN_FOUR_DECK
+            || id == FACTORY_SKIN_TOUR
         {
             return;
         }
@@ -105,7 +105,7 @@ impl SkinManager {
             SkinManifest::classic_club(),
             SkinManifest::battle_scratch(),
             SkinManifest::producer_remix(),
-            SkinManifest::four_deck_pro(),
+            SkinManifest::tour_pro(),
         ];
         list.extend(self.custom_skins.clone());
         list
@@ -131,8 +131,8 @@ impl SkinManager {
                 self.active_skin = SkinManifest::producer_remix();
                 Ok(self.active_skin.clone())
             }
-            FACTORY_SKIN_FOUR_DECK => {
-                self.active_skin = SkinManifest::four_deck_pro();
+            FACTORY_SKIN_TOUR => {
+                self.active_skin = SkinManifest::tour_pro();
                 Ok(self.active_skin.clone())
             }
             custom_id => {
@@ -157,7 +157,7 @@ impl SkinManager {
         if id == FACTORY_SKIN_CLASSIC
             || id == FACTORY_SKIN_BATTLE
             || id == FACTORY_SKIN_REMIX
-            || id == FACTORY_SKIN_FOUR_DECK
+            || id == FACTORY_SKIN_TOUR
         {
             return Err("Tidak dapat menimpa skin bawaan pabrik".to_string());
         }
@@ -180,7 +180,7 @@ impl SkinManager {
         if skin_id == FACTORY_SKIN_CLASSIC
             || skin_id == FACTORY_SKIN_BATTLE
             || skin_id == FACTORY_SKIN_REMIX
-            || skin_id == FACTORY_SKIN_FOUR_DECK
+            || skin_id == FACTORY_SKIN_TOUR
         {
             return Err("Skin pabrikan bawaan tidak dapat dihapus".to_string());
         }
@@ -279,7 +279,7 @@ impl SkinManager {
         if id == FACTORY_SKIN_CLASSIC
             || id == FACTORY_SKIN_BATTLE
             || id == FACTORY_SKIN_REMIX
-            || id == FACTORY_SKIN_FOUR_DECK
+            || id == FACTORY_SKIN_TOUR
         {
             manifest.metadata.id = format!("{}-imported", id);
             manifest.metadata.name = format!("{} (Imported)", manifest.metadata.name);

@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use crate::skin::loader::{SkinManager, FACTORY_SKIN_BATTLE, FACTORY_SKIN_CLASSIC, FACTORY_SKIN_FOUR_DECK, FACTORY_SKIN_REMIX};
+    use crate::skin::loader::{SkinManager, FACTORY_SKIN_BATTLE, FACTORY_SKIN_CLASSIC, FACTORY_SKIN_REMIX, FACTORY_SKIN_TOUR};
     use crate::skin::manifest::{PlatterSize, SkinManifest, WaveformOrientation, WaveformPosition};
 
     #[test]
@@ -12,7 +12,7 @@ mod tests {
             SkinManifest::classic_club(),
             SkinManifest::battle_scratch(),
             SkinManifest::producer_remix(),
-            SkinManifest::four_deck_pro(),
+            SkinManifest::tour_pro(),
         ];
 
         assert_eq!(skins.len(), 4);
@@ -27,9 +27,10 @@ mod tests {
         assert_eq!(skins[2].metadata.id, FACTORY_SKIN_REMIX);
         assert!(skins[2].layout.show_scratch_pads);
 
-        assert_eq!(skins[3].metadata.id, FACTORY_SKIN_FOUR_DECK);
-        assert_eq!(skins[3].layout.deck_count, 4);
-        assert_eq!(skins[3].layout.mixer.channel_count, 4);
+        assert_eq!(skins[3].metadata.id, FACTORY_SKIN_TOUR);
+        assert_eq!(skins[3].layout.deck_count, 2);
+        assert_eq!(skins[3].layout.waveform.height_px, 164);
+        assert_eq!(skins[3].layout.mixer.channel_count, 2);
     }
 
     #[test]
@@ -67,8 +68,9 @@ mod tests {
         assert_eq!(switched.metadata.id, FACTORY_SKIN_BATTLE);
         assert_eq!(mgr.get_active_skin().metadata.id, FACTORY_SKIN_BATTLE);
 
-        let four_deck = mgr.set_active_skin(FACTORY_SKIN_FOUR_DECK).unwrap();
-        assert_eq!(four_deck.layout.deck_count, 4);
+        let tour = mgr.set_active_skin(FACTORY_SKIN_TOUR).unwrap();
+        assert_eq!(tour.layout.deck_count, 2);
+        assert_eq!(tour.layout.waveform.height_px, 164);
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

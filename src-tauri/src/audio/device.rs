@@ -63,6 +63,10 @@ pub struct AudioDeviceInfo {
     pub host: String,
     pub is_default: bool,
     pub max_channels: u16,
+    /// Jumlah channel yang benar-benar diekspos perangkat sebagai konfigurasi
+    /// output valid. UI hanya menawarkan angka di daftar ini sehingga ALSA tidak
+    /// pernah diminta channel map yang tidak ada.
+    pub supported_channels: Vec<u16>,
     pub sample_rates: Vec<u32>,
     pub sample_formats: Vec<String>,
     pub buffer_frames_min: Option<u32>,
@@ -92,6 +96,7 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
             host: host_label().to_string(),
             is_default,
             max_channels: 0,
+            supported_channels: Vec::new(),
             sample_rates: Vec::new(),
             sample_formats: Vec::new(),
             buffer_frames_min: None,
@@ -106,6 +111,7 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
             info.default_sample_rate = Some(sample_rate);
             info.default_channels = Some(default_config.channels());
             info.max_channels = info.max_channels.max(default_config.channels());
+            push_channel(&mut info.supported_channels, default_config.channels());
             push_rate(&mut info.sample_rates, sample_rate);
             push_format(&mut info.sample_formats, default_config.sample_format());
         }
@@ -113,6 +119,7 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
         if let Ok(ranges) = device.supported_output_configs() {
             for range in ranges {
                 info.max_channels = info.max_channels.max(range.channels());
+                push_channel(&mut info.supported_channels, range.channels());
                 push_format(&mut info.sample_formats, range.sample_format());
 
                 let min_rate = range.min_sample_rate();
@@ -139,6 +146,8 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
         }
 
         info.sample_rates.sort_unstable();
+        info.supported_channels.sort_unstable();
+        info.supported_channels.dedup();
         info.sample_formats.sort();
         info.sample_formats.dedup();
         result.push(info);
@@ -156,6 +165,12 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
 fn push_rate(rates: &mut Vec<u32>, rate: u32) {
     if !rates.contains(&rate) {
         rates.push(rate);
+    }
+}
+
+fn push_channel(channels: &mut Vec<u16>, channel: u16) {
+    if channel > 0 && !channels.contains(&channel) {
+        channels.push(channel);
     }
 }
 

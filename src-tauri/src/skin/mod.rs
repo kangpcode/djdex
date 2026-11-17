@@ -8,7 +8,7 @@ mod tests;
 
 pub use loader::{
     default_skins_dir, SkinManager, FACTORY_SKIN_BATTLE, FACTORY_SKIN_CLASSIC,
-    FACTORY_SKIN_FOUR_DECK, FACTORY_SKIN_REMIX,
+    FACTORY_SKIN_REMIX, FACTORY_SKIN_TOUR,
 };
 pub use manifest::{
     MixerLayout, MixerPosition, PlatterSize, PlatterStyle, SkinLayout, SkinManifest, SkinMetadata,

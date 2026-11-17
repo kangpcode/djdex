@@ -67,6 +67,8 @@ pub struct StartRequest {
     pub device_name: Option<String>,
     pub buffer_size: Option<u32>,
     pub sample_rate: Option<u32>,
+    /// Jumlah channel output. `None`/0 = otomatis (stereo, paling kompatibel).
+    pub channels: Option<u16>,
     pub tone_freq_hz: Option<f32>,
     pub tone_gain_db: Option<f32>,
 }
@@ -547,132 +549,294 @@ fn audio_host_loop(
 fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream, AudioError> {
     let device = find_output_device(request.device_name.as_deref())?;
     let device_name = device.to_string();
+    let candidates = config_candidates(&device, request)?;
 
-    let supported = select_config(&device, request)?;
-    let sample_rate = supported.sample_rate();
-    let channels = supported.channels();
-    let sample_format = supported.sample_format();
+    // Coba kandidat berurutan. Ini yang membuat aplikasi tetap bisa bunyi di
+    // ALSA ketika perangkat menolak channel map tertentu: kandidat stereo selalu
+    // tersedia sebagai fallback, sehingga pesan `find_matching_chmap` tidak
+    // menggagalkan inisialisasi engine.
+    let mut attempts: Vec<String> = Vec::new();
 
-    let mut config = supported.config();
-    config.buffer_size = match request.buffer_size {
-        Some(frames) => BufferSize::Fixed(frames),
-        None => BufferSize::Default,
-    };
+    for candidate in candidates {
+        let sample_rate = candidate.sample_rate();
+        let channels = candidate.channels();
+        let sample_format = candidate.sample_format();
+        let buffer_frames = candidate.buffer_frames();
+        let latency_ms =
+            buffer_frames.map(|frames| f64::from(frames) / f64::from(sample_rate) * 1_000.0);
 
-    let buffer_frames = match config.buffer_size {
-        BufferSize::Fixed(frames) => Some(frames),
-        BufferSize::Default => None,
-    };
-    let latency_ms =
-        buffer_frames.map(|frames| f64::from(frames) / f64::from(sample_rate) * 1_000.0);
+        let mut config = candidate.config.config();
+        config.buffer_size = candidate.buffer;
 
-    // Deck dibuat sebelum stream agar consumer ring buffer bisa langsung
-    // dimiliki callback audio.
-    let (deck_a, reader_a) = Deck::new(sample_rate)?;
-    let (deck_b, reader_b) = Deck::new(sample_rate)?;
-    let decks = [Arc::new(deck_a), Arc::new(deck_b)];
-    let (sampler_controller, sampler_rt) = SamplerController::new(sample_rate);
-    let sampler = Arc::new(sampler_controller);
-    let (preview_controller, preview_rt) = PreviewController::new(sample_rate);
-    let preview = Arc::new(preview_controller);
-    let (recorder, recorder_rt) = RecorderController::new(sample_rate);
-    let (broadcast, broadcast_rt) = BroadcastController::new(sample_rate);
+        // Deck dibuat sebelum stream agar consumer ring buffer bisa langsung
+        // dimiliki callback audio. Bila percobaan ini gagal, semuanya dibuang
+        // (worker thread ikut berhenti) sebelum kandidat berikutnya dicoba.
+        let (decks, readers) = create_decks(sample_rate)?;
+        let (sampler_controller, sampler_rt) = SamplerController::new(sample_rate);
+        let sampler = Arc::new(sampler_controller);
+        let (preview_controller, preview_rt) = PreviewController::new(sample_rate);
+        let preview = Arc::new(preview_controller);
+        let (recorder, recorder_rt) = RecorderController::new(sample_rate);
+        let (broadcast, broadcast_rt) = BroadcastController::new(sample_rate);
 
-    let stream = match sample_format {
-        SampleFormat::F32 => {
-            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt, recorder_rt, broadcast_rt)?
+        let stream = match build_for_format(
+            &device,
+            sample_format,
+            config,
+            Arc::clone(&rt),
+            readers,
+            sampler_rt,
+            preview_rt,
+            recorder_rt,
+            broadcast_rt,
+        ) {
+            Ok(stream) => stream,
+            Err(err) => {
+                attempts.push(format!(
+                    "{} ch @ {} Hz: {}",
+                    channels,
+                    sample_rate,
+                    err
+                ));
+                continue;
+            }
+        };
+
+        if let Err(err) = stream.play() {
+            attempts.push(format!(
+                "{} ch @ {} Hz: gagal start stream: {}",
+                channels, sample_rate, err
+            ));
+            continue;
         }
-        SampleFormat::I16 => {
-            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt, recorder_rt, broadcast_rt)?
-        }
-        SampleFormat::U16 => {
-            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt, recorder_rt, broadcast_rt)?
-        }
-        other => {
-            return Err(AudioError::UnsupportedSampleFormat(sample_format_label(
-                other,
-            )))
-        }
-    };
 
-    stream
-        .play()
-        .map_err(|err| AudioError::PlayStream(err.to_string()))?;
+        return Ok(OpenedStream {
+            stream,
+            decks,
+            sampler,
+            preview,
+            recorder,
+            broadcast,
+            report: StreamReport {
+                device_name,
+                host: host_label().to_string(),
+                sample_rate,
+                channels,
+                sample_format: sample_format_label(sample_format),
+                buffer_frames,
+                latency_ms,
+            },
+        });
+    }
 
-    Ok(OpenedStream {
-        stream,
-        decks,
-        sampler,
-        preview,
-        recorder,
-        broadcast,
-        report: StreamReport {
-            device_name,
-            host: host_label().to_string(),
-            sample_rate,
-            channels,
-            sample_format: sample_format_label(sample_format),
-            buffer_frames,
-            latency_ms,
-        },
-    })
+    Err(AudioError::UnsupportedConfig(open_error_hint(&attempts)))
 }
 
-/// Pilih konfigurasi stream: default device, dengan override sample rate/buffer
-/// bila diminta dan didukung perangkat.
-fn select_config(
+/// Buat dua deck + reader-nya untuk satu percobaan stream.
+fn create_decks(
+    sample_rate: u32,
+) -> Result<([Arc<Deck>; DECK_COUNT], [DeckReader; DECK_COUNT]), AudioError> {
+    let (deck_a, reader_a) = Deck::new(sample_rate)?;
+    let (deck_b, reader_b) = Deck::new(sample_rate)?;
+    let decks: [Arc<Deck>; DECK_COUNT] = [Arc::new(deck_a), Arc::new(deck_b)];
+    Ok((decks, [reader_a, reader_b]))
+}
+
+/// Satu kandidat konfigurasi stream yang sudah divalidasi terhadap kapabilitas
+/// perangkat (sample format, channel, sample rate, dan buffer).
+struct ConfigCandidate {
+    config: SupportedStreamConfig,
+    buffer: BufferSize,
+}
+
+impl ConfigCandidate {
+    fn sample_rate(&self) -> u32 {
+        self.config.sample_rate()
+    }
+
+    fn channels(&self) -> u16 {
+        self.config.channels()
+    }
+
+    fn sample_format(&self) -> SampleFormat {
+        self.config.sample_format()
+    }
+
+    fn buffer_frames(&self) -> Option<u32> {
+        match self.buffer {
+            BufferSize::Fixed(frames) => Some(frames),
+            BufferSize::Default => None,
+        }
+    }
+}
+
+/// Urutan channel yang dicoba: permintaan pengguna lebih dulu, lalu stereo
+/// (channel map universal), lalu default perangkat, lalu mono.
+fn channel_preference(requested: Option<u16>, default_channels: u16) -> Vec<u16> {
+    let mut channels = Vec::new();
+    if let Some(channel) = requested.filter(|channel| *channel > 0) {
+        channels.push(channel);
+    }
+    for channel in [2u16, default_channels, 1u16] {
+        if channel > 0 && !channels.contains(&channel) {
+            channels.push(channel);
+        }
+    }
+    channels
+}
+
+/// Validasi buffer terhadap rentang perangkat. Nilai di luar rentang di-clamp
+/// (bukan ditolak) supaya pilihan 64–1024 frame tetap berfungsi di semua driver.
+fn select_buffer(config: &SupportedStreamConfig, requested: Option<u32>) -> BufferSize {
+    let Some(frames) = requested.filter(|frames| *frames > 0) else {
+        return BufferSize::Default;
+    };
+    match config.buffer_size() {
+        SupportedBufferSize::Range { min, max } => BufferSize::Fixed(frames.clamp(*min, *max)),
+        SupportedBufferSize::Unknown => BufferSize::Default,
+    }
+}
+
+/// Susun daftar konfigurasi stream yang layak dicoba, paling diinginkan lebih
+/// dulu. Hanya sample format yang didukung engine (f32/i16/u16) yang masuk.
+fn config_candidates(
     device: &Device,
     request: &StartRequest,
-) -> Result<SupportedStreamConfig, AudioError> {
+) -> Result<Vec<ConfigCandidate>, AudioError> {
     let default_config = device.default_output_config().map_err(|err| {
         AudioError::UnsupportedConfig(format!("konfigurasi default tidak tersedia: {err}"))
     })?;
+    let default_rate = default_config.sample_rate();
+    let channel_prefs = channel_preference(request.channels, default_config.channels());
+    let rate_prefs: Vec<u32> = match request.sample_rate.filter(|rate| *rate > 0) {
+        Some(rate) if rate != default_rate => vec![rate, default_rate],
+        _ => vec![default_rate],
+    };
 
-    let config = match request.sample_rate {
-        Some(rate) if rate != default_config.sample_rate() => {
-            let ranges = device
-                .supported_output_configs()
-                .map_err(|err| AudioError::Enumerate(err.to_string()))?;
+    let ranges: Vec<_> = device
+        .supported_output_configs()
+        .map_err(|err| AudioError::Enumerate(err.to_string()))?
+        .collect();
 
-            let mut matched = None;
-            for range in ranges {
-                if range.channels() == default_config.channels()
-                    && range.sample_format() == default_config.sample_format()
-                    && range.contains_rate(rate)
-                {
-                    // Non-panicking: rentang sudah dicek, `try_` tetap dipakai
-                    // agar tidak ada jalur panic sama sekali.
-                    matched = range.try_with_sample_rate(rate);
-                    break;
+    let mut candidates: Vec<ConfigCandidate> = Vec::new();
+
+    for sample_format in [SampleFormat::F32, SampleFormat::I16, SampleFormat::U16] {
+        for channel in &channel_prefs {
+            for rate in &rate_prefs {
+                let Some(range) = ranges.iter().find(|range| {
+                    range.sample_format() == sample_format
+                        && range.channels() == *channel
+                        && range.contains_rate(*rate)
+                }) else {
+                    continue;
+                };
+                if let Some(config) = range.try_with_sample_rate(*rate) {
+                    push_candidate(&mut candidates, config, request.buffer_size);
                 }
             }
-
-            matched.ok_or_else(|| {
-                AudioError::UnsupportedConfig(format!(
-                    "sample rate {rate} Hz tidak didukung perangkat ini"
-                ))
-            })?
         }
-        _ => default_config,
-    };
-
-    let buffer_out_of_range = match (request.buffer_size, config.buffer_size()) {
-        (Some(frames), SupportedBufferSize::Range { min, max }) => frames < *min || frames > *max,
-        _ => false,
-    };
-
-    if buffer_out_of_range {
-        let (min, max) = match config.buffer_size() {
-            SupportedBufferSize::Range { min, max } => (*min, *max),
-            SupportedBufferSize::Unknown => (0, 0),
-        };
-        let frames = request.buffer_size.unwrap_or_default();
-        return Err(AudioError::UnsupportedConfig(format!(
-            "buffer {frames} frame di luar rentang perangkat ({min}-{max})"
-        )));
     }
 
-    Ok(config)
+    // Jaring pengaman terakhir: konfigurasi default perangkat apa adanya.
+    push_candidate(&mut candidates, default_config, request.buffer_size);
+
+    if candidates.is_empty() {
+        return Err(AudioError::UnsupportedConfig(
+            "perangkat tidak mengekspos konfigurasi output yang didukung (f32/i16/u16)"
+                .to_string(),
+        ));
+    }
+
+    Ok(candidates)
+}
+
+fn push_candidate(
+    list: &mut Vec<ConfigCandidate>,
+    config: SupportedStreamConfig,
+    requested_buffer: Option<u32>,
+) {
+    let buffer = select_buffer(&config, requested_buffer);
+    let buffer_frames = match buffer {
+        BufferSize::Fixed(frames) => Some(frames),
+        BufferSize::Default => None,
+    };
+    let duplicate = list.iter().any(|existing| {
+        existing.sample_rate() == config.sample_rate()
+            && existing.channels() == config.channels()
+            && existing.sample_format() == config.sample_format()
+            && existing.buffer_frames() == buffer_frames
+    });
+    if !duplicate {
+        list.push(ConfigCandidate { config, buffer });
+    }
+}
+
+/// Bangun stream untuk sample format tertentu, lalu terjemahkan error backend
+/// menjadi pesan yang bisa ditindaklanjuti.
+fn build_for_format(
+    device: &Device,
+    sample_format: SampleFormat,
+    config: StreamConfig,
+    rt: Arc<RtState>,
+    readers: [DeckReader; DECK_COUNT],
+    sampler_rt: SamplerRt,
+    preview_rt: PreviewPlayerRt,
+    recorder_rt: RecorderProducer,
+    broadcast_rt: BroadcastProducer,
+) -> Result<Stream, AudioError> {
+    match sample_format {
+        SampleFormat::F32 => build_output::<f32>(
+            device,
+            config,
+            rt,
+            readers,
+            sampler_rt,
+            preview_rt,
+            recorder_rt,
+            broadcast_rt,
+        ),
+        SampleFormat::I16 => build_output::<i16>(
+            device,
+            config,
+            rt,
+            readers,
+            sampler_rt,
+            preview_rt,
+            recorder_rt,
+            broadcast_rt,
+        ),
+        SampleFormat::U16 => build_output::<u16>(
+            device,
+            config,
+            rt,
+            readers,
+            sampler_rt,
+            preview_rt,
+            recorder_rt,
+            broadcast_rt,
+        ),
+        other => Err(AudioError::UnsupportedSampleFormat(sample_format_label(other))),
+    }
+}
+
+/// Gabungkan percobaan yang gagal menjadi satu pesan, plus panduan ALSA.
+fn open_error_hint(attempts: &[String]) -> String {
+    let detail = if attempts.is_empty() {
+        "perangkat tidak menyediakan konfigurasi output yang bisa dibuka".to_string()
+    } else {
+        attempts.join("; ")
+    };
+
+    if cfg!(target_os = "linux") {
+        format!(
+            "Gagal membuka stream audio. {detail}. Tip ALSA: pilih channel 'Stereo (2 ch)'. \
+             Pesan 'pcm_route.c ... find_matching_chmap: Found no matching channel map' berarti \
+             perangkat tidak punya channel map untuk jumlah channel yang diminta; stereo selalu \
+             aman, dan untuk headphone gunakan SPLIT CUE atau perangkat dengan 4 channel."
+        )
+    } else {
+        format!("Gagal membuka stream audio. {detail}")
+    }
 }
 
 fn build_output<T>(
@@ -1009,5 +1173,30 @@ mod tests {
         assert_eq!(rt.frames.load(Ordering::Relaxed), 64 * 256);
         assert!(f32::from_bits(rt.peak.load(Ordering::Relaxed)) > 0.0);
         assert_eq!(buffer[1], buffer[0], "test tone mono pada L/R");
+    }
+
+    #[test]
+    fn channel_preference_keeps_stereo_as_safe_fallback() {
+        assert_eq!(channel_preference(Some(4), 6), vec![4, 2, 6, 1]);
+        assert_eq!(channel_preference(Some(0), 2), vec![2, 1]);
+        assert_eq!(channel_preference(None, 8), vec![2, 8, 1]);
+        // Stereo selalu hadir di daftar sehingga channel map ALSA tidak pernah
+        // diminta untuk jumlah channel yang tidak diketahui driver.
+        for requested in [None, Some(2), Some(4), Some(6), Some(8)] {
+            assert!(channel_preference(requested, 2).contains(&2));
+        }
+    }
+
+    #[test]
+    fn open_error_hint_explains_alsa_channel_map() {
+        let hint = open_error_hint(&[
+            "BackendSpecific: ALSA lib pcm_route.c find_matching_chmap: Found no matching channel map"
+                .to_string(),
+        ]);
+        assert!(hint.contains("Gagal membuka stream audio"));
+        if cfg!(target_os = "linux") {
+            assert!(hint.contains("channel map"));
+            assert!(hint.contains("SPLIT CUE"));
+        }
     }
 }

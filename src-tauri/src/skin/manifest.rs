@@ -348,16 +348,17 @@ impl SkinManifest {
         }
     }
 
-    /// Template 4: "Four-Deck Pro" (Layout 4 deck A/C kiri, B/D kanan, mixer 4-channel).
-    pub fn four_deck_pro() -> Self {
+    /// Template 4: "Tour Pro" (2 deck lebar, waveform tinggi, palet 4 aksen
+    /// untuk cue bank, dan layout phase strip aktif).
+    pub fn tour_pro() -> Self {
         Self {
             metadata: SkinMetadata {
-                id: "four-deck-pro".to_string(),
-                name: "Four-Deck Pro".to_string(),
+                id: "tour-pro".to_string(),
+                name: "Tour Pro".to_string(),
                 author: "Kangpcode".to_string(),
-                version: "1.0.0".to_string(),
+                version: "1.1.0".to_string(),
                 description:
-                    "Tata letak 4 deck workstation profesional: Deck A & C di sisi kiri, Deck B & D di sisi kanan, serta mixer 4-channel lengkap."
+                    "Tata letak tur/festival: waveform lebar dan tinggi, piringan vinyl standar, phase sync strip aktif, serta palet empat aksen untuk cue bank."
                         .to_string(),
                 preview_image: None,
             },
@@ -375,23 +376,23 @@ impl SkinManifest {
                 custom_css: None,
             },
             layout: SkinLayout {
-                deck_count: 4,
+                deck_count: 2,
                 waveform: WaveformLayout {
                     position: WaveformPosition::TopStacked,
                     orientation: WaveformOrientation::Horizontal,
-                    height_px: 96,
+                    height_px: 164,
                     show_beatgrid: true,
                 },
                 platter: PlatterStyle {
-                    size: PlatterSize::Compact,
+                    size: PlatterSize::Standard,
                     vinyl_texture: true,
-                    center_display: true,
+                    center_display: false,
                 },
                 mixer: MixerLayout {
                     position: MixerPosition::Center,
-                    channel_count: 4,
-                    vu_meter_style: "segmented".to_string(),
-                    crossfader_height_px: 52,
+                    channel_count: 2,
+                    vu_meter_style: "gradient".to_string(),
+                    crossfader_height_px: 44,
                 },
                 lower_panel_default: "library".to_string(),
                 show_phase_strip: true,
