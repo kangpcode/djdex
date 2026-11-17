@@ -190,14 +190,27 @@ export default function App() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setLowerTab("sampler")}
+                onClick={() => setLowerTab("library")}
                 className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
-                  lowerTab === "sampler"
+                  lowerTab === "library"
                     ? "border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(0,229,255,0.25)]"
                     : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
                 }`}
               >
                 <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                Library & Crates
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLowerTab("sampler")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "sampler"
+                    ? "border-pink-400 bg-pink-500/20 text-pink-300 shadow-[0_0_10px_rgba(244,114,182,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-pink-400" />
                 Remixer / Sampler & 16-Step Sequencer
               </button>
 
@@ -230,7 +243,7 @@ export default function App() {
 
             <button
               type="button"
-              onClick={() => setLowerTab(lowerTab === "all" ? "sampler" : "all")}
+              onClick={() => setLowerTab(lowerTab === "all" ? "library" : "all")}
               className={`rounded border px-2.5 py-1 text-[11px] font-semibold transition ${
                 lowerTab === "all"
                   ? "border-cyan-400 bg-cyan-500/20 text-cyan-300"
@@ -242,6 +255,8 @@ export default function App() {
           </div>
 
           {/* Tab Views */}
+          {(lowerTab === "library" || lowerTab === "all") && <LibraryPanel />}
+
           {(lowerTab === "sampler" || lowerTab === "all") && <SamplerPanel />}
 
           {(lowerTab === "fx" || lowerTab === "all") && <FxPanel />}
@@ -259,12 +274,12 @@ export default function App() {
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.7.0</span>
+        <span>By Kangpcode · v0.8.0</span>
         <span className="hidden sm:inline">
-          Rust + Tauri 2 · Symphonia · CPAL · Remixer/Sampler 16-Pads · 16-Step Sequencer
+          Rust + Tauri 2 · SQLite Library · Batch Analyzer · Crates & Playlists · Cue Preview
         </span>
         <span className="ml-auto hidden md:inline">
-          Space = play/pause · Keys 1-8 = Trigger Pads · target latensi &lt; 15 ms
+          Space = play/pause · Headphone = Cue Preview · Drag to Deck A/B
         </span>
       </footer>
     </div>
