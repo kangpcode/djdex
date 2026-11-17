@@ -12,6 +12,11 @@ use crate::audio::device::{list_output_devices, AudioDeviceInfo};
 use crate::audio::engine::{AudioEngine, EngineStatus, StartRequest};
 use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
+use crate::library::db::{
+    CrateItem, HistoryItem, LibraryTrack, PlaylistItem, SmartFilter, TrackQuery,
+};
+use crate::library::preview::PreviewStatus;
+use crate::library::scanner::ScanProgress;
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 use crate::state::AppState;
 
@@ -439,4 +444,206 @@ pub fn import_sample_pack(
     path: String,
 ) -> IpcResult<SamplerStatus> {
     state.import_sample_pack(path).map_err(|e| e.to_string())
+}
+
+// ---- Library, Crate, Playlist & Preview (Fase 8) -------------------------
+
+#[tauri::command]
+pub fn get_library_tracks(
+    state: State<'_, AppState>,
+    query: Option<TrackQuery>,
+) -> IpcResult<Vec<LibraryTrack>> {
+    state
+        .get_library_tracks(query.unwrap_or_default())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn scan_library_folder(
+    state: State<'_, AppState>,
+    folder_path: String,
+) -> IpcResult<ScanProgress> {
+    state
+        .scan_library_folder(folder_path)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn start_batch_analyze(
+    state: State<'_, AppState>,
+    track_ids: Option<Vec<i64>>,
+) -> IpcResult<ScanProgress> {
+    state
+        .start_batch_analyze(track_ids)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_scan_progress(state: State<'_, AppState>) -> ScanProgress {
+    state.get_scan_progress()
+}
+
+#[tauri::command]
+pub fn create_crate(
+    state: State<'_, AppState>,
+    name: String,
+    color: Option<String>,
+) -> IpcResult<i64> {
+    state.create_crate(name, color).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_crate(state: State<'_, AppState>, id: i64) -> IpcResult<()> {
+    state.delete_crate(id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_crates(state: State<'_, AppState>) -> IpcResult<Vec<CrateItem>> {
+    state.list_crates().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn add_track_to_crate(
+    state: State<'_, AppState>,
+    crate_id: i64,
+    track_id: i64,
+) -> IpcResult<()> {
+    state
+        .add_track_to_crate(crate_id, track_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn remove_track_from_crate(
+    state: State<'_, AppState>,
+    crate_id: i64,
+    track_id: i64,
+) -> IpcResult<()> {
+    state
+        .remove_track_from_crate(crate_id, track_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn create_playlist(
+    state: State<'_, AppState>,
+    name: String,
+    smart_filter: Option<SmartFilter>,
+) -> IpcResult<i64> {
+    state
+        .create_playlist(name, smart_filter)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_playlist(state: State<'_, AppState>, id: i64) -> IpcResult<()> {
+    state.delete_playlist(id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_playlists(state: State<'_, AppState>) -> IpcResult<Vec<PlaylistItem>> {
+    state.list_playlists().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn add_track_to_playlist(
+    state: State<'_, AppState>,
+    playlist_id: i64,
+    track_id: i64,
+) -> IpcResult<()> {
+    state
+        .add_track_to_playlist(playlist_id, track_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn remove_track_from_playlist(
+    state: State<'_, AppState>,
+    playlist_id: i64,
+    track_id: i64,
+) -> IpcResult<()> {
+    state
+        .remove_track_from_playlist(playlist_id, track_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_playlist(state: State<'_, AppState>, file_path: String) -> IpcResult<i64> {
+    state.import_playlist(file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_playlist(
+    state: State<'_, AppState>,
+    playlist_id: i64,
+    dest_path: String,
+) -> IpcResult<()> {
+    state
+        .export_playlist(playlist_id, dest_path)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn update_track_rating(
+    state: State<'_, AppState>,
+    track_id: i64,
+    rating: u32,
+) -> IpcResult<()> {
+    state
+        .update_track_rating(track_id, rating)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn update_track_color(
+    state: State<'_, AppState>,
+    track_id: i64,
+    color: Option<String>,
+) -> IpcResult<()> {
+    state
+        .update_track_color(track_id, color)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_library_track(state: State<'_, AppState>, track_id: i64) -> IpcResult<()> {
+    state
+        .delete_library_track(track_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_library_history(
+    state: State<'_, AppState>,
+    limit: Option<usize>,
+) -> IpcResult<Vec<HistoryItem>> {
+    state
+        .get_library_history(limit.unwrap_or(50))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn preview_play(
+    state: State<'_, AppState>,
+    path: String,
+    start_secs: Option<f64>,
+) -> IpcResult<PreviewStatus> {
+    state
+        .preview_play(path, start_secs.unwrap_or(0.0))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn preview_stop(state: State<'_, AppState>) -> IpcResult<PreviewStatus> {
+    state.preview_stop().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn preview_seek(state: State<'_, AppState>, seconds: f64) -> IpcResult<PreviewStatus> {
+    state.preview_seek(seconds).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_preview_status(state: State<'_, AppState>) -> PreviewStatus {
+    state.preview_status()
 }
