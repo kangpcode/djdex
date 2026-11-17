@@ -244,7 +244,9 @@ fn push_rate(rates: &mut Vec<u32>, rate: u32) {
 }
 
 fn push_channel(channels: &mut Vec<u16>, channel: u16) {
-    if channel > 0 && !channels.contains(&channel) {
+    // Hanya tawarkan jumlah channel dengan channel map standar (Mono, Stereo, Quad/4ch, 5.1/6ch, 7.1/8ch)
+    // supaya plugin route/PipeWire tidak memaparkan channel ganjil 3..64 yang memicu error chmap.
+    if matches!(channel, 1 | 2 | 4 | 6 | 8) && !channels.contains(&channel) {
         channels.push(channel);
     }
 }
