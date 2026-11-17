@@ -377,6 +377,92 @@ export interface TrackQuery {
   limit?: number | null;
 }
 
+// ---- MIDI & Keyboard (Fase 9) ----
+
+export interface MidiPortInfo {
+  id: number;
+  name: string;
+}
+
+export type MidiMessageType = "noteOn" | "noteOff" | "controlChange" | "pitchBend";
+
+export interface MidiEvent {
+  channel: number;
+  messageType: MidiMessageType;
+  control: number;
+  value: number;
+}
+
+export type JogWheelMode =
+  | "relativeTwoComp"
+  | "relativeBinaryOffset"
+  | "relativeSignedBit"
+  | "absolute";
+
+export type DjAction =
+  | { type: "deckPlay"; payload: { deck: number } }
+  | { type: "deckCue"; payload: { deck: number } }
+  | { type: "deckSync"; payload: { deck: number } }
+  | { type: "deckPitch"; payload: { deck: number } }
+  | { type: "deckPitchBend"; payload: { deck: number; direction: number } }
+  | { type: "deckJog"; payload: { deck: number; mode: JogWheelMode } }
+  | { type: "deckHotCue"; payload: { deck: number; index: number } }
+  | { type: "deckLoopToggle"; payload: { deck: number } }
+  | { type: "deckLoopHalf"; payload: { deck: number } }
+  | { type: "deckLoopDouble"; payload: { deck: number } }
+  | { type: "deckBeatJump"; payload: { deck: number; beats: number } }
+  | { type: "mixerFader"; payload: { deck: number } }
+  | { type: "mixerCrossfader" }
+  | { type: "mixerEqLow"; payload: { deck: number } }
+  | { type: "mixerEqMid"; payload: { deck: number } }
+  | { type: "mixerEqHigh"; payload: { deck: number } }
+  | { type: "mixerFilter"; payload: { deck: number } }
+  | { type: "mixerGain"; payload: { deck: number } }
+  | { type: "mixerPfl"; payload: { deck: number } }
+  | { type: "mixerMasterVolume" }
+  | { type: "mixerCueVolume" }
+  | { type: "mixerCueMix" }
+  | { type: "samplerPad"; payload: { pad: number } }
+  | { type: "samplerBankSelect"; payload: { bank: number } }
+  | { type: "samplerVolume" }
+  | { type: "fxToggle"; payload: { chain: number; slot: number } }
+  | { type: "fxWetDry"; payload: { chain: number; slot: number } }
+  | { type: "browserScroll"; payload: { delta: number } }
+  | { type: "browserLoadDeck"; payload: { deck: number } };
+
+export interface MidiMapping {
+  id: string;
+  channel: number;
+  messageType: MidiMessageType;
+  control: number;
+  action: DjAction;
+  description?: string | null;
+}
+
+export interface MidiLearnStatus {
+  isLearning: boolean;
+  targetAction?: DjAction | null;
+  lastEvent?: MidiEvent | null;
+}
+
+export interface MidiStatus {
+  connectedInput: string | null;
+  connectedOutput: string | null;
+  isLearning: boolean;
+  activePreset: string;
+  mappingCount: number;
+  lastEvent?: MidiEvent | null;
+}
+
+export interface KeyboardBinding {
+  key: string;
+  ctrl: boolean;
+  shift: boolean;
+  alt: boolean;
+  action: DjAction;
+  description?: string | null;
+}
+
 /** True bila UI berjalan di dalam webview Tauri (bukan browser biasa). */
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -622,6 +708,38 @@ export const ipc = {
 
   getPreviewStatus: () =>
     invokeCommand<PreviewStatus>("get_preview_status"),
+
+  // MIDI & Keyboard (Fase 9)
+  listMidiInputs: () => invokeCommand<MidiPortInfo[]>("list_midi_inputs"),
+  listMidiOutputs: () => invokeCommand<MidiPortInfo[]>("list_midi_outputs"),
+  connectMidiDevice: (inputIndex?: number, outputIndex?: number) =>
+    invokeCommand<MidiStatus>("connect_midi_device", { inputIndex, outputIndex }),
+  disconnectMidiDevice: () => invokeCommand<MidiStatus>("disconnect_midi_device"),
+  getMidiStatus: () => invokeCommand<MidiStatus>("get_midi_status"),
+  startMidiLearn: (action: DjAction) =>
+    invokeCommand<MidiLearnStatus>("start_midi_learn", { action }),
+  cancelMidiLearn: () => invokeCommand<MidiLearnStatus>("cancel_midi_learn"),
+  getMidiMappings: () => invokeCommand<MidiMapping[]>("get_midi_mappings"),
+  setMidiMapping: (mapping: MidiMapping) =>
+    invokeCommand<void>("set_midi_mapping", { mapping }),
+  removeMidiMapping: (id: string) =>
+    invokeCommand<boolean>("remove_midi_mapping", { id }),
+  clearMidiMappings: () => invokeCommand<void>("clear_midi_mappings"),
+  loadMidiPreset: (name: string) =>
+    invokeCommand<MidiStatus>("load_midi_preset", { name }),
+  saveMidiPreset: (name: string) =>
+    invokeCommand<MidiStatus>("save_midi_preset", { name }),
+  listMidiPresets: () => invokeCommand<string[]>("list_midi_presets"),
+  getKeyboardMappings: () =>
+    invokeCommand<KeyboardBinding[]>("get_keyboard_mappings"),
+  setKeyboardMapping: (binding: KeyboardBinding) =>
+    invokeCommand<void>("set_keyboard_mapping", { binding }),
+  removeKeyboardMapping: (key: string, ctrl?: boolean, shift?: boolean, alt?: boolean) =>
+    invokeCommand<boolean>("remove_keyboard_mapping", { key, ctrl, shift, alt }),
+  resetKeyboardMappings: () =>
+    invokeCommand<KeyboardBinding[]>("reset_keyboard_mappings"),
+  handleKeyboardShortcut: (key: string, ctrl?: boolean, shift?: boolean, alt?: boolean) =>
+    invokeCommand<DjAction | null>("handle_keyboard_shortcut", { key, ctrl, shift, alt }),
 };
 
 export const api = ipc;
