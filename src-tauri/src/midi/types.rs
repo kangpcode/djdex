@@ -104,7 +104,9 @@ impl MidiEvent {
         match self.message_type {
             MidiMessageType::NoteOff => vec![0x80 | ch, self.control & 0x7F, self.value & 0x7F],
             MidiMessageType::NoteOn => vec![0x90 | ch, self.control & 0x7F, self.value & 0x7F],
-            MidiMessageType::ControlChange => vec![0xB0 | ch, self.control & 0x7F, self.value & 0x7F],
+            MidiMessageType::ControlChange => {
+                vec![0xB0 | ch, self.control & 0x7F, self.value & 0x7F]
+            }
             MidiMessageType::PitchBend => {
                 let val14 = ((self.value as u16) & 0x7F) << 7;
                 let lsb = (val14 & 0x7F) as u8;

@@ -3,7 +3,14 @@
 use super::db::*;
 use super::playlist::*;
 
-fn sample_track(id: i64, title: &str, artist: &str, bpm: f64, key: &str, genre: &str) -> LibraryTrack {
+fn sample_track(
+    id: i64,
+    title: &str,
+    artist: &str,
+    bpm: f64,
+    key: &str,
+    genre: &str,
+) -> LibraryTrack {
     LibraryTrack {
         id,
         file_path: format!("/music/{artist} - {title}.mp3"),
@@ -37,29 +44,35 @@ fn test_database_crud_and_search() {
     let _id3 = db.insert_or_update_track(&t3).expect("insert t3");
 
     // Cari dengan teks
-    let res = db.get_tracks(TrackQuery {
-        search: Some("House".to_string()),
-        ..Default::default()
-    }).expect("query");
+    let res = db
+        .get_tracks(TrackQuery {
+            search: Some("House".to_string()),
+            ..Default::default()
+        })
+        .expect("query");
     assert_eq!(res.len(), 1);
     assert_eq!(res[0].title, "Deep House Grooves");
 
     // Sorting by BPM desc
-    let sorted = db.get_tracks(TrackQuery {
-        sort_column: Some("bpm".to_string()),
-        sort_descending: Some(true),
-        ..Default::default()
-    }).expect("sorted");
+    let sorted = db
+        .get_tracks(TrackQuery {
+            sort_column: Some("bpm".to_string()),
+            sort_descending: Some(true),
+            ..Default::default()
+        })
+        .expect("sorted");
     assert_eq!(sorted.len(), 3);
     assert_eq!(sorted[0].bpm, Some(128.0));
     assert_eq!(sorted[2].bpm, Some(95.0));
 
     // Update rating
     db.update_rating(id1, 5).expect("update rating");
-    let updated = db.get_tracks(TrackQuery {
-        search: Some("Deep House".to_string()),
-        ..Default::default()
-    }).expect("get updated");
+    let updated = db
+        .get_tracks(TrackQuery {
+            search: Some("Deep House".to_string()),
+            ..Default::default()
+        })
+        .expect("get updated");
     assert_eq!(updated[0].rating, 5);
 }
 
@@ -69,7 +82,9 @@ fn test_crates_management() {
     let t1 = sample_track(0, "Track One", "Artist", 120.0, "8A", "House");
     let id1 = db.insert_or_update_track(&t1).expect("insert");
 
-    let crate_id = db.create_crate("Festival Crates", Some("#00e5ff")).expect("create crate");
+    let crate_id = db
+        .create_crate("Festival Crates", Some("#00e5ff"))
+        .expect("create crate");
     let crates = db.list_crates().expect("list");
     assert_eq!(crates.len(), 1);
     assert_eq!(crates[0].track_count, 0);
@@ -79,10 +94,12 @@ fn test_crates_management() {
     assert_eq!(crates_after[0].track_count, 1);
 
     // Query track di crate
-    let tracks_in_crate = db.get_tracks(TrackQuery {
-        crate_id: Some(crate_id),
-        ..Default::default()
-    }).expect("tracks in crate");
+    let tracks_in_crate = db
+        .get_tracks(TrackQuery {
+            crate_id: Some(crate_id),
+            ..Default::default()
+        })
+        .expect("tracks in crate");
     assert_eq!(tracks_in_crate.len(), 1);
     assert_eq!(tracks_in_crate[0].id, id1);
 
@@ -108,12 +125,16 @@ fn test_smart_playlists() {
         max_bpm: Some(130.0),
         ..Default::default()
     };
-    let pl_id = db.create_playlist("House Zone 120-130", Some(filter)).expect("create smart pl");
+    let pl_id = db
+        .create_playlist("House Zone 120-130", Some(filter))
+        .expect("create smart pl");
 
-    let tracks = db.get_tracks(TrackQuery {
-        playlist_id: Some(pl_id),
-        ..Default::default()
-    }).expect("smart playlist tracks");
+    let tracks = db
+        .get_tracks(TrackQuery {
+            playlist_id: Some(pl_id),
+            ..Default::default()
+        })
+        .expect("smart playlist tracks");
 
     assert_eq!(tracks.len(), 1);
     assert_eq!(tracks[0].title, "Club House");

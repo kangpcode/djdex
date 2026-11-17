@@ -22,7 +22,13 @@ impl SimpleRng {
 }
 
 /// Menghasilkan Kick Drum sintetis dengan transient punch dan decaying pitch sine.
-pub fn synth_kick(sample_rate: u32, duration_secs: f32, start_freq: f32, end_freq: f32, punch: f32) -> Vec<f32> {
+pub fn synth_kick(
+    sample_rate: u32,
+    duration_secs: f32,
+    start_freq: f32,
+    end_freq: f32,
+    punch: f32,
+) -> Vec<f32> {
     let frames = (sample_rate as f32 * duration_secs) as usize;
     let mut out = Vec::with_capacity(frames * 2);
     let mut phase = 0.0_f32;
@@ -118,7 +124,11 @@ pub fn synth_hihat(sample_rate: u32, duration_secs: f32, metallic: bool) -> Vec<
         }
 
         let noise = rng.next_f32() * 0.7;
-        let mixed = if metallic { osc_sum * 0.5 + noise * 0.5 } else { noise };
+        let mixed = if metallic {
+            osc_sum * 0.5 + noise * 0.5
+        } else {
+            noise
+        };
         let env = (-progress * if duration_secs > 0.15 { 6.0 } else { 22.0 }).exp();
         let val = (mixed * env).clamp(-1.0, 1.0);
 
@@ -200,7 +210,7 @@ pub fn synth_scratch(sample_rate: u32, duration_secs: f32, style: usize) -> Vec<
         // Modulasi kecepatan & pitch piringan maju/mundur
         let speed = match style {
             0 => (t * 2.0).sin().abs() * 1.8 + 0.3, // Baby scratch (maju-mundur)
-            1 => progress * 2.5 + 0.2,             // Forward chirp
+            1 => progress * 2.5 + 0.2,              // Forward chirp
             2 => ((progress * 16.0 * PI).sin() > 0.0) as i32 as f32 * (progress * 1.5 + 0.5), // Transform scratch
             _ => (t * 3.0).sin().abs() * 2.0 + 0.2,
         };
@@ -249,7 +259,10 @@ pub fn synth_fx(sample_rate: u32, duration_secs: f32, fx_type: usize) -> Vec<f32
                 let lfo = (2.0 * PI * 4.0 * t).sin();
                 let freq = 650.0 + lfo * 350.0;
                 phase += 2.0 * PI * freq / sample_rate as f32;
-                (if phase.sin() > 0.0 { 0.7 } else { -0.7 }, (-progress * 3.0).exp())
+                (
+                    if phase.sin() > 0.0 { 0.7 } else { -0.7 },
+                    (-progress * 3.0).exp(),
+                )
             }
             2 => {
                 // Airhorn blast

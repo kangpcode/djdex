@@ -6,9 +6,7 @@ mod midi_unit_tests {
     use crate::midi::mapping::{
         MidiMappingManager, FACTORY_PRESET_HERCULES, FACTORY_PRESET_PIONEER,
     };
-    use crate::midi::types::{
-        DjAction, JogWheelMode, KeyboardBinding, MidiEvent, MidiMessageType,
-    };
+    use crate::midi::types::{DjAction, JogWheelMode, KeyboardBinding, MidiEvent, MidiMessageType};
 
     #[test]
     fn test_midi_event_parse_note_on_off() {

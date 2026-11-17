@@ -745,13 +745,7 @@ mod tests {
         };
         mixer.configure(&params, &FxParams::default());
 
-        let frame = mixer.process(
-            (0.0, 0.0),
-            (0.0, 0.0),
-            (0.0, 0.0),
-            (0.42, 0.42),
-            0.0,
-        );
+        let frame = mixer.process((0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (0.42, 0.42), 0.0);
         // Master harus nol
         assert_eq!(frame.master_l, 0.0);
         assert_eq!(frame.master_r, 0.0);

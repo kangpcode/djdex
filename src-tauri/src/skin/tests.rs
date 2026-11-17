@@ -2,9 +2,12 @@
 
 #[cfg(test)]
 mod skin_unit_tests {
-    use std::fs;
-    use crate::skin::loader::{SkinManager, FACTORY_SKIN_BATTLE, FACTORY_SKIN_CLASSIC, FACTORY_SKIN_REMIX, FACTORY_SKIN_TOUR};
+    use crate::skin::loader::{
+        SkinManager, FACTORY_SKIN_BATTLE, FACTORY_SKIN_CLASSIC, FACTORY_SKIN_REMIX,
+        FACTORY_SKIN_TOUR,
+    };
     use crate::skin::manifest::{PlatterSize, SkinManifest, WaveformOrientation, WaveformPosition};
+    use std::fs;
 
     #[test]
     fn test_factory_skins_initialization() {
@@ -18,11 +21,17 @@ mod skin_unit_tests {
         assert_eq!(skins.len(), 4);
         assert_eq!(skins[0].metadata.id, FACTORY_SKIN_CLASSIC);
         assert_eq!(skins[0].layout.deck_count, 2);
-        assert_eq!(skins[0].layout.waveform.position, WaveformPosition::TopStacked);
+        assert_eq!(
+            skins[0].layout.waveform.position,
+            WaveformPosition::TopStacked
+        );
 
         assert_eq!(skins[1].metadata.id, FACTORY_SKIN_BATTLE);
         assert_eq!(skins[1].layout.platter.size, PlatterSize::LargeBattle);
-        assert_eq!(skins[1].layout.waveform.orientation, WaveformOrientation::Vertical);
+        assert_eq!(
+            skins[1].layout.waveform.orientation,
+            WaveformOrientation::Vertical
+        );
 
         assert_eq!(skins[2].metadata.id, FACTORY_SKIN_REMIX);
         assert!(skins[2].layout.show_scratch_pads);
@@ -53,7 +62,10 @@ mod skin_unit_tests {
 
         assert_eq!(parsed.metadata.id, original.metadata.id);
         assert_eq!(parsed.theme.primary_color, original.theme.primary_color);
-        assert_eq!(parsed.layout.waveform.orientation, WaveformOrientation::Vertical);
+        assert_eq!(
+            parsed.layout.waveform.orientation,
+            WaveformOrientation::Vertical
+        );
     }
 
     #[test]
@@ -95,8 +107,12 @@ mod skin_unit_tests {
         assert!(list.iter().any(|s| s.metadata.id == "neon-cyberpunk"));
 
         // Hapus skin kustom
-        mgr.delete_skin("neon-cyberpunk").expect("harus berhasil hapus");
-        assert!(!mgr.list_skins().iter().any(|s| s.metadata.id == "neon-cyberpunk"));
+        mgr.delete_skin("neon-cyberpunk")
+            .expect("harus berhasil hapus");
+        assert!(!mgr
+            .list_skins()
+            .iter()
+            .any(|s| s.metadata.id == "neon-cyberpunk"));
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

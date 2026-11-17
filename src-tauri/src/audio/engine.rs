@@ -479,24 +479,43 @@ impl Drop for AudioEngine {
     }
 }
 
+/// Hasil inisialisasi engine yang dikirim dari audio host ke pemanggil.
+type EngineReady = Sender<
+    Result<
+        (
+            StreamReport,
+            [Arc<Deck>; DECK_COUNT],
+            Arc<SamplerController>,
+            Arc<PreviewController>,
+            Arc<RecorderController>,
+            Arc<BroadcastController>,
+        ),
+        AudioError,
+    >,
+>;
+
+/// Consumer RT (sampler, preview, recorder, broadcast) milik callback audio.
+struct RtConsumers {
+    sampler: SamplerRt,
+    preview: PreviewPlayerRt,
+    recorder: RecorderProducer,
+    broadcast: BroadcastProducer,
+}
+
+/// State callback audio: oscillator, mixer, deck reader, dan consumer RT.
+struct CallbackContext {
+    oscillator: ToneOscillator,
+    mixer: Mixer,
+    decks: [DeckReader; DECK_COUNT],
+    consumers: RtConsumers,
+}
+
 fn audio_host_loop(
     request: StartRequest,
     rt: Arc<RtState>,
     info: Arc<Mutex<StreamInfo>>,
     commands: Receiver<AudioCommand>,
-    ready: Sender<
-        Result<
-            (
-                StreamReport,
-                [Arc<Deck>; DECK_COUNT],
-                Arc<SamplerController>,
-                Arc<PreviewController>,
-                Arc<RecorderController>,
-                Arc<BroadcastController>,
-            ),
-            AudioError,
-        >,
-    >,
+    ready: EngineReady,
 ) {
     let opened = match open_stream(&request, Arc::clone(&rt)) {
         Ok(opened) => opened,
@@ -579,25 +598,23 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
         let (recorder, recorder_rt) = RecorderController::new(sample_rate);
         let (broadcast, broadcast_rt) = BroadcastController::new(sample_rate);
 
+        let consumers = RtConsumers {
+            sampler: sampler_rt,
+            preview: preview_rt,
+            recorder: recorder_rt,
+            broadcast: broadcast_rt,
+        };
         let stream = match build_for_format(
             &device,
             sample_format,
             config,
             Arc::clone(&rt),
             readers,
-            sampler_rt,
-            preview_rt,
-            recorder_rt,
-            broadcast_rt,
+            consumers,
         ) {
             Ok(stream) => stream,
             Err(err) => {
-                attempts.push(format!(
-                    "{} ch @ {} Hz: {}",
-                    channels,
-                    sample_rate,
-                    err
-                ));
+                attempts.push(format!("{} ch @ {} Hz: {}", channels, sample_rate, err));
                 continue;
             }
         };
@@ -742,8 +759,7 @@ fn config_candidates(
 
     if candidates.is_empty() {
         return Err(AudioError::UnsupportedConfig(
-            "perangkat tidak mengekspos konfigurasi output yang didukung (f32/i16/u16)"
-                .to_string(),
+            "perangkat tidak mengekspos konfigurasi output yang didukung (f32/i16/u16)".to_string(),
         ));
     }
 
@@ -779,43 +795,15 @@ fn build_for_format(
     config: StreamConfig,
     rt: Arc<RtState>,
     readers: [DeckReader; DECK_COUNT],
-    sampler_rt: SamplerRt,
-    preview_rt: PreviewPlayerRt,
-    recorder_rt: RecorderProducer,
-    broadcast_rt: BroadcastProducer,
+    consumers: RtConsumers,
 ) -> Result<Stream, AudioError> {
     match sample_format {
-        SampleFormat::F32 => build_output::<f32>(
-            device,
-            config,
-            rt,
-            readers,
-            sampler_rt,
-            preview_rt,
-            recorder_rt,
-            broadcast_rt,
-        ),
-        SampleFormat::I16 => build_output::<i16>(
-            device,
-            config,
-            rt,
-            readers,
-            sampler_rt,
-            preview_rt,
-            recorder_rt,
-            broadcast_rt,
-        ),
-        SampleFormat::U16 => build_output::<u16>(
-            device,
-            config,
-            rt,
-            readers,
-            sampler_rt,
-            preview_rt,
-            recorder_rt,
-            broadcast_rt,
-        ),
-        other => Err(AudioError::UnsupportedSampleFormat(sample_format_label(other))),
+        SampleFormat::F32 => build_output::<f32>(device, config, rt, readers, consumers),
+        SampleFormat::I16 => build_output::<i16>(device, config, rt, readers, consumers),
+        SampleFormat::U16 => build_output::<u16>(device, config, rt, readers, consumers),
+        other => Err(AudioError::UnsupportedSampleFormat(sample_format_label(
+            other,
+        ))),
     }
 }
 
@@ -843,19 +831,15 @@ fn build_output<T>(
     device: &Device,
     config: StreamConfig,
     rt: Arc<RtState>,
-    mut decks: [DeckReader; DECK_COUNT],
-    mut sampler_rt: SamplerRt,
-    mut preview_rt: PreviewPlayerRt,
-    mut recorder_rt: RecorderProducer,
-    mut broadcast_rt: BroadcastProducer,
+    decks: [DeckReader; DECK_COUNT],
+    consumers: RtConsumers,
 ) -> Result<Stream, AudioError>
 where
     T: SizedSample + FromSample<f32> + Send + 'static,
 {
     let channels = usize::from(config.channels.max(1));
     let sample_rate = config.sample_rate as f32;
-    let mut oscillator = ToneOscillator::new(sample_rate);
-    let mut mixer = Mixer::new(sample_rate);
+    let mut context = CallbackContext::new(sample_rate, decks, consumers);
 
     let callback_rt = Arc::clone(&rt);
     let error_rt = Arc::clone(&rt);
@@ -864,19 +848,7 @@ where
         .build_output_stream::<T, _, _>(
             config,
             move |data: &mut [T], _info: &cpal::OutputCallbackInfo| {
-                render_block(
-                    data,
-                    channels,
-                    sample_rate,
-                    &callback_rt,
-                    &mut oscillator,
-                    &mut decks,
-                    &mut sampler_rt,
-                    &mut preview_rt,
-                    &mut recorder_rt,
-                    &mut broadcast_rt,
-                    &mut mixer,
-                );
+                context.render_block(data, channels, sample_rate, &callback_rt);
             },
             move |_err| {
                 // Error backend (underrun/device dicabut). Hitung saja; stream
@@ -888,156 +860,158 @@ where
         .map_err(|err| AudioError::BuildStream(err.to_string()))
 }
 
-/// Isi satu buffer output. Fungsi ini berjalan di jalur RT:
-/// tidak ada alokasi, lock, I/O, maupun panic.
-fn render_block<T>(
-    data: &mut [T],
-    channels: usize,
-    sample_rate: f32,
-    rt: &RtState,
-    oscillator: &mut ToneOscillator,
-    decks: &mut [DeckReader; DECK_COUNT],
-    sampler: &mut SamplerRt,
-    preview: &mut PreviewPlayerRt,
-    recorder: &mut RecorderProducer,
-    broadcast: &mut BroadcastProducer,
-    mixer: &mut Mixer,
-) where
-    T: SizedSample + FromSample<f32>,
-{
-    let started = Instant::now();
-    let channels = channels.max(1);
-    let params = rt.mixer.params();
-    let fx_params = rt.fx.params();
-    mixer.configure(&params, &fx_params);
-    let split_cue = params.split_cue && channels == 2;
-    let enabled = rt.tone_enabled.load(Ordering::Relaxed);
-    let frequency = load_f32(&rt.tone_freq).clamp(TONE_MIN_HZ, TONE_MAX_HZ);
-    let tone_target = if enabled {
-        load_f32(&rt.tone_gain)
-    } else {
-        0.0
-    };
-    let tone_smoothing = 1.0 - (-1.0 / (GAIN_SMOOTHING_SECONDS * sample_rate)).exp();
-
-    // Gain deck di-ramp per blok agar perubahan fader tidak klik.
-    let deck_smoothing = 1.0 - (-1.0 / (DECK_GAIN_SMOOTHING_SECONDS * sample_rate)).exp();
-    let (deck_a_target, deck_b_target) = (decks[0].target_gain(), decks[1].target_gain());
-    let (mut deck_a_gain, mut deck_b_gain) = (decks[0].current_gain(), decks[1].current_gain());
-
-    let frames = data.len() / channels;
-    let (first, second) = decks.split_at_mut(1);
-    let deck_a_reader = &mut first[0];
-    let deck_b_reader = &mut second[0];
-    let deck_a_samples = deck_a_reader.prepare(frames);
-    let deck_a_frames = deck_a_samples.len() / 2;
-    let deck_b_samples = deck_b_reader.prepare(frames);
-    let deck_b_frames = deck_b_samples.len() / 2;
-
-    sampler.process_block(frames, 128.0);
-    preview.prepare_block();
-
-    let mut peak = 0.0_f32;
-    let mut deck_a_peak = 0.0_f32;
-    let mut deck_b_peak = 0.0_f32;
-    let mut master_peak_l = 0.0_f32;
-    let mut master_peak_r = 0.0_f32;
-
-    for (index, frame) in data.chunks_mut(channels).enumerate() {
-        let tone = oscillator.next(frequency, tone_target, tone_smoothing);
-        deck_a_gain += (deck_a_target - deck_a_gain) * deck_smoothing;
-        deck_b_gain += (deck_b_target - deck_b_gain) * deck_smoothing;
-
-        let (left, right) = if index < deck_a_frames {
-            (
-                deck_a_samples[index * 2] * deck_a_gain,
-                deck_a_samples[index * 2 + 1] * deck_a_gain,
-            )
-        } else {
-            (0.0, 0.0)
-        };
-        let (left_b, right_b) = if index < deck_b_frames {
-            (
-                deck_b_samples[index * 2] * deck_b_gain,
-                deck_b_samples[index * 2 + 1] * deck_b_gain,
-            )
-        } else {
-            (0.0, 0.0)
-        };
-
-        deck_a_peak = deck_a_peak.max(left.abs()).max(right.abs());
-        deck_b_peak = deck_b_peak.max(left_b.abs()).max(right_b.abs());
-
-        let sampler_sample = if index < frames {
-            sampler.sample_at(index)
-        } else {
-            (0.0, 0.0)
-        };
-        let preview_sample = preview.next_sample();
-
-        let mix = mixer.process(
-            (left, right),
-            (left_b, right_b),
-            sampler_sample,
-            preview_sample,
-            tone,
-        );
-        master_peak_l = master_peak_l.max(mix.master_l.abs());
-        master_peak_r = master_peak_r.max(mix.master_r.abs());
-
-        let mut out_left = soft_clip(mix.master_l);
-        let mut out_right = soft_clip(mix.master_r);
-
-        // Rekam dan broadcast master mix stereo murni (lock-free)
-        recorder.push(out_left, out_right);
-        broadcast.push(out_left, out_right);
-
-        // Perangkat stereo: split cue menaruh cue di L dan master di R.
-        if split_cue {
-            out_left = soft_clip(0.5 * (mix.head_l + mix.head_r));
-            out_right = soft_clip(0.5 * (mix.master_l + mix.master_r));
+impl CallbackContext {
+    fn new(sample_rate: f32, decks: [DeckReader; DECK_COUNT], consumers: RtConsumers) -> Self {
+        Self {
+            oscillator: ToneOscillator::new(sample_rate),
+            mixer: Mixer::new(sample_rate),
+            decks,
+            consumers,
         }
+    }
 
-        let head_left = soft_clip(mix.head_l);
-        let head_right = soft_clip(mix.head_r);
-        peak = peak.max(out_left.abs()).max(out_right.abs());
+    /// Isi satu buffer output. Fungsi ini berjalan di jalur RT:
+    /// tidak ada alokasi, lock, I/O, maupun panic.
+    fn render_block<T>(&mut self, data: &mut [T], channels: usize, sample_rate: f32, rt: &RtState)
+    where
+        T: SizedSample + FromSample<f32>,
+    {
+        let started = Instant::now();
+        let channels = channels.max(1);
+        let params = rt.mixer.params();
+        let fx_params = rt.fx.params();
+        self.mixer.configure(&params, &fx_params);
+        let split_cue = params.split_cue && channels == 2;
+        let enabled = rt.tone_enabled.load(Ordering::Relaxed);
+        let frequency = load_f32(&rt.tone_freq).clamp(TONE_MIN_HZ, TONE_MAX_HZ);
+        let tone_target = if enabled {
+            load_f32(&rt.tone_gain)
+        } else {
+            0.0
+        };
+        let tone_smoothing = 1.0 - (-1.0 / (GAIN_SMOOTHING_SECONDS * sample_rate)).exp();
 
-        for (channel, slot) in frame.iter_mut().enumerate() {
-            let value = match channel {
-                0 => out_left,
-                1 => out_right,
-                2 if channels >= 4 => head_left,
-                3 if channels >= 4 => head_right,
-                _ => 0.0,
+        // Gain deck di-ramp per blok agar perubahan fader tidak klik.
+        let deck_smoothing = 1.0 - (-1.0 / (DECK_GAIN_SMOOTHING_SECONDS * sample_rate)).exp();
+        let (deck_a_target, deck_b_target) =
+            (self.decks[0].target_gain(), self.decks[1].target_gain());
+        let (mut deck_a_gain, mut deck_b_gain) =
+            (self.decks[0].current_gain(), self.decks[1].current_gain());
+
+        let frames = data.len() / channels;
+        let (first, second) = self.decks.split_at_mut(1);
+        let deck_a_reader = &mut first[0];
+        let deck_b_reader = &mut second[0];
+        let deck_a_samples = deck_a_reader.prepare(frames);
+        let deck_a_frames = deck_a_samples.len() / 2;
+        let deck_b_samples = deck_b_reader.prepare(frames);
+        let deck_b_frames = deck_b_samples.len() / 2;
+
+        self.consumers.sampler.process_block(frames, 128.0);
+        self.consumers.preview.prepare_block();
+
+        let mut peak = 0.0_f32;
+        let mut deck_a_peak = 0.0_f32;
+        let mut deck_b_peak = 0.0_f32;
+        let mut master_peak_l = 0.0_f32;
+        let mut master_peak_r = 0.0_f32;
+
+        for (index, frame) in data.chunks_mut(channels).enumerate() {
+            let tone = self.oscillator.next(frequency, tone_target, tone_smoothing);
+            deck_a_gain += (deck_a_target - deck_a_gain) * deck_smoothing;
+            deck_b_gain += (deck_b_target - deck_b_gain) * deck_smoothing;
+
+            let (left, right) = if index < deck_a_frames {
+                (
+                    deck_a_samples[index * 2] * deck_a_gain,
+                    deck_a_samples[index * 2 + 1] * deck_a_gain,
+                )
+            } else {
+                (0.0, 0.0)
             };
-            *slot = T::from_sample_(value);
+            let (left_b, right_b) = if index < deck_b_frames {
+                (
+                    deck_b_samples[index * 2] * deck_b_gain,
+                    deck_b_samples[index * 2 + 1] * deck_b_gain,
+                )
+            } else {
+                (0.0, 0.0)
+            };
+
+            deck_a_peak = deck_a_peak.max(left.abs()).max(right.abs());
+            deck_b_peak = deck_b_peak.max(left_b.abs()).max(right_b.abs());
+
+            let sampler_sample = if index < frames {
+                self.consumers.sampler.sample_at(index)
+            } else {
+                (0.0, 0.0)
+            };
+            let preview_sample = self.consumers.preview.next_sample();
+
+            let mix = self.mixer.process(
+                (left, right),
+                (left_b, right_b),
+                sampler_sample,
+                preview_sample,
+                tone,
+            );
+            master_peak_l = master_peak_l.max(mix.master_l.abs());
+            master_peak_r = master_peak_r.max(mix.master_r.abs());
+
+            let mut out_left = soft_clip(mix.master_l);
+            let mut out_right = soft_clip(mix.master_r);
+
+            // Rekam dan broadcast master mix stereo murni (lock-free)
+            self.consumers.recorder.push(out_left, out_right);
+            self.consumers.broadcast.push(out_left, out_right);
+
+            // Perangkat stereo: split cue menaruh cue di L dan master di R.
+            if split_cue {
+                out_left = soft_clip(0.5 * (mix.head_l + mix.head_r));
+                out_right = soft_clip(0.5 * (mix.master_l + mix.master_r));
+            }
+
+            let head_left = soft_clip(mix.head_l);
+            let head_right = soft_clip(mix.head_r);
+            peak = peak.max(out_left.abs()).max(out_right.abs());
+
+            for (channel, slot) in frame.iter_mut().enumerate() {
+                let value = match channel {
+                    0 => out_left,
+                    1 => out_right,
+                    2 if channels >= 4 => head_left,
+                    3 if channels >= 4 => head_right,
+                    _ => 0.0,
+                };
+                *slot = T::from_sample_(value);
+            }
         }
+
+        deck_a_reader.set_current_gain(deck_a_gain);
+        deck_b_reader.set_current_gain(deck_b_gain);
+        deck_a_reader.report_peak(deck_a_peak);
+        deck_b_reader.report_peak(deck_b_peak);
+
+        rt.master_peak_l
+            .fetch_max(master_peak_l.to_bits(), Ordering::Relaxed);
+        rt.master_peak_r
+            .fetch_max(master_peak_r.to_bits(), Ordering::Relaxed);
+        let reduction = self.mixer.take_limiter_reduction_db();
+        if reduction > 0.0 {
+            rt.limiter_reduction
+                .fetch_max(reduction.to_bits(), Ordering::Relaxed);
+        }
+
+        rt.callbacks.fetch_add(1, Ordering::Relaxed);
+        rt.frames.fetch_add(frames as u64, Ordering::Relaxed);
+        rt.peak.fetch_max(peak.to_bits(), Ordering::Relaxed);
+
+        self.consumers.preview.finish_block();
+
+        let elapsed_us = started.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
+        rt.callback_us_last.store(elapsed_us, Ordering::Relaxed);
+        rt.callback_us_max.fetch_max(elapsed_us, Ordering::Relaxed);
     }
-
-    deck_a_reader.set_current_gain(deck_a_gain);
-    deck_b_reader.set_current_gain(deck_b_gain);
-    deck_a_reader.report_peak(deck_a_peak);
-    deck_b_reader.report_peak(deck_b_peak);
-
-    rt.master_peak_l
-        .fetch_max(master_peak_l.to_bits(), Ordering::Relaxed);
-    rt.master_peak_r
-        .fetch_max(master_peak_r.to_bits(), Ordering::Relaxed);
-    let reduction = mixer.take_limiter_reduction_db();
-    if reduction > 0.0 {
-        rt.limiter_reduction
-            .fetch_max(reduction.to_bits(), Ordering::Relaxed);
-    }
-
-    rt.callbacks.fetch_add(1, Ordering::Relaxed);
-    rt.frames.fetch_add(frames as u64, Ordering::Relaxed);
-    rt.peak.fetch_max(peak.to_bits(), Ordering::Relaxed);
-
-    preview.finish_block();
-
-    let elapsed_us = started.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
-    rt.callback_us_last.store(elapsed_us, Ordering::Relaxed);
-    rt.callback_us_max.fetch_max(elapsed_us, Ordering::Relaxed);
 }
 
 /// Generator sine dengan phase accumulator + smoothing gain 5 ms.
@@ -1141,31 +1115,23 @@ mod tests {
         let rt = RtState::new(&request);
         rt.tone_enabled.store(true, Ordering::Relaxed);
 
-        let mut oscillator = ToneOscillator::new(48_000.0);
         let (_deck_a, deck_a_reader) = Deck::new(48_000).expect("deck a");
         let (_deck_b, deck_b_reader) = Deck::new(48_000).expect("deck b");
-        let mut decks = [deck_a_reader, deck_b_reader];
-        let (_sampler_ctrl, mut sampler_rt) = SamplerController::new(48_000);
-        let (_preview_ctrl, mut preview_rt) = PreviewController::new(48_000);
-        let (_rec_ctrl, mut rec_rt) = RecorderController::new(48_000);
-        let (_bc_ctrl, mut bc_rt) = BroadcastController::new(48_000);
-        let mut mixer = Mixer::new(48_000.0);
+        let (_sampler_ctrl, sampler_rt) = SamplerController::new(48_000);
+        let (_preview_ctrl, preview_rt) = PreviewController::new(48_000);
+        let (_rec_ctrl, rec_rt) = RecorderController::new(48_000);
+        let (_bc_ctrl, bc_rt) = BroadcastController::new(48_000);
+        let consumers = RtConsumers {
+            sampler: sampler_rt,
+            preview: preview_rt,
+            recorder: rec_rt,
+            broadcast: bc_rt,
+        };
+        let mut context = CallbackContext::new(48_000.0, [deck_a_reader, deck_b_reader], consumers);
         let mut buffer = vec![0.0_f32; 256 * 2];
         // Paksa gain ramp mencapai target supaya peak terdeteksi.
         for _ in 0..64 {
-            render_block(
-                &mut buffer,
-                2,
-                48_000.0,
-                &rt,
-                &mut oscillator,
-                &mut decks,
-                &mut sampler_rt,
-                &mut preview_rt,
-                &mut rec_rt,
-                &mut bc_rt,
-                &mut mixer,
-            );
+            context.render_block(&mut buffer, 2, 48_000.0, &rt);
         }
 
         assert!(buffer.iter().all(|sample| sample.is_finite()));

@@ -4,8 +4,8 @@
 //! bisa diganti/dimatikan dari command. Mutex ini TIDAK pernah dipakai di jalur
 //! audio real-time.
 
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 use crate::analysis::waveform::WaveformDto;
 use crate::audio::autodj::{AutoDjStatus, AutoDjUpdate};
@@ -24,8 +24,7 @@ use crate::library::db::{
 use crate::library::preview::PreviewStatus;
 use crate::library::scanner::{ScanProgress, ScannerManager};
 use crate::midi::{
-    DjAction, KeyboardBinding, MidiLearnStatus, MidiMapping, MidiPortInfo, MidiStatus,
-    MidiManager,
+    DjAction, KeyboardBinding, MidiLearnStatus, MidiManager, MidiMapping, MidiPortInfo, MidiStatus,
 };
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 use crate::skin::{default_skins_dir, SkinManager, SkinManifest};
@@ -41,9 +40,8 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         let db_path = default_db_path();
-        let db = Arc::new(
-            LibraryDb::new(db_path).unwrap_or_else(|_| LibraryDb::in_memory().unwrap()),
-        );
+        let db =
+            Arc::new(LibraryDb::new(db_path).unwrap_or_else(|_| LibraryDb::in_memory().unwrap()));
         let scanner = ScannerManager::new();
         let engine = Arc::new(Mutex::new(None));
         let presets_dir = default_presets_dir();
@@ -62,7 +60,9 @@ impl Default for AppState {
 
 fn default_presets_dir() -> std::path::PathBuf {
     if let Ok(appdata) = std::env::var("APPDATA") {
-        std::path::PathBuf::from(appdata).join("djdex").join("presets")
+        std::path::PathBuf::from(appdata)
+            .join("djdex")
+            .join("presets")
     } else if let Ok(home) = std::env::var("HOME") {
         std::path::PathBuf::from(home)
             .join(".local")
@@ -76,7 +76,9 @@ fn default_presets_dir() -> std::path::PathBuf {
 
 fn default_db_path() -> std::path::PathBuf {
     if let Ok(appdata) = std::env::var("APPDATA") {
-        std::path::PathBuf::from(appdata).join("djdex").join("djdex_library.db")
+        std::path::PathBuf::from(appdata)
+            .join("djdex")
+            .join("djdex_library.db")
     } else if let Ok(home) = std::env::var("HOME") {
         std::path::PathBuf::from(home)
             .join(".local")
@@ -335,7 +337,11 @@ impl AppState {
         self.with_engine(|engine| Ok(engine.sampler().status()))
     }
 
-    pub fn trigger_sampler_pad(&self, pad_id: usize, velocity: Option<f32>) -> Result<(), AudioError> {
+    pub fn trigger_sampler_pad(
+        &self,
+        pad_id: usize,
+        velocity: Option<f32>,
+    ) -> Result<(), AudioError> {
         self.with_engine(|engine| {
             engine.sampler().trigger_pad(pad_id, velocity);
             Ok(())
@@ -377,14 +383,22 @@ impl AppState {
         })
     }
 
-    pub fn update_sampler_pad(&self, pad_id: usize, update: PadUpdate) -> Result<SamplerStatus, AudioError> {
+    pub fn update_sampler_pad(
+        &self,
+        pad_id: usize,
+        update: PadUpdate,
+    ) -> Result<SamplerStatus, AudioError> {
         self.with_engine(|engine| {
             engine.sampler().update_pad(pad_id, update);
             Ok(engine.sampler().status())
         })
     }
 
-    pub fn load_sampler_pad_file(&self, pad_id: usize, path_str: String) -> Result<SamplerStatus, AudioError> {
+    pub fn load_sampler_pad_file(
+        &self,
+        pad_id: usize,
+        path_str: String,
+    ) -> Result<SamplerStatus, AudioError> {
         self.with_engine(|engine| {
             let path = std::path::PathBuf::from(&path_str);
             let mut decoder = TrackDecoder::open(&path)?;
@@ -409,7 +423,9 @@ impl AppState {
                 .unwrap_or("Custom")
                 .to_string();
 
-            engine.sampler().load_pad_audio(pad_id, final_samples, target_rate, Some(name));
+            engine
+                .sampler()
+                .load_pad_audio(pad_id, final_samples, target_rate, Some(name));
             Ok(engine.sampler().status())
         })
     }
@@ -468,12 +484,11 @@ impl AppState {
                 samples
             };
 
-            let name = format!(
-                "Deck {} Slice",
-                if deck_slot == 0 { "A" } else { "B" }
-            );
+            let name = format!("Deck {} Slice", if deck_slot == 0 { "A" } else { "B" });
 
-            engine.sampler().load_pad_audio(pad_id, final_samples, target_rate, Some(name));
+            engine
+                .sampler()
+                .load_pad_audio(pad_id, final_samples, target_rate, Some(name));
             Ok(engine.sampler().status())
         })
     }
@@ -487,13 +502,17 @@ impl AppState {
 
     pub fn export_sample_pack(&self, dest_path: String) -> Result<(), AudioError> {
         self.with_engine(|engine| {
-            engine.sampler().export_pack(std::path::Path::new(&dest_path))
+            engine
+                .sampler()
+                .export_pack(std::path::Path::new(&dest_path))
         })
     }
 
     pub fn import_sample_pack(&self, zip_path: String) -> Result<SamplerStatus, AudioError> {
         self.with_engine(|engine| {
-            engine.sampler().import_pack(std::path::Path::new(&zip_path))?;
+            engine
+                .sampler()
+                .import_pack(std::path::Path::new(&zip_path))?;
             Ok(engine.sampler().status())
         })
     }
@@ -568,7 +587,8 @@ impl AppState {
         playlist_id: i64,
         track_id: i64,
     ) -> Result<(), AudioError> {
-        self.library.remove_track_from_playlist(playlist_id, track_id)
+        self.library
+            .remove_track_from_playlist(playlist_id, track_id)
     }
 
     pub fn import_playlist(&self, file_path: String) -> Result<i64, AudioError> {
@@ -758,7 +778,11 @@ impl AppState {
         self.skin.lock().delete_skin(skin_id)
     }
 
-    pub fn export_skin_pack(&self, skin_id: &str, dest_path: &std::path::Path) -> Result<(), String> {
+    pub fn export_skin_pack(
+        &self,
+        skin_id: &str,
+        dest_path: &std::path::Path,
+    ) -> Result<(), String> {
         self.skin.lock().export_skin_pack(skin_id, dest_path)
     }
 
@@ -841,7 +865,9 @@ fn default_recordings_dir() -> std::path::PathBuf {
     if let Ok(music) = std::env::var("XDG_MUSIC_DIR") {
         std::path::PathBuf::from(music).join("DJDeX Recordings")
     } else if let Ok(home) = std::env::var("HOME") {
-        std::path::PathBuf::from(home).join("Music").join("DJDeX Recordings")
+        std::path::PathBuf::from(home)
+            .join("Music")
+            .join("DJDeX Recordings")
     } else {
         std::path::PathBuf::from("recordings")
     }

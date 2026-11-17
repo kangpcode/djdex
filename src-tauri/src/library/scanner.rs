@@ -188,7 +188,9 @@ pub fn extract_metadata(path: &Path) -> Result<LibraryTrack, AudioError> {
         .read()
         .map_err(|e| AudioError::Io(e.to_string()))?;
 
-    let tag = tagged_file.primary_tag().or_else(|| tagged_file.first_tag());
+    let tag = tagged_file
+        .primary_tag()
+        .or_else(|| tagged_file.first_tag());
     let properties = tagged_file.properties();
 
     let duration = properties.duration().as_secs_f64();

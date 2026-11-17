@@ -31,7 +31,12 @@ fn test_default_banks_initialization() {
     for bank in &banks {
         assert_eq!(bank.pads.len(), 16);
         for pad in &bank.pads {
-            assert!(pad.is_loaded(), "Pad {} di bank {} harus terisi audio", pad.id, bank.name);
+            assert!(
+                pad.is_loaded(),
+                "Pad {} di bank {} harus terisi audio",
+                pad.id,
+                bank.name
+            );
             assert!(pad.duration_secs > 0.0);
         }
     }
@@ -81,8 +86,14 @@ fn test_sampler_process_renders_audio_on_trigger() {
     // Audio harus terisi sinyal Kick
     let energy_l: f32 = (0..frames).map(|i| rt.sample_at(i).0.abs()).sum();
     let energy_r: f32 = (0..frames).map(|i| rt.sample_at(i).1.abs()).sum();
-    assert!(energy_l > 0.0, "Output kiri harus menghasilkan audio setelah pad dipicu");
-    assert!(energy_r > 0.0, "Output kanan harus menghasilkan audio setelah pad dipicu");
+    assert!(
+        energy_l > 0.0,
+        "Output kiri harus menghasilkan audio setelah pad dipicu"
+    );
+    assert!(
+        energy_r > 0.0,
+        "Output kanan harus menghasilkan audio setelah pad dipicu"
+    );
 }
 
 #[test]

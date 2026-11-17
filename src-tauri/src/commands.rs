@@ -373,7 +373,9 @@ pub fn trigger_sampler_pad(
     pad: usize,
     velocity: Option<f32>,
 ) -> IpcResult<()> {
-    state.trigger_sampler_pad(pad, velocity).map_err(|e| e.to_string())
+    state
+        .trigger_sampler_pad(pad, velocity)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -407,7 +409,9 @@ pub fn update_sampler_pad(
     pad: usize,
     update: PadUpdate,
 ) -> IpcResult<SamplerStatus> {
-    state.update_sampler_pad(pad, update).map_err(|e| e.to_string())
+    state
+        .update_sampler_pad(pad, update)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -416,7 +420,9 @@ pub fn load_sampler_pad_file(
     pad: usize,
     path: String,
 ) -> IpcResult<SamplerStatus> {
-    state.load_sampler_pad_file(pad, path).map_err(|e| e.to_string())
+    state
+        .load_sampler_pad_file(pad, path)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -445,10 +451,7 @@ pub fn export_sample_pack(state: State<'_, AppState>, path: String) -> IpcResult
 }
 
 #[tauri::command]
-pub fn import_sample_pack(
-    state: State<'_, AppState>,
-    path: String,
-) -> IpcResult<SamplerStatus> {
+pub fn import_sample_pack(state: State<'_, AppState>, path: String) -> IpcResult<SamplerStatus> {
     state.import_sample_pack(path).map_err(|e| e.to_string())
 }
 
@@ -738,10 +741,7 @@ pub fn get_keyboard_mappings(state: State<'_, AppState>) -> Vec<KeyboardBinding>
 }
 
 #[tauri::command]
-pub fn set_keyboard_mapping(
-    state: State<'_, AppState>,
-    binding: KeyboardBinding,
-) -> IpcResult<()> {
+pub fn set_keyboard_mapping(state: State<'_, AppState>, binding: KeyboardBinding) -> IpcResult<()> {
     state.set_keyboard_mapping(binding);
     Ok(())
 }
@@ -796,10 +796,7 @@ pub fn get_active_skin(state: State<'_, AppState>) -> SkinManifest {
 }
 
 #[tauri::command]
-pub fn set_active_skin(
-    state: State<'_, AppState>,
-    skin_id: String,
-) -> IpcResult<SkinManifest> {
+pub fn set_active_skin(state: State<'_, AppState>, skin_id: String) -> IpcResult<SkinManifest> {
     state.set_active_skin(&skin_id)
 }
 
@@ -826,10 +823,7 @@ pub fn export_skin_pack(
 }
 
 #[tauri::command]
-pub fn import_skin_pack(
-    state: State<'_, AppState>,
-    zip_path: String,
-) -> IpcResult<SkinManifest> {
+pub fn import_skin_pack(state: State<'_, AppState>, zip_path: String) -> IpcResult<SkinManifest> {
     state.import_skin_pack(std::path::Path::new(&zip_path))
 }
 

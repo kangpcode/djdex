@@ -101,7 +101,10 @@ impl KeyboardManager {
             ctrl: false,
             shift: false,
             alt: false,
-            action: DjAction::DeckPitchBend { deck: 0, direction: -1 },
+            action: DjAction::DeckPitchBend {
+                deck: 0,
+                direction: -1,
+            },
             description: Some("Deck 1: Pitch Bend Slow Down".to_string()),
         });
         self.bindings.push(KeyboardBinding {
@@ -109,7 +112,10 @@ impl KeyboardManager {
             ctrl: false,
             shift: false,
             alt: false,
-            action: DjAction::DeckPitchBend { deck: 0, direction: 1 },
+            action: DjAction::DeckPitchBend {
+                deck: 0,
+                direction: 1,
+            },
             description: Some("Deck 1: Pitch Bend Speed Up".to_string()),
         });
         self.bindings.push(KeyboardBinding {
@@ -179,7 +185,10 @@ impl KeyboardManager {
             ctrl: false,
             shift: false,
             alt: false,
-            action: DjAction::DeckPitchBend { deck: 1, direction: -1 },
+            action: DjAction::DeckPitchBend {
+                deck: 1,
+                direction: -1,
+            },
             description: Some("Deck 2: Pitch Bend Slow Down".to_string()),
         });
         self.bindings.push(KeyboardBinding {
@@ -187,7 +196,10 @@ impl KeyboardManager {
             ctrl: false,
             shift: false,
             alt: false,
-            action: DjAction::DeckPitchBend { deck: 1, direction: 1 },
+            action: DjAction::DeckPitchBend {
+                deck: 1,
+                direction: 1,
+            },
             description: Some("Deck 2: Pitch Bend Speed Up".to_string()),
         });
         self.bindings.push(KeyboardBinding {

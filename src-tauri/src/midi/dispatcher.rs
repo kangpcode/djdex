@@ -451,12 +451,8 @@ impl MidiDispatcher {
                 }
                 DjAction::DeckCue { deck } => {
                     if let Ok(d) = engine.deck(*deck) {
-                        let _ = dev.send_led(
-                            m.channel,
-                            m.control,
-                            is_cc,
-                            d.status().cue_secs > 0.0,
-                        );
+                        let _ =
+                            dev.send_led(m.channel, m.control, is_cc, d.status().cue_secs > 0.0);
                     }
                 }
                 DjAction::DeckLoopToggle { deck } => {

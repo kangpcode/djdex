@@ -3,7 +3,9 @@
 use std::fs;
 use std::path::PathBuf;
 
-use super::types::{DjAction, JogWheelMode, MidiEvent, MidiLearnStatus, MidiMapping, MidiMessageType};
+use super::types::{
+    DjAction, JogWheelMode, MidiEvent, MidiLearnStatus, MidiMapping, MidiMessageType,
+};
 
 pub const FACTORY_PRESET_PIONEER: &str = "Pioneer DDJ-400 / DDJ-FLX4";
 pub const FACTORY_PRESET_HERCULES: &str = "Hercules DJControl Inpulse";
@@ -59,10 +61,7 @@ impl MidiMappingManager {
     /// Memproses event MIDI masuk:
     /// - Jika dalam mode MIDI Learn, langsung memetakan event ke target aksi.
     /// - Jika dalam mode normal, mencari aksi DJ yang sesuai.
-    pub fn process_event(
-        &mut self,
-        event: &MidiEvent,
-    ) -> (Option<MidiMapping>, Option<DjAction>) {
+    pub fn process_event(&mut self, event: &MidiEvent) -> (Option<MidiMapping>, Option<DjAction>) {
         if self.learn_status.is_learning {
             // Hindari NoteOff atau NoteOn velocity 0 saat proses learning tombol
             if event.message_type == MidiMessageType::NoteOff

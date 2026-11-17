@@ -125,7 +125,8 @@ impl PreviewPlayerRt {
     }
 
     pub fn update_ui_atomics(&self) {
-        self.playing_atomic.store(self.is_playing, Ordering::Relaxed);
+        self.playing_atomic
+            .store(self.is_playing, Ordering::Relaxed);
         let pos_sec = (self.cursor / self.sample_rate as f64) as f32;
         self.pos_atomic.store(pos_sec.to_bits(), Ordering::Relaxed);
     }

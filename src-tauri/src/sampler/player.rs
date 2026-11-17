@@ -1,10 +1,10 @@
 //! Mesin playback audio Sampler real-time dan Controller lock-free untuk UI.
 
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::Arc;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::Arc;
 
 use super::bank::{create_default_banks, SampleBank, BANK_COUNT, PADS_PER_BANK};
 use super::pad::{PadDto, PadMode, PadUpdate};
@@ -345,11 +345,7 @@ impl SamplerRt {
 
     /// Render satu blok sampel audio sampler ke dalam buffer internal scratch.
     /// Tidak ada alokasi memori heap, mutex, atau syscall di fungsi ini jika frames <= 4096.
-    pub fn process_block(
-        &mut self,
-        frames: usize,
-        master_bpm: f32,
-    ) {
+    pub fn process_block(&mut self, frames: usize, master_bpm: f32) {
         self.handle_commands(master_bpm);
 
         if self.scratch_l.len() < frames {
@@ -453,8 +449,12 @@ impl SamplerRt {
 
         // Update atomik untuk polling UI cepat
         for p in 0..PADS_PER_BANK {
-            self.pad_states[p].is_playing.store(pad_active[p], Ordering::Relaxed);
-            self.pad_states[p].progress_bits.store(pad_progress[p].to_bits(), Ordering::Relaxed);
+            self.pad_states[p]
+                .is_playing
+                .store(pad_active[p], Ordering::Relaxed);
+            self.pad_states[p]
+                .progress_bits
+                .store(pad_progress[p].to_bits(), Ordering::Relaxed);
         }
     }
 
@@ -482,9 +482,8 @@ pub struct SamplerController {
 impl SamplerController {
     pub fn new(sample_rate: u32) -> (Self, SamplerRt) {
         let (command_tx, command_rx) = bounded(256);
-        let pad_states: Arc<[AtomicPadState; PADS_PER_BANK]> = Arc::new(std::array::from_fn(|_| {
-            AtomicPadState::default()
-        }));
+        let pad_states: Arc<[AtomicPadState; PADS_PER_BANK]> =
+            Arc::new(std::array::from_fn(|_| AtomicPadState::default()));
         let default_banks = create_default_banks(sample_rate);
         let banks = Arc::new(RwLock::new(default_banks));
         let active_bank = Arc::new(RwLock::new(0));
@@ -540,7 +539,9 @@ impl SamplerController {
     pub fn set_master_volume(&self, vol: f32) {
         let clamped = vol.clamp(0.0, 2.0);
         *self.master_volume.write() = clamped;
-        let _ = self.command_tx.send(SamplerCommand::SetMasterVolume(clamped));
+        let _ = self
+            .command_tx
+            .send(SamplerCommand::SetMasterVolume(clamped));
     }
 
     pub fn update_pad(&self, pad_id: usize, update: PadUpdate) {
@@ -649,7 +650,9 @@ impl SamplerController {
                 seq.pad_mappings = mappings;
             }
         }
-        let _ = self.command_tx.send(SamplerCommand::SequencerUpdate(update));
+        let _ = self
+            .command_tx
+            .send(SamplerCommand::SequencerUpdate(update));
     }
 
     pub fn export_pack(&self, dest_path: &std::path::Path) -> Result<(), AudioError> {

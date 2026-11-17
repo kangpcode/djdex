@@ -136,7 +136,11 @@ impl SkinManager {
                 Ok(self.active_skin.clone())
             }
             custom_id => {
-                if let Some(found) = self.custom_skins.iter().find(|s| s.metadata.id == custom_id) {
+                if let Some(found) = self
+                    .custom_skins
+                    .iter()
+                    .find(|s| s.metadata.id == custom_id)
+                {
                     self.active_skin = found.clone();
                     Ok(self.active_skin.clone())
                 } else {
@@ -215,8 +219,8 @@ impl SkinManager {
         let file = File::create(destination_path)
             .map_err(|e| format!("Gagal membuat file export: {}", e))?;
         let mut zip = ZipWriter::new(file);
-        let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Deflated);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
         // Tulis skin.json
         let json_content = manifest.to_json()?;
@@ -239,10 +243,10 @@ impl SkinManager {
 
     /// Impor paket skin dari file .djdex-skin (.zip).
     pub fn import_skin_pack(&mut self, zip_path: &Path) -> Result<SkinManifest, String> {
-        let file = File::open(zip_path)
-            .map_err(|e| format!("Gagal membuka file skin pack: {}", e))?;
-        let mut archive = ZipArchive::new(file)
-            .map_err(|e| format!("Format arsip skin tidak valid: {}", e))?;
+        let file =
+            File::open(zip_path).map_err(|e| format!("Gagal membuka file skin pack: {}", e))?;
+        let mut archive =
+            ZipArchive::new(file).map_err(|e| format!("Format arsip skin tidak valid: {}", e))?;
 
         // Cari skin.json atau manifest.json atau skin.toml
         let mut target_name = None;

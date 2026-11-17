@@ -1,8 +1,8 @@
 //! Manajer sentral MIDI & Keyboard yang mengoordinasikan perangkat, pemetaan, dan eksekusi aksi.
 
+use parking_lot::Mutex;
 use std::path::PathBuf;
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 use crate::audio::engine::AudioEngine;
 
@@ -24,10 +24,7 @@ pub struct MidiManager {
 }
 
 impl MidiManager {
-    pub fn new(
-        presets_dir: Option<PathBuf>,
-        engine: Arc<Mutex<Option<AudioEngine>>>,
-    ) -> Arc<Self> {
+    pub fn new(presets_dir: Option<PathBuf>, engine: Arc<Mutex<Option<AudioEngine>>>) -> Arc<Self> {
         Arc::new(Self {
             device: Mutex::new(MidiDeviceManager::new()),
             mapping: Mutex::new(MidiMappingManager::new(presets_dir)),

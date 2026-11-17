@@ -35,7 +35,9 @@ impl MidiDeviceManager {
         let mut result = Vec::with_capacity(ports.len());
 
         for (id, port) in ports.iter().enumerate() {
-            let name = midi_in.port_name(port).unwrap_or_else(|_| format!("MIDI In {}", id));
+            let name = midi_in
+                .port_name(port)
+                .unwrap_or_else(|_| format!("MIDI In {}", id));
             result.push(MidiPortInfo { id, name });
         }
 
@@ -49,7 +51,9 @@ impl MidiDeviceManager {
         let mut result = Vec::with_capacity(ports.len());
 
         for (id, port) in ports.iter().enumerate() {
-            let name = midi_out.port_name(port).unwrap_or_else(|_| format!("MIDI Out {}", id));
+            let name = midi_out
+                .port_name(port)
+                .unwrap_or_else(|_| format!("MIDI Out {}", id));
             result.push(MidiPortInfo { id, name });
         }
 

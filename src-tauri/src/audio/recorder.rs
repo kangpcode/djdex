@@ -56,9 +56,7 @@ impl RecorderProducer {
     /// Metode ini aman untuk thread real-time (lock-free, tanpa alokasi memori).
     #[inline]
     pub fn push(&mut self, left: f32, right: f32) {
-        if self.is_recording.load(Ordering::Relaxed)
-            && !self.is_paused.load(Ordering::Relaxed)
-        {
+        if self.is_recording.load(Ordering::Relaxed) && !self.is_paused.load(Ordering::Relaxed) {
             let _ = self.producer.push((left, right));
         }
     }
@@ -168,7 +166,8 @@ impl RecorderController {
                         if let Some(base) = &base_output_path {
                             let next_path = make_split_path(base, local_split_idx);
                             *current_path.lock() = Some(next_path.clone());
-                            if let Ok(w) = create_wav_writer(&next_path, sample_rate, active_format) {
+                            if let Ok(w) = create_wav_writer(&next_path, sample_rate, active_format)
+                            {
                                 current_writer = Some(w);
                             }
                         }
@@ -183,7 +182,9 @@ impl RecorderController {
                                 active_format = *current_format.lock();
                                 local_split_idx = 0;
                                 split_count.store(0, Ordering::Relaxed);
-                                if let Ok(writer) = create_wav_writer(path, sample_rate, active_format) {
+                                if let Ok(writer) =
+                                    create_wav_writer(path, sample_rate, active_format)
+                                {
                                     current_writer = Some(writer);
                                 }
                             }
@@ -227,7 +228,10 @@ impl RecorderController {
                                     RecordFormat::Wav24 => 6,
                                     RecordFormat::Wav32Float => 8,
                                 };
-                                bytes_written.fetch_add(frames_this_batch * bytes_per_frame, Ordering::Relaxed);
+                                bytes_written.fetch_add(
+                                    frames_this_batch * bytes_per_frame,
+                                    Ordering::Relaxed,
+                                );
                                 peak_l.store(max_l.to_bits(), Ordering::Relaxed);
                                 peak_r.store(max_r.to_bits(), Ordering::Relaxed);
                             }
@@ -272,7 +276,11 @@ impl RecorderController {
     }
 
     /// Mulai merekam master mix ke file tujuan dengan format yang ditentukan.
-    pub fn start(&self, output_path: PathBuf, format: RecordFormat) -> Result<RecorderStatus, AudioError> {
+    pub fn start(
+        &self,
+        output_path: PathBuf,
+        format: RecordFormat,
+    ) -> Result<RecorderStatus, AudioError> {
         if self.is_recording.load(Ordering::SeqCst) {
             return Ok(self.status());
         }
@@ -336,7 +344,11 @@ impl RecorderController {
         let duration_secs = frames as f64 / self.sample_rate as f64;
         let p_l = f32::from_bits(self.peak_l.load(Ordering::Relaxed));
         let p_r = f32::from_bits(self.peak_r.load(Ordering::Relaxed));
-        let file_path = self.current_path.lock().as_ref().map(|p| p.to_string_lossy().to_string());
+        let file_path = self
+            .current_path
+            .lock()
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string());
         let format = *self.current_format.lock();
 
         RecorderStatus {
@@ -390,7 +402,8 @@ fn create_wav_writer(
         },
     };
 
-    WavWriter::create(path, spec).map_err(|e| AudioError::Io(format!("Gagal membuat file WAV: {}", e)))
+    WavWriter::create(path, spec)
+        .map_err(|e| AudioError::Io(format!("Gagal membuat file WAV: {}", e)))
 }
 
 fn make_split_path(base_path: &Path, split_idx: u32) -> PathBuf {
@@ -413,7 +426,13 @@ mod tests {
 
     #[test]
     fn test_recorder_workflow_wav16() {
-        let dir = std::env::temp_dir().join(format!("djdex_rec_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let dir = std::env::temp_dir().join(format!(
+            "djdex_rec_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let file_path = dir.join("test_mix.wav");
 
@@ -422,7 +441,9 @@ mod tests {
         assert!(!status.is_recording);
         assert_eq!(status.frames_recorded, 0);
 
-        let started = controller.start(file_path.clone(), RecordFormat::Wav16).expect("start");
+        let started = controller
+            .start(file_path.clone(), RecordFormat::Wav16)
+            .expect("start");
         assert!(started.is_recording);
         assert!(!started.is_paused);
 
@@ -467,12 +488,20 @@ mod tests {
 
     #[test]
     fn test_recorder_split() {
-        let dir = std::env::temp_dir().join(format!("djdex_split_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let dir = std::env::temp_dir().join(format!(
+            "djdex_split_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let file_path = dir.join("split_session.wav");
 
         let (controller, mut producer) = RecorderController::new(44100);
-        controller.start(file_path.clone(), RecordFormat::Wav32Float).expect("start");
+        controller
+            .start(file_path.clone(), RecordFormat::Wav32Float)
+            .expect("start");
 
         for _ in 0..500 {
             producer.push(0.3, -0.3);

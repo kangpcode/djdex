@@ -196,7 +196,8 @@ impl BroadcastController {
 
                         if !chunk_buffer.is_empty() {
                             if let Err(e) = stream.write_all(&chunk_buffer) {
-                                *last_error.lock() = Some(format!("Gagal streaming audio ke server: {}", e));
+                                *last_error.lock() =
+                                    Some(format!("Gagal streaming audio ke server: {}", e));
                                 active_tcp = None;
                                 is_streaming.store(false, Ordering::SeqCst);
                                 *start_time.lock() = None;
@@ -244,7 +245,9 @@ impl BroadcastController {
         if let Some(err) = self.last_error.lock().clone() {
             Err(AudioError::Io(err))
         } else {
-            Err(AudioError::Io("Batas waktu koneksi ke server streaming habis".to_string()))
+            Err(AudioError::Io(
+                "Batas waktu koneksi ke server streaming habis".to_string(),
+            ))
         }
     }
 
@@ -293,15 +296,20 @@ impl Drop for BroadcastController {
     }
 }
 
-fn connect_and_handshake(config: &BroadcastConfig, sample_rate: u32) -> Result<TcpStream, AudioError> {
+fn connect_and_handshake(
+    config: &BroadcastConfig,
+    sample_rate: u32,
+) -> Result<TcpStream, AudioError> {
     let mut stream = TcpStream::connect_timeout(
         &config
             .server
             .parse()
-            .or_else(|_| match std::net::ToSocketAddrs::to_socket_addrs(&config.server) {
-                Ok(mut addrs) => addrs.next().ok_or(()),
-                Err(_) => Err(()),
-            })
+            .or_else(
+                |_| match std::net::ToSocketAddrs::to_socket_addrs(&config.server) {
+                    Ok(mut addrs) => addrs.next().ok_or(()),
+                    Err(_) => Err(()),
+                },
+            )
             .map_err(|_| AudioError::Io("Alamat server streaming tidak valid".to_string()))?,
         Duration::from_secs(3),
     )

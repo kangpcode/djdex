@@ -1,8 +1,8 @@
 //! Lapisan database SQLite lokal untuk Library musik, Crate, Playlist, dan History.
 
-use std::path::PathBuf;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 use crate::error::AudioError;
 
@@ -352,7 +352,10 @@ impl LibraryDb {
 
         if let Some(ref search) = query.search {
             if !search.trim().is_empty() {
-                conditions.push(" (t.title LIKE ? OR t.artist LIKE ? OR t.album LIKE ? OR t.genre LIKE ?) ".to_string());
+                conditions.push(
+                    " (t.title LIKE ? OR t.artist LIKE ? OR t.album LIKE ? OR t.genre LIKE ?) "
+                        .to_string(),
+                );
                 let pattern = format!("%{}%", search.trim());
                 param_values.push(pattern.clone().into());
                 param_values.push(pattern.clone().into());
@@ -580,7 +583,11 @@ impl LibraryDb {
         Ok(())
     }
 
-    pub fn remove_track_from_playlist(&self, playlist_id: i64, track_id: i64) -> Result<(), AudioError> {
+    pub fn remove_track_from_playlist(
+        &self,
+        playlist_id: i64,
+        track_id: i64,
+    ) -> Result<(), AudioError> {
         let conn = self.conn();
         conn.execute(
             "DELETE FROM playlist_tracks WHERE playlist_id = ?1 AND track_id = ?2",

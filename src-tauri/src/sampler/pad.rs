@@ -1,7 +1,7 @@
 //! Definisi Sample Pad, mode trigger, dan DTO untuk UI.
 
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// Mode trigger pad sampler.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,7 +22,6 @@ pub enum PadMode {
     /// Lompat / mainkan dari cue point.
     CuePad,
 }
-
 
 /// Satu slot sample pad di engine sampler.
 #[derive(Clone)]

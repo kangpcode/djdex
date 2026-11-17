@@ -94,15 +94,13 @@ pub fn export_m3u(
     let mut file = File::create(dest_path)
         .map_err(|e| AudioError::Io(format!("Gagal membuat file M3U: {e}")))?;
 
-    writeln!(file, "#EXTM3U")
-        .map_err(|e| AudioError::Io(e.to_string()))?;
+    writeln!(file, "#EXTM3U").map_err(|e| AudioError::Io(e.to_string()))?;
 
     for track in tracks {
         let dur = track.duration_secs.round() as i64;
         writeln!(file, "#EXTINF:{dur},{} - {}", track.artist, track.title)
             .map_err(|e| AudioError::Io(e.to_string()))?;
-        writeln!(file, "{}", track.file_path)
-            .map_err(|e| AudioError::Io(e.to_string()))?;
+        writeln!(file, "{}", track.file_path).map_err(|e| AudioError::Io(e.to_string()))?;
     }
 
     Ok(())
