@@ -139,11 +139,11 @@ impl RecorderController {
         let should_split = Arc::clone(&self.should_split);
         let frames_recorded = Arc::clone(&self.frames_recorded);
         let bytes_written = Arc::clone(&self.bytes_written);
-        let peak_l = Arc::clone(&peak_l);
-        let peak_r = Arc::clone(&peak_r);
-        let split_count = Arc::clone(&split_count);
-        let current_path = Arc::clone(&current_path);
-        let current_format = Arc::clone(&current_format);
+        let peak_l = Arc::clone(&self.peak_l);
+        let peak_r = Arc::clone(&self.peak_r);
+        let split_count = Arc::clone(&self.split_count);
+        let current_path = Arc::clone(&self.current_path);
+        let current_format = Arc::clone(&self.current_format);
         let sample_rate = self.sample_rate;
 
         let handle = thread::Builder::new()
@@ -258,7 +258,7 @@ impl RecorderController {
                     }
 
                     // Tidur singkat agar thread tidak membebani CPU
-                    thread::sleep(std::time::Duration::from_millis(15));
+                    thread::sleep(Duration::from_millis(15));
                 }
 
                 // Cleanup saat worker dihentikan
@@ -298,7 +298,7 @@ impl RecorderController {
         self.is_recording.store(false, Ordering::SeqCst);
         self.is_paused.store(false, Ordering::SeqCst);
         // Beri jeda singkat agar thread worker mem-flush sisa data dan memanggil finalize
-        thread::sleep(std::time::Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(50));
         Ok(self.status())
     }
 
