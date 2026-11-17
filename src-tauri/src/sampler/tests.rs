@@ -1,7 +1,6 @@
 //! Unit test untuk Sampler, Synth, Sequencer, dan Bank.
 
 use super::bank::*;
-use super::pad::*;
 use super::player::*;
 use super::sequencer::*;
 use super::synth::*;
@@ -77,14 +76,11 @@ fn test_sampler_process_renders_audio_on_trigger() {
     controller.trigger_pad(0, Some(1.0));
 
     let frames = 512;
-    let mut out_l = vec![0.0_f32; frames];
-    let mut out_r = vec![0.0_f32; frames];
-
-    rt.process_block(frames, 128.0, &mut out_l, &mut out_r);
+    rt.process_block(frames, 128.0);
 
     // Audio harus terisi sinyal Kick
-    let energy_l: f32 = out_l.iter().map(|s| s.abs()).sum();
-    let energy_r: f32 = out_r.iter().map(|s| s.abs()).sum();
+    let energy_l: f32 = (0..frames).map(|i| rt.sample_at(i).0.abs()).sum();
+    let energy_r: f32 = (0..frames).map(|i| rt.sample_at(i).1.abs()).sum();
     assert!(energy_l > 0.0, "Output kiri harus menghasilkan audio setelah pad dipicu");
     assert!(energy_r > 0.0, "Output kanan harus menghasilkan audio setelah pad dipicu");
 }

@@ -105,6 +105,8 @@ pub struct SamplerRt {
     master_volume: f32,
     sample_rate: f32,
     pad_states: Arc<[AtomicPadState; PADS_PER_BANK]>,
+    pub scratch_l: Vec<f32>,
+    pub scratch_r: Vec<f32>,
 }
 
 impl SamplerRt {
@@ -123,6 +125,8 @@ impl SamplerRt {
             master_volume: 1.0,
             sample_rate,
             pad_states,
+            scratch_l: vec![0.0; 4096],
+            scratch_r: vec![0.0; 4096],
         }
     }
 
@@ -339,24 +343,27 @@ impl SamplerRt {
         }
     }
 
-    /// Render satu blok sampel audio sampler.
-    /// Tidak ada alokasi memori heap, mutex, atau syscall di fungsi ini.
+    /// Render satu blok sampel audio sampler ke dalam buffer internal scratch.
+    /// Tidak ada alokasi memori heap, mutex, atau syscall di fungsi ini jika frames <= 4096.
     pub fn process_block(
         &mut self,
         frames: usize,
         master_bpm: f32,
-        out_l: &mut [f32],
-        out_r: &mut [f32],
     ) {
         self.handle_commands(master_bpm);
+
+        if self.scratch_l.len() < frames {
+            self.scratch_l.resize(frames, 0.0);
+            self.scratch_r.resize(frames, 0.0);
+        }
 
         let mut triggers: [(usize, u8); TRACK_COUNT] = [(0, 100); TRACK_COUNT];
         let mut trigger_count = 0;
 
         // Reset buffer output
         for i in 0..frames {
-            out_l[i] = 0.0;
-            out_r[i] = 0.0;
+            self.scratch_l[i] = 0.0;
+            self.scratch_r[i] = 0.0;
         }
 
         let mut pad_active = [false; PADS_PER_BANK];
@@ -441,14 +448,23 @@ impl SamplerRt {
                 }
             }
 
-            out_l[i] = sum_l;
-            out_r[i] = sum_r;
+            self.scratch_l[i] = sum_l;
+            self.scratch_r[i] = sum_r;
         }
 
         // Update atomik untuk polling UI cepat
         for p in 0..PADS_PER_BANK {
             self.pad_states[p].is_playing.store(pad_active[p], Ordering::Relaxed);
             self.pad_states[p].progress_bits.store(pad_progress[p].to_bits(), Ordering::Relaxed);
+        }
+    }
+
+    #[inline]
+    pub fn sample_at(&self, index: usize) -> (f32, f32) {
+        if index < self.scratch_l.len() {
+            (self.scratch_l[index], self.scratch_r[index])
+        } else {
+            (0.0, 0.0)
         }
     }
 }
@@ -509,6 +525,10 @@ impl SamplerController {
 
     pub fn stop_all(&self) {
         let _ = self.command_tx.send(SamplerCommand::StopAll);
+    }
+
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
     }
 
     pub fn select_bank(&self, bank_id: usize) {
