@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=DJDeX
+Comment=Virtual DJ workstation powered by Rust real-time audio engine
+GenericName=Virtual DJ Workstation
+Exec=djdex %F
+Icon=com.kangpcode.djdex
+Type=Application
+StartupNotify=true
+Categories=AudioVideo;Audio;Mixer;Midi;Sequencer;
+MimeType=audio/mpeg;audio/x-wav;audio/flac;audio/ogg;audio/aac;audio/x-m4a;audio/x-aiff;
+Keywords=dj;mixer;turntable;music;scratch;audio;effects;sampler;icecast;broadcast;
+Terminal=false

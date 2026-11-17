@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { formatBpm, formatTime } from "../lib/format";
 
 export type PlatterMode = "vinyl" | "cdj";
+export type PlatterSize = "compact" | "standard" | "large-battle";
 
 interface PlatterProps {
   position: number;
@@ -16,6 +17,22 @@ interface PlatterProps {
   onBend: (factor: number) => void;
   onBendEnd: () => void;
   disabled?: boolean;
+  /** Ukuran piringan dari skin aktif. */
+  size?: PlatterSize;
+  vinylTexture?: boolean;
+  centerDisplay?: boolean;
+  /** Warna aksen deck dari skin aktif. */
+  accent?: string;
+}
+
+const SIZES: Record<PlatterSize, number> = {
+  compact: 112,
+  standard: 142,
+  "large-battle": 190,
+};
+
+function accentHex(value: string | undefined, fallback: string): string {
+  return value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 }
 
 /**
@@ -35,6 +52,10 @@ export function Platter({
   onBend,
   onBendEnd,
   disabled = false,
+  size = "standard",
+  vinylTexture = true,
+  centerDisplay = true,
+  accent,
 }: PlatterProps) {
   const discRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ angle: number; position: number } | null>(null);
@@ -44,6 +65,8 @@ export function Platter({
   const rotation = (position / 1.8) * 360;
   const radius = 62;
   const circumference = 2 * Math.PI * radius;
+  const dimension = SIZES[size] ?? SIZES.standard;
+  const color = accentHex(accent, "#22d3ee");
 
   const angleAt = (clientX: number, clientY: number) => {
     const element = discRef.current;
@@ -110,9 +133,10 @@ export function Platter({
     <div className="flex flex-col items-center gap-1.5">
       <div
         ref={discRef}
-        className={`platter relative h-[142px] w-[142px] select-none ${
+        className={`platter relative select-none ${
           disabled ? "opacity-50" : "cursor-grab active:cursor-grabbing"
         }`}
+        style={{ height: dimension, width: dimension }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
@@ -131,7 +155,8 @@ export function Platter({
             cy="71"
             r={radius}
             fill="none"
-            stroke="rgba(34,211,238,0.12)"
+            stroke={color}
+            strokeOpacity="0.14"
             strokeWidth="4"
           />
           <circle
@@ -139,7 +164,7 @@ export function Platter({
             cy="71"
             r={radius}
             fill="none"
-            stroke="rgba(34,211,238,0.95)"
+            stroke={color}
             strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray={`${circumference * progress} ${circumference}`}
@@ -154,7 +179,7 @@ export function Platter({
           />
           <defs>
             <radialGradient id="vinylGradient" cx="40%" cy="35%" r="70%">
-              <stop offset="0%" stopColor="#233044" />
+              <stop offset="0%" stopColor={vinylTexture ? "#233044" : "#151b25"} />
               <stop offset="55%" stopColor="#0c131d" />
               <stop offset="100%" stopColor="#05080d" />
             </radialGradient>
@@ -166,21 +191,42 @@ export function Platter({
               transition: dragging ? "none" : "transform 90ms linear",
             }}
           >
-            <circle cx="71" cy="71" r="42" fill="none" stroke="rgba(148,163,184,0.13)" />
-            <circle cx="71" cy="71" r="34" fill="none" stroke="rgba(148,163,184,0.1)" />
-            <line x1="71" y1="71" x2="71" y2="31" stroke="rgba(34,211,238,0.75)" strokeWidth="2" />
-            <circle cx="71" cy="31" r="3.2" fill="#22d3ee" />
+            {vinylTexture ? (
+              <>
+                <circle cx="71" cy="71" r="42" fill="none" stroke="rgba(148,163,184,0.13)" />
+                <circle cx="71" cy="71" r="34" fill="none" stroke="rgba(148,163,184,0.1)" />
+                <circle cx="71" cy="71" r="26" fill="none" stroke="rgba(148,163,184,0.07)" />
+              </>
+            ) : null}
+            <line
+              x1="71"
+              y1="71"
+              x2="71"
+              y2="31"
+              stroke={color}
+              strokeOpacity="0.8"
+              strokeWidth="2"
+            />
+            <circle cx="71" cy="31" r="3.2" fill={color} />
           </g>
           <circle cx="71" cy="71" r="7" fill="#94a3b8" />
           <circle cx="71" cy="71" r="3" fill="#0b1118" />
         </svg>
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="readout text-[13px] text-cyan-soft">{formatTime(position)}</span>
-          <span className="text-[9px] uppercase tracking-[0.18em] text-ink-faint">
-            {playing ? "playing" : "paused"}
-          </span>
-        </div>
+        {centerDisplay ? (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="readout text-[13px] text-accent">{formatTime(position)}</span>
+            <span className="text-[9px] uppercase tracking-[0.18em] text-ink-faint">
+              {playing ? "playing" : "paused"}
+            </span>
+          </div>
+        ) : (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="text-[9px] uppercase tracking-[0.18em] text-ink-faint">
+              {playing ? "playing" : "paused"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1">

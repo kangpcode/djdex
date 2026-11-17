@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "DJDeX",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "identifier": "com.kangpcode.djdex",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -41,8 +41,55 @@
     ],
     "category": "Music",
     "shortDescription": "Virtual DJ workstation",
-    "longDescription": "DJDeX By Kangpcode - dua deck (hingga empat), mixer, efek, remixer, library, dan audio engine Rust real-time.",
+    "longDescription": "DJDeX By Kangpcode - software workstation DJ profesional dengan dua hingga empat deck, mixer 4 channel, sampler 16-step sequencer, efek audio, library SQLite, MIDI mapping, dan perekam audio master mix.",
     "copyright": "Copyright (c) 2026 Kangpcode",
-    "resources": []
+    "resources": [
+      "../skins/**"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "macOS": {
+      "entitlements": "Entitlements.plist",
+      "minimumSystemVersion": "10.15",
+      "frameworks": [],
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        }
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libasound2",
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1",
+          "librsvg2-2"
+        ],
+        "section": "sound"
+      },
+      "rpm": {
+        "depends": [
+          "alsa-lib",
+          "webkit2gtk4.1",
+          "gtk3",
+          "libappindicator-gtk3"
+        ],
+        "release": "1"
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    }
   }
 }
