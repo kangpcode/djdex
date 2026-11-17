@@ -3,6 +3,44 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-11-17
+
+### Added — Fase 8: Library, Database, Analisis Batch, dan Playlist
+
+- Lapisan Database SQLite lokal berkecepatan tinggi `src-tauri/src/library/db.rs` berbasis `rusqlite` (bundled engine):
+  - Skema relasional teroptimasi dengan index pencarian cepat untuk tabel `tracks`, `crates`, `crate_tracks`, `playlists`, `playlist_tracks`, dan `history`.
+  - Operasi CRUD lengkap untuk track musik, pemetaan crate/sub-folder kategori DJ, playlist manual, dan smart playlist berbasis query aturan dinamis.
+  - Penilaian track (bintang 1-5), penanda warna (color tagging), dan penghitung putaran lagu (play count).
+  - Pencatatan riwayat pemutaran (DJ play history) secara otomatis saat lagu dimuat ke Deck A atau Deck B.
+- Pemindai folder rekursif & ekstraktor metadata audio `src-tauri/src/library/scanner.rs`:
+  - Ekstraksi tag ID3/metadata dengan crate `lofty`: judul lagu, nama artis, album, genre, tahun rilis, dan durasi audio.
+  - Dukungan format audio komprehensif: MP3, FLAC, WAV, OGG/Vorbis, AAC, M4A, AIFF, ALAC.
+  - Worker analisis audio batch di thread latar belakang (`djdex-batch-analyzer`): mendeteksi BPM, tangga nada musik & Camelot key (misal "8A", "11B"), serta loudness EBU R128 (LUFS) untuk setiap track yang belum teranalisis.
+  - Pelacakan progres pemindaian dan analisis atomik untuk status responsif di antarmuka pengguna.
+- Manajemen Crate & Playlist `src-tauri/src/library/playlist.rs`:
+  - Kategori Crates manual untuk pengelompokan lagu fleksibel oleh DJ.
+  - Smart Playlist dengan filter parameter otomatis (rentang BPM minimum/maksimum, key, genre, rating minimum).
+  - Parser dan generator impor/ekspor playlist standar format M3U, M3U8, dan PLS.
+- Pemutar Headphone Cue Preview (Browser Cue Player) `src-tauri/src/library/preview.rs`:
+  - Memungkinkan DJ mendengarkan cuplikan audio track mana pun langsung melalui headphone (Cue Bus / PFL) sebelum memuatnya ke Deck A atau Deck B.
+  - Cuplikan preview terisolasi sepenuhnya ke jalur headphone cue mixer dan tidak bocor ke output Master publik.
+  - Player real-time lock-free yang didecode di background thread (`djdex-preview-decoder`) dengan resampler otomatis ke laju sampel engine.
+  - Kontrol scrubbing / seeking interaktif dengan pelaporan posisi detik real-time.
+- Antarmuka Browser DJ & Store React `src/components/LibraryPanel.tsx` dan `src/stores/libraryStore.ts`:
+  - Panel perpustakaan bergaya profesional DJ workstation dengan navigasi pohon Crates & Playlists di sisi kiri.
+  - Kolom pencarian instan multi-kategori (judul, artis, album, genre) dengan filter dan pengurutan multi-kolom (BPM, Key, Durasi, Rating, Plays, Tanggal).
+  - Tombol aksi muat langsung ke Deck A (sian) dan Deck B (magenta), serta dukungan Drag & Drop file audio ke deck.
+  - Bilah mini-player cuplikan headphone cue di bagian bawah tabel track dengan scrubber interaktif dan tombol stop cue.
+  - Dialog native untuk pemindaian folder, pembuatan Crate baru, pembuatan Smart Playlist, serta impor/ekspor M3U.
+  - Sub-tampilan riwayat pemutaran DJ (Play History) dengan penanda deck pemutar dan stempel waktu.
+- 6 unit test baru untuk Library Database CRUD, Crates, Smart Playlists, Riwayat, dan Ekspor M3U; total 65 unit test Rust lulus 100%.
+
+### Changed
+
+- Versi aplikasi dinaikkan ke `0.8.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, `App.tsx`, dan UI footer).
+- `Mixer::process` di engine audio diperluas untuk menerima kanal stereo preview headphone cue secara aman tanpa alokasi memori.
+- Pemuatan track ke deck di `AppState::load_track` sekarang otomatis memperbarui counter putaran lagu dan mencatat entri riwayat sesi pemutaran di SQLite database.
+
 ## [0.7.0] - 2026-11-17
 
 ### Added — Fase 7: Remixer/Sampler + Step Sequencer
