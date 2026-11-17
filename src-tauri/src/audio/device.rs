@@ -1,4 +1,4 @@
-//! Enumerasi perangkat output dan pemilihan device berdasarkan nama.
+//! Enumerasi perangkat output dan pemilihan device berdasarkan nama atau ID unik.
 //!
 //! Catatan RT: modul ini hanya dipanggil dari thread non-RT (IPC / audio host),
 //! tidak pernah dari callback audio.
@@ -32,7 +32,57 @@ pub fn sample_format_label(format: SampleFormat) -> String {
     }
 }
 
-/// Cari device output berdasarkan nama. `None` berarti device default sistem.
+/// Ambil string ID unik perangkat (mis. `"alsa:default"` atau `"alsa:plughw:CARD=..."`).
+fn device_unique_id(device: &Device) -> String {
+    device
+        .id()
+        .map(|id| id.to_string())
+        .unwrap_or_else(|_| device.to_string())
+}
+
+/// Di Linux ALSA, filter alias PCM virtual/duplikat (`surround*`, `dmix`, `sysdefault`,
+/// `front`, `null`, dan alias `CARD=<angka>`) yang memicu error `pcm_route` / `pcm_dmix`
+/// saat enumerasi padahal sudah terwakili oleh `default`/`pipewire`/`plughw`/`hdmi`.
+fn is_eligible_output_device(pcm_id: &str) -> bool {
+    if !cfg!(target_os = "linux") {
+        return true;
+    }
+
+    let raw = pcm_id.strip_prefix("alsa:").unwrap_or(pcm_id);
+
+    if raw == "null"
+        || raw.starts_with("surround")
+        || raw.starts_with("dmix:")
+        || raw.starts_with("sysdefault:")
+        || raw.starts_with("front:")
+        || raw.starts_with("hw:")
+    {
+        return false;
+    }
+
+    // Hilangkan duplikat numerik seperti `plughw:CARD=0,DEV=3` karena sudah ada `CARD=Generic`.
+    if let Some(after_card) = raw.split("CARD=").nth(1) {
+        let card_val = after_card.split(',').next().unwrap_or("");
+        if !card_val.is_empty() && card_val.chars().all(|c| c.is_ascii_digit()) {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Format nama tampilan yang jelas agar dua PCM dari kartu yang sama tetap terbedakan.
+fn format_display_name(device: &Device, unique_id: &str) -> String {
+    let base = device.to_string();
+    let raw = unique_id.strip_prefix("alsa:").unwrap_or(unique_id);
+    if matches!(raw, "default" | "pipewire" | "pulse" | "jack") || !cfg!(target_os = "linux") {
+        return base;
+    }
+    let tag = raw.split(':').next().unwrap_or(raw);
+    format!("{base} [{tag}]")
+}
+
+/// Cari device output berdasarkan ID unik atau nama. `None` berarti device default sistem.
 pub fn find_output_device(name: Option<&str>) -> Result<Device, AudioError> {
     let host = cpal::default_host();
 
@@ -41,13 +91,28 @@ pub fn find_output_device(name: Option<&str>) -> Result<Device, AudioError> {
             .default_output_device()
             .ok_or(AudioError::NoOutputDevice),
         Some(requested) => {
-            let devices = host
+            let devices: Vec<Device> = host
                 .output_devices()
-                .map_err(|err| AudioError::Enumerate(err.to_string()))?;
+                .map_err(|err| AudioError::Enumerate(err.to_string()))?
+                .collect();
 
+            // Utamakan kecocokan exact pada ID unik (mis. "alsa:default", "alsa:plughw:...").
+            if let Some(found) = devices
+                .iter()
+                .find(|device| device_unique_id(device) == requested)
+                .cloned()
+            {
+                return Ok(found);
+            }
+
+            // Fallback untuk nama display atau ID tanpa prefix host.
             devices
                 .into_iter()
-                .find(|device| device.to_string() == requested)
+                .find(|device| {
+                    let uid = device_unique_id(device);
+                    let raw = uid.strip_prefix("alsa:").unwrap_or(&uid);
+                    raw == requested || device.to_string() == requested
+                })
                 .ok_or_else(|| AudioError::DeviceNotFound(requested.to_string()))
         }
     }
@@ -57,7 +122,7 @@ pub fn find_output_device(name: Option<&str>) -> Result<Device, AudioError> {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioDeviceInfo {
-    /// Identifier praktis: nama device (stabil selama device tidak diganti nama).
+    /// Identifier unik perangkat (mis. "alsa:default", "alsa:pipewire", atau nama host lain).
     pub id: String,
     pub name: String,
     pub host: String,
@@ -78,9 +143,7 @@ pub struct AudioDeviceInfo {
 /// Daftar semua perangkat output beserta kapabilitasnya, default lebih dulu.
 pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
     let host = cpal::default_host();
-    let default_name = host
-        .default_output_device()
-        .map(|device| device.to_string());
+    let default_id = host.default_output_device().map(|d| device_unique_id(&d));
     let devices = host
         .output_devices()
         .map_err(|err| AudioError::Enumerate(err.to_string()))?;
@@ -88,10 +151,16 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
     let mut result = Vec::new();
 
     for device in devices {
-        let name = device.to_string();
-        let is_default = default_name.as_deref() == Some(name.as_str());
+        let uid = device_unique_id(&device);
+        let is_default = default_id.as_deref() == Some(uid.as_str());
+
+        if !is_default && !is_eligible_output_device(&uid) {
+            continue;
+        }
+
+        let name = format_display_name(&device, &uid);
         let mut info = AudioDeviceInfo {
-            id: name.clone(),
+            id: uid,
             name,
             host: host_label().to_string(),
             is_default,
@@ -105,19 +174,11 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
             default_channels: None,
         };
 
-        // Default config tidak selalu tersedia (mis. device "null"); tetap tampilkan device.
-        if let Ok(default_config) = device.default_output_config() {
-            let sample_rate = default_config.sample_rate();
-            info.default_sample_rate = Some(sample_rate);
-            info.default_channels = Some(default_config.channels());
-            info.max_channels = info.max_channels.max(default_config.channels());
-            push_channel(&mut info.supported_channels, default_config.channels());
-            push_rate(&mut info.sample_rates, sample_rate);
-            push_format(&mut info.sample_formats, default_config.sample_format());
-        }
-
+        // Panggil `supported_output_configs` cukup 1 kali saja (di cpal ALSA,
+        // `default_output_config` secara internal mengulangi probing yang sama).
         if let Ok(ranges) = device.supported_output_configs() {
-            for range in ranges {
+            let mut collected: Vec<_> = ranges.collect();
+            for range in &collected {
                 info.max_channels = info.max_channels.max(range.channels());
                 push_channel(&mut info.supported_channels, range.channels());
                 push_format(&mut info.sample_formats, range.sample_format());
@@ -143,6 +204,20 @@ pub fn list_output_devices() -> Result<Vec<AudioDeviceInfo>, AudioError> {
                         Some(info.buffer_frames_max.map_or(max, |v| v.max(max)));
                 }
             }
+
+            collected.sort_by(|a, b| a.cmp_default_heuristics(b));
+            if let Some(best) = collected.into_iter().next_back() {
+                let default_cfg = best
+                    .try_with_standard_sample_rate()
+                    .unwrap_or_else(|| best.with_max_sample_rate());
+                info.default_sample_rate = Some(default_cfg.sample_rate());
+                info.default_channels = Some(default_cfg.channels());
+            }
+        }
+
+        // Di Linux, abaikan kartu/node yang tidak membuka output valid (kecuali default).
+        if !is_default && info.supported_channels.is_empty() {
+            continue;
         }
 
         info.sample_rates.sort_unstable();
@@ -186,11 +261,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_output_devices_returns_cleanly() {
-        let devices = list_output_devices().unwrap();
-        for d in &devices {
-            eprintln!("DEV: {} ch={:?} def={:?}", d.name, d.supported_channels, d.default_channels);
+    fn eligible_filter_skips_virtual_alsa_route_aliases() {
+        if cfg!(target_os = "linux") {
+            assert!(is_eligible_output_device("alsa:default"));
+            assert!(is_eligible_output_device("alsa:pipewire"));
+            assert!(is_eligible_output_device("alsa:plughw:CARD=Generic,DEV=3"));
+            assert!(!is_eligible_output_device("alsa:null"));
+            assert!(!is_eligible_output_device("alsa:surround51:CARD=Generic_1,DEV=0"));
+            assert!(!is_eligible_output_device("alsa:dmix:CARD=Generic_1,DEV=0"));
+            assert!(!is_eligible_output_device("alsa:plughw:CARD=0,DEV=3"));
         }
+    }
+
+    #[test]
+    fn list_output_devices_returns_cleanly() {
+        let devices = list_output_devices().expect("enumerate audio output devices");
         assert!(!devices.is_empty());
     }
 }

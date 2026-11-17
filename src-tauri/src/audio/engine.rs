@@ -720,9 +720,28 @@ fn config_candidates(
     device: &Device,
     request: &StartRequest,
 ) -> Result<Vec<ConfigCandidate>, AudioError> {
-    let default_config = device.default_output_config().map_err(|err| {
-        AudioError::UnsupportedConfig(format!("konfigurasi default tidak tersedia: {err}"))
-    })?;
+    // Panggil `supported_output_configs` cukup satu kali agar di Linux ALSA
+    // driver tidak di-probe berulang kali.
+    let mut ranges: Vec<_> = device
+        .supported_output_configs()
+        .map_err(|err| AudioError::Enumerate(err.to_string()))?
+        .collect();
+
+    if ranges.is_empty() {
+        return Err(AudioError::UnsupportedConfig(
+            "perangkat tidak mengekspos konfigurasi output".to_string(),
+        ));
+    }
+
+    ranges.sort_by(|a, b| a.cmp_default_heuristics(b));
+    let best_range = ranges
+        .last()
+        .expect("ranges sudah dipastikan tidak kosong")
+        .clone();
+    let default_config = best_range
+        .try_with_standard_sample_rate()
+        .unwrap_or_else(|| best_range.with_max_sample_rate());
+
     let default_rate = default_config.sample_rate();
     let default_channels = default_config.channels();
     let default_format = default_config.sample_format();
@@ -747,11 +766,6 @@ fn config_candidates(
         _ => vec![default_rate],
     };
 
-    let ranges: Vec<_> = device
-        .supported_output_configs()
-        .map_err(|err| AudioError::Enumerate(err.to_string()))?
-        .collect();
-
     for sample_format in [
         default_format,
         SampleFormat::F32,
@@ -760,7 +774,7 @@ fn config_candidates(
     ] {
         for channel in &channel_prefs {
             for rate in &rate_prefs {
-                let Some(range) = ranges.iter().find(|range| {
+                let Some(range) = ranges.iter().rev().find(|range| {
                     range.sample_format() == sample_format
                         && range.channels() == *channel
                         && range.contains_rate(*rate)
@@ -1184,16 +1198,5 @@ mod tests {
             assert!(hint.contains("channel map"));
             assert!(hint.contains("SPLIT CUE"));
         }
-    }
-
-    #[test]
-    fn start_default_engine_logs_check() {
-        let res = AudioEngine::start(StartRequest::default());
-        eprintln!("AudioEngine::start default: {:?}", res.as_ref().map(|_| "OK"));
-        let res4 = AudioEngine::start(StartRequest {
-            channels: Some(4),
-            ..Default::default()
-        });
-        eprintln!("AudioEngine::start 4ch: {:?}", res4.as_ref().map(|_| "OK"));
     }
 }
