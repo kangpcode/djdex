@@ -544,21 +544,46 @@ class SynthAudioEngine {
         break;
       }
 
-      // TRADISIONAL JAWA: Gong Ageng
+      // TRADISIONAL JAWA & SUNDA: Gong Ageng & Kempul (Tuned Gong Multi-Pitch)
       case "gamelan_gong": {
         const osc1 = ctx.createOscillator();
         const osc2 = ctx.createOscillator();
+        const osc3 = ctx.createOscillator();
         osc1.type = "sine";
         osc1.frequency.setValueAtTime(freq, now);
         osc2.type = "sine";
-        osc2.frequency.setValueAtTime(freq + 2.5, now); // Beating shimmer 2.5 Hz
+        osc2.frequency.setValueAtTime(freq + (freq < 150 ? 2.5 : 4.0), now); // Beating shimmer
+        osc3.type = "sine";
+        osc3.frequency.setValueAtTime(freq * 2.76, now); // Inharmonic partial
+
+        const gongGain = ctx.createGain();
+        gongGain.gain.setValueAtTime(0.2, now);
+        osc3.connect(gongGain);
+        gongGain.connect(voiceGain);
 
         voiceGain.gain.setValueAtTime(vel * 0.95, now);
-        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
+        const decayTime = freq < 100 ? 3.5 : freq < 300 ? 2.2 : 1.4;
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + decayTime);
 
         osc1.connect(voiceGain);
         osc2.connect(voiceGain);
-        [osc1, osc2].forEach((o) => { o.start(now); oscillators.push(o); });
+        [osc1, osc2, osc3].forEach((o) => { o.start(now); oscillators.push(o); });
+        break;
+      }
+
+      // TRADISIONAL: Kendang Tuned (Membran Kulit Bernada Multi-Pitch)
+      case "kendang_tuned": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq * 1.35, now);
+        osc.frequency.exponentialRampToValueAtTime(freq, now + 0.08);
+
+        voiceGain.gain.setValueAtTime(vel * 0.9, now);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+        osc.connect(voiceGain);
+        osc.start(now);
+        oscillators.push(osc);
         break;
       }
 
@@ -842,6 +867,163 @@ class SynthAudioEngine {
         osc.connect(gain);
         osc.start(now);
         osc.stop(now + 0.52);
+        break;
+      }
+
+      // KENDANG: Kulanter Tong (Ring 280 Hz)
+      case "kendang_tong": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(360, now);
+        osc.frequency.exponentialRampToValueAtTime(280, now + 0.08);
+
+        gain.gain.setValueAtTime(vel * 0.9, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.30);
+        break;
+      }
+
+      // KENDANG: Plak Open Slap (460 Hz snappy)
+      case "kendang_plak": {
+        const osc = ctx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(460, now);
+        osc.frequency.exponentialRampToValueAtTime(160, now + 0.04);
+
+        gain.gain.setValueAtTime(vel * 0.95, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.20);
+        break;
+      }
+
+      // KENDANG: Ketuk Rim Wood Knock (1200 Hz)
+      case "kendang_ketuk": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.03);
+
+        gain.gain.setValueAtTime(vel * 0.85, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.14);
+        break;
+      }
+
+      // KENDANG: Indung Deep Sub (46 Hz warm boom)
+      case "kendang_indung": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(75, now);
+        osc.frequency.exponentialRampToValueAtTime(46, now + 0.14);
+
+        gain.gain.setValueAtTime(vel * 1.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.58);
+        break;
+      }
+
+      // GOONG: Goong Ageng Heavy Sub (43.65 Hz)
+      case "goong_ageng": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(43.65, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(46.15, now); // Beating shimmer 2.5Hz
+
+        gain.gain.setValueAtTime(vel * 1.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 3.1);
+        osc2.stop(now + 3.1);
+        break;
+      }
+
+      // GOONG: Goong Suwukan (65.41 Hz)
+      case "goong_suwukan": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(65.41, now);
+
+        gain.gain.setValueAtTime(vel * 1.0, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 2.1);
+        break;
+      }
+
+      // GOONG: Kempul Resonant (140 Hz)
+      case "kempul_gong": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(140.0, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(386.4, now); // 2.76x overtone
+
+        gain.gain.setValueAtTime(vel * 0.9, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 1.5);
+        osc2.stop(now + 1.5);
+        break;
+      }
+
+      // GOONG: Kenong Chime (280 Hz)
+      case "kenong_gong": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(280.0, now);
+
+        gain.gain.setValueAtTime(vel * 0.85, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.95);
+        break;
+      }
+
+      // ANGKLUNG: Bambu Clack & Resonansi Ganda
+      case "angklung_hit": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = "triangle";
+        osc1.frequency.setValueAtTime(523.25, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(1046.5, now);
+
+        gain.gain.setValueAtTime(vel * 0.9, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.75);
+        osc2.stop(now + 0.75);
         break;
       }
 
