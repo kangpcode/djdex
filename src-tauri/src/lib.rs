@@ -7,6 +7,7 @@ mod audio;
 mod commands;
 mod dsp;
 mod error;
+pub mod sampler;
 mod state;
 
 use state::AppState;
