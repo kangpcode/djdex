@@ -1,7 +1,7 @@
 //! Pengujian unit untuk sistem MIDI & Keyboard mapping.
 
 #[cfg(test)]
-mod tests {
+mod midi_unit_tests {
     use crate::midi::keyboard::KeyboardManager;
     use crate::midi::mapping::{
         MidiMappingManager, FACTORY_PRESET_HERCULES, FACTORY_PRESET_PIONEER,

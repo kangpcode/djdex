@@ -378,8 +378,7 @@ impl SamplerRt {
                 &mut trigger_count,
             );
             if trigger_count > 0 {
-                for t_idx in 0..trigger_count {
-                    let (pad_id, vel) = triggers[t_idx];
+                for &(pad_id, vel) in triggers.iter().take(trigger_count) {
                     let norm_vel = vel as f32 / 127.0;
                     self.trigger_pad(pad_id, norm_vel, true, master_bpm);
                 }

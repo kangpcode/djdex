@@ -85,7 +85,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 - `docs/BUILD_PER_OS.md` menambahkan bagian troubleshooting ALSA (`find_matching_chmap`).
 - `docs/ARSITEKTUR.md` diperbarui ke status implementasi Fase 11.
 - PhaseStrip di UI menandai Fase 7–11 selesai dan Fase 12 sebagai berikutnya.
-- 2 unit test baru untuk preferensi channel/fallback stereo dan pesan bantuan ALSA; total **80 unit test Rust**.
+- 2 unit test baru untuk preferensi channel/fallback stereo dan pesan bantuan ALSA; total **84 unit test Rust**.
 
 ## [0.10.0] - 2026-11-17
 

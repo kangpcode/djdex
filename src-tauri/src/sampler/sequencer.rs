@@ -121,7 +121,7 @@ impl StepSequencer {
     pub fn current_step_target_frames(&self, sample_rate: f32, effective_bpm: f32) -> f64 {
         let base = self.base_step_frames(sample_rate, effective_bpm);
         let swing_amount = self.swing.clamp(0.0, 0.75) as f64;
-        if self.current_step % 2 == 0 {
+        if self.current_step.is_multiple_of(2) {
             // Step genap diperpanjang sedikit
             base * (1.0 + swing_amount * 0.5)
         } else {

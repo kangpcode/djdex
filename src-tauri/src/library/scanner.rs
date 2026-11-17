@@ -45,6 +45,12 @@ pub struct ScannerManager {
     total_analyze: Arc<AtomicUsize>,
 }
 
+impl Default for ScannerManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ScannerManager {
     pub fn new() -> Self {
         Self {
@@ -262,7 +268,9 @@ pub fn analyze_track_audio(path: &Path) -> Result<(f64, String, f64), AudioError
     }
 
     let mono: Vec<f32> = samples
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|c| 0.5 * (c[0] + c[1]))
         .collect();
 

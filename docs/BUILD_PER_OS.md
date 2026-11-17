@@ -163,4 +163,6 @@ Pipa CI/CD telah dikonfigurasi penuh di folder `.github/workflows/`:
 | WebKitGTK tidak ditemukan | Paket webkit lama digunakan | Pastikan memasang versi 4.1: `libwebkit2gtk-4.1-dev` |
 | Permintaan audio input / MIC ditolak di macOS | Belum diberi hak akses privasi | Izinkan akses mikrofon di *System Settings -> Privacy & Security -> Microphone* |
 | XRun / Glitch audio pada sistem dengan beban berat | Buffer audio terlalu kecil | Buka panel *Audio Output*, naikkan buffer frames dari 128 ke 256 atau 512 frame |
+| `ALSA lib pcm_route.c:886:(find_matching_chmap) Found no matching channel map` | ALSA/CPAL diminta membuka jumlah channel yang tidak memiliki channel map (mis. 4 ch pada perangkat stereo/HDMI) | Pilih **Channel output = Auto — stereo** di panel Audio Output lalu terapkan ulang. Engine otomatis mencoba stereo sebelum gagal. Untuk cue headphone gunakan **SPLIT CUE** atau perangkat 4 channel yang valid. |
+| Engine gagal membuka stream setelah perangkat diganti | Perangkat dicabut atau buffer di luar rentang driver | Klik **Pindai ulang**, pilih perangkat `default`, buffer 256 frame, lalu terapkan ulang. |
 | Sambungan Icecast ditolak (HTTP 401/404) | Mount point atau password keliru | Pastikan format mount memakai tanda slash (contoh: `/live`) dan password cocok dengan `icecast.xml` |

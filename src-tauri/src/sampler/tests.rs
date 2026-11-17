@@ -11,7 +11,7 @@ fn test_synth_generates_valid_stereo_audio() {
     assert!(!kick.is_empty());
     assert_eq!(kick.len() % 2, 0); // Stereo
     for &s in &kick {
-        assert!(s >= -1.05 && s <= 1.05);
+        assert!((-1.05..=1.05).contains(&s));
     }
 
     let snare = synth_snare(44100, 0.2, 200.0, 0.8);

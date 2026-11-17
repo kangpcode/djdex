@@ -208,7 +208,7 @@ impl BroadcastController {
                         }
                     } else {
                         // Jika sedang tidak streaming, buang sampel yang masuk
-                        while let Ok(_) = consumer.pop() {}
+                        while consumer.pop().is_ok() {}
                         thread::sleep(Duration::from_millis(25));
                     }
                 }
@@ -370,7 +370,7 @@ fn connect_and_handshake(config: &BroadcastConfig, sample_rate: u32) -> Result<T
 /// Fungsi bantu enkripsi standar Base64 murni tanpa dependensi eksternal.
 pub fn base64_encode(input: &[u8]) -> String {
     const CHARSET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::with_capacity((input.len() + 2) / 3 * 4);
+    let mut result = String::with_capacity(input.len().div_ceil(3) * 4);
 
     for chunk in input.chunks(3) {
         let b0 = chunk[0] as usize;

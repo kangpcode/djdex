@@ -1,14 +1,14 @@
 //! Pengujian unit untuk sistem Skin dan Template DJDeX.
 
 #[cfg(test)]
-mod tests {
+mod skin_unit_tests {
     use std::fs;
     use crate::skin::loader::{SkinManager, FACTORY_SKIN_BATTLE, FACTORY_SKIN_CLASSIC, FACTORY_SKIN_REMIX, FACTORY_SKIN_TOUR};
     use crate::skin::manifest::{PlatterSize, SkinManifest, WaveformOrientation, WaveformPosition};
 
     #[test]
     fn test_factory_skins_initialization() {
-        let skins = vec![
+        let skins = [
             SkinManifest::classic_club(),
             SkinManifest::battle_scratch(),
             SkinManifest::producer_remix(),

@@ -6,8 +6,10 @@ use serde::{Deserialize, Serialize};
 /// Mode trigger pad sampler.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum PadMode {
     /// Mainkan sekali sampai akhir saat dipicu.
+    #[default]
     OneShot,
     /// Mainkan terus berulang sampai dimatikan / dipicu lagi.
     Loop,
@@ -21,11 +23,6 @@ pub enum PadMode {
     CuePad,
 }
 
-impl Default for PadMode {
-    fn default() -> Self {
-        Self::OneShot
-    }
-}
 
 /// Satu slot sample pad di engine sampler.
 #[derive(Clone)]

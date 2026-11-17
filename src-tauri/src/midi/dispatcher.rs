@@ -325,15 +325,15 @@ impl MidiDispatcher {
             DjAction::SamplerPad { pad } => {
                 if is_press {
                     let vel = (value as f32) / 127.0;
-                    let _ = engine.sampler().trigger_pad(*pad, Some(vel));
+                    engine.sampler().trigger_pad(*pad, Some(vel));
                 } else {
-                    let _ = engine.sampler().release_pad(*pad);
+                    engine.sampler().release_pad(*pad);
                 }
             }
 
             DjAction::SamplerBankSelect { bank } => {
                 if is_press {
-                    let _ = engine.sampler().select_bank(*bank);
+                    engine.sampler().select_bank(*bank);
                 }
             }
 
