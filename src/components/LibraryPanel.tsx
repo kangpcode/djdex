@@ -186,21 +186,21 @@ export function LibraryPanel() {
           {/* Search Bar */}
           <div className="relative flex-1 max-w-md">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              🔍
+              <IconSearch className="w-4 h-4" />
             </span>
             <input
               type="text"
               placeholder="Cari lagu, artis, album, genre..."
               value={searchQuery}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-950 text-sm rounded border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+              className="w-full pl-9 pr-8 py-1.5 bg-slate-950 text-sm rounded border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearch("")}
                 className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200"
               >
-                ✕
+                <IconClose className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -212,7 +212,7 @@ export function LibraryPanel() {
               className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-cyan-400 rounded border border-cyan-800/60 transition-colors flex items-center gap-1.5 shadow-sm"
               title="Pindai folder musik di komputer"
             >
-              <span>📁</span> Pindai Folder
+              <IconFolder className="w-3.5 h-3.5" /> Pindai Folder
             </button>
             <button
               onClick={() => batchAnalyze()}
@@ -220,14 +220,14 @@ export function LibraryPanel() {
               className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-amber-400 rounded border border-amber-800/60 transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
               title="Analisis otomatis BPM, Key Camelot, dan LUFS loudness"
             >
-              <span>⚡</span> {scanProgress.isAnalyzing ? "Menganalisis..." : "Analisis Batch"}
+              <IconFlash className="w-3.5 h-3.5" /> {scanProgress.isAnalyzing ? "Menganalisis..." : "Analisis Batch"}
             </button>
             <button
               onClick={handleImportPlaylist}
               className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-purple-400 rounded border border-purple-800/60 transition-colors flex items-center gap-1.5 shadow-sm"
               title="Impor file playlist M3U atau PLS"
             >
-              <span>📥</span> Impor M3U
+              <IconImport className="w-3.5 h-3.5" /> Impor M3U
             </button>
           </div>
         </div>
@@ -236,7 +236,9 @@ export function LibraryPanel() {
         {(scanProgress.isScanning || scanProgress.isAnalyzing) && (
           <div className="bg-gradient-to-r from-cyan-950 via-slate-900 to-purple-950 px-4 py-1.5 border-b border-cyan-800/50 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-cyan-300 font-medium">
-              <span className="animate-spin inline-block">⚙️</span>
+              <span className="animate-spin inline-block">
+                <IconGear className="w-3.5 h-3.5" />
+              </span>
               {scanProgress.isScanning
                 ? `Memindai folder... (${scanProgress.scannedFiles} file ditemukan)`
                 : `Analisis batch BPM & Key... (${scanProgress.analyzedTracks} / ${scanProgress.totalAnalyze})`}
