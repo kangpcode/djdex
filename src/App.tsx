@@ -46,6 +46,7 @@ export default function App() {
   const status = useAudioStore((state) => state.status);
   const refreshDevices = useAudioStore((state) => state.refreshDevices);
   const refreshStatus = useAudioStore((state) => state.refreshStatus);
+  const ensureEngine = useAudioStore((state) => state.ensureEngine);
   const engineInitialized = useAudioStore((state) => Boolean(state.status?.initialized));
 
   const refreshDeckA = useDeckAStore((state) => state.refresh);
@@ -68,12 +69,32 @@ export default function App() {
     void refreshSkins();
   }, [refreshSkins]);
 
+  // Inisialisasi semua engine saat aplikasi dibuka: pindai perangkat lalu buka
+  // stream audio default secara otomatis (idempoten, aman untuk StrictMode).
   useEffect(() => {
     if (!isTauri()) {
       return;
     }
-    void refreshDevices();
-  }, [refreshDevices]);
+    let cancelled = false;
+    void (async () => {
+      await refreshDevices();
+      if (!cancelled) {
+        await ensureEngine();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureEngine, refreshDevices]);
+
+  // Template menentukan panel bawah awal yang paling relevan.
+  const skinDefaultTab = activeSkin?.layout.lowerPanelDefault;
+  useEffect(() => {
+    const allowed: LowerTab[] = ["library", "sampler", "fx", "midi", "skin", "record", "engine"];
+    if (skinDefaultTab && allowed.includes(skinDefaultTab as LowerTab)) {
+      setLowerTab(skinDefaultTab as LowerTab);
+    }
+  }, [activeSkin?.metadata.id, skinDefaultTab]);
 
   useEffect(() => {
     if (!engineInitialized) {
@@ -283,6 +304,19 @@ export default function App() {
               >
                 <span className="h-2 w-2 rounded-full bg-amber-400" />
                 Audio Output & Diagnostics
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLowerTab("record")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "record"
+                    ? "border-red-400 bg-red-500/20 text-red-300 shadow-[0_0_10px_rgba(248,113,113,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-red-400" />
+                Record & Live Broadcast
               </button>
             </div>
 

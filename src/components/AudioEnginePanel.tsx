@@ -11,6 +11,7 @@ export function AudioEnginePanel() {
     selectedDeviceId,
     bufferSize,
     sampleRate,
+    channels,
     status,
     busy,
     error,
@@ -18,6 +19,7 @@ export function AudioEnginePanel() {
     selectDevice,
     setBufferSize,
     setSampleRate,
+    setChannels,
     startEngine,
     stopEngine,
     clearError,
@@ -49,6 +51,22 @@ export function AudioEnginePanel() {
     ...(activeDevice?.sampleRates ?? []).map((rate) => ({
       value: String(rate),
       label: formatSampleRate(rate),
+    })),
+  ];
+
+  const supportedChannels = activeDevice?.supportedChannels?.length
+    ? activeDevice.supportedChannels
+    : [2];
+  const channelOptions = [
+    { value: "auto", label: "Auto — stereo (paling kompatibel)" },
+    ...supportedChannels.map((value) => ({
+      value: String(value),
+      label:
+        value === 2
+          ? "2 ch — Stereo (master L/R)"
+          : value === 4
+            ? "4 ch — Master 1/2 + Headphone Cue 3/4"
+            : `${value} ch`,
     })),
   ];
 
@@ -150,6 +168,18 @@ export function AudioEnginePanel() {
           disabled={busy}
           hint="Auto mengikuti konfigurasi default perangkat."
         />
+
+        <div className="sm:col-span-2">
+          <Select
+            id="channels"
+            label="Channel output"
+            value={channels == null ? "auto" : String(channels)}
+            options={channelOptions}
+            onChange={(value) => setChannels(value === "auto" ? null : Number(value))}
+            disabled={busy}
+            hint="Engine mencoba konfigurasi berurutan: pilihan Anda → stereo → default perangkat. Stereo selalu aman di ALSA; 4 channel hanya untuk antarmuka audio yang benar-benar mendukung master + cue terpisah."
+          />
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -206,8 +236,10 @@ export function AudioEnginePanel() {
       </dl>
 
       <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
-        Fase 1 fokus pada output nyata: perangkat, buffer, dan generator sine. Decoder
-        Symphonia, deck, dan waveform menyusul di Fase 2.
+        Fase 11: engine membuka stream secara otomatis saat aplikasi dijalankan, lalu
+        menampilkan perangkat, format, buffer, latensi, dan statistik callback yang aktif.
+        Jika ALSA menolak channel map (mis. <span className="font-mono">find_matching_chmap</span>),
+        engine otomatis turun ke stereo, bukan gagal total.
       </p>
     </Panel>
   );

@@ -143,7 +143,7 @@ export function SkinPanel() {
   };
 
   const isFactorySkin = (id: string) =>
-    ["classic-club", "battle-scratch", "producer-remix", "four-deck-pro"].includes(id);
+    ["classic-club", "battle-scratch", "producer-remix", "tour-pro"].includes(id);
 
   return (
     <Panel
@@ -525,8 +525,10 @@ export function SkinPanel() {
                     onChange={(e) => setDeckCount(Number(e.target.value))}
                     className="w-full rounded border border-line bg-deck-900 px-3 py-1.5 text-xs text-ink focus:outline-none"
                   >
-                    <option value={2}>2 Deck (Deck A & B)</option>
-                    <option value={4}>4 Deck (A/C Kiri, B/D Kanan)</option>
+                    <option value={2}>2 Deck (Deck A &amp; B — didukung engine)</option>
+                    <option value={4} disabled>
+                      4 Deck (menunggu engine 4-deck — fase berikutnya)
+                    </option>
                   </select>
                 </div>
 

@@ -9,6 +9,7 @@ import type {
 import { useAudioStore } from "../stores/audioStore";
 import { useDeckAStore, useDeckBStore } from "../stores/deckStore";
 import { useMixerStore } from "../stores/mixerStore";
+import { useSkinStore } from "../stores/skinStore";
 import { LevelMeter } from "./ui/LevelMeter";
 import { Panel } from "./ui/Panel";
 import { Slider } from "./ui/Slider";
@@ -235,6 +236,7 @@ export function MixerPanel() {
   const engine = useAudioStore((state) => state.status);
   const deckApeak = useDeckAStore((state) => state.status?.peak ?? 0);
   const deckBpeak = useDeckBStore((state) => state.status?.peak ?? 0);
+  const skin = useSkinStore((state) => state.activeSkin);
 
   const m = mixer ?? FALLBACK;
   const ready = Boolean(engine?.initialized);
@@ -269,6 +271,7 @@ export function MixerPanel() {
     <Panel
       title="Mixer"
       subtitle="Channel A/B · EQ · filter · crossfader · master · cue"
+      accentColor={skin?.theme.primaryColor}
       actions={
         <span className="chip">
           <span className={`led ${ready ? "led-on" : ""}`} />
