@@ -39,6 +39,7 @@ use crate::audio::fx::{FxControls, FxParams, FxSlotUpdate};
 use crate::audio::gain::{db_to_linear, linear_to_db};
 use crate::audio::mixer::{Mixer, MixerControls, MixerParams, MixerUpdate};
 use crate::error::AudioError;
+use crate::library::preview::{PreviewController, PreviewPlayerRt};
 use crate::sampler::{SamplerController, SamplerRt};
 
 /// Batas frekuensi test tone (Hz).
@@ -209,6 +210,7 @@ struct OpenedStream {
     stream: Stream,
     decks: [Arc<Deck>; DECK_COUNT],
     sampler: Arc<SamplerController>,
+    preview: Arc<PreviewController>,
     report: StreamReport,
 }
 
@@ -220,6 +222,7 @@ pub struct AudioEngine {
     worker: Option<JoinHandle<()>>,
     decks: [Arc<Deck>; DECK_COUNT],
     sampler: Arc<SamplerController>,
+    preview: Arc<PreviewController>,
     auto_dj: AutoDj,
 }
 
@@ -243,7 +246,7 @@ impl AudioEngine {
             .map_err(|err| AudioError::StreamThreadSpawn(err.to_string()))?;
 
         match ready_rx.recv_timeout(OPEN_TIMEOUT) {
-            Ok(Ok((_report, decks, sampler))) => {
+            Ok(Ok((_report, decks, sampler, preview))) => {
                 let auto_dj = match AutoDj::start(
                     [Arc::clone(&decks[0]), Arc::clone(&decks[1])],
                     Arc::clone(&rt.mixer),
@@ -262,6 +265,7 @@ impl AudioEngine {
                     worker: Some(worker),
                     decks,
                     sampler,
+                    preview,
                     auto_dj,
                 })
             }
@@ -340,6 +344,10 @@ impl AudioEngine {
 
     pub fn sampler(&self) -> &Arc<SamplerController> {
         &self.sampler
+    }
+
+    pub fn preview(&self) -> &Arc<PreviewController> {
+        &self.preview
     }
 
     pub fn load_track(
@@ -492,7 +500,7 @@ fn audio_host_loop(
     }
 
     if ready
-        .send(Ok((opened.report, opened.decks, opened.sampler)))
+        .send(Ok((opened.report, opened.decks, opened.sampler, opened.preview)))
         .is_err()
     {
         // Pemanggil sudah menyerah; stream akan ditutup saat fungsi kembali.
@@ -539,16 +547,18 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
     let decks = [Arc::new(deck_a), Arc::new(deck_b)];
     let (sampler_controller, sampler_rt) = SamplerController::new(sample_rate);
     let sampler = Arc::new(sampler_controller);
+    let (preview_controller, preview_rt) = PreviewController::new(sample_rate);
+    let preview = Arc::new(preview_controller);
 
     let stream = match sample_format {
         SampleFormat::F32 => {
-            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt)?
+            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt)?
         }
         SampleFormat::I16 => {
-            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt)?
+            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt)?
         }
         SampleFormat::U16 => {
-            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt)?
+            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt)?
         }
         other => {
             return Err(AudioError::UnsupportedSampleFormat(sample_format_label(
@@ -565,6 +575,7 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
         stream,
         decks,
         sampler,
+        preview,
         report: StreamReport {
             device_name,
             host: host_label().to_string(),
@@ -640,6 +651,7 @@ fn build_output<T>(
     rt: Arc<RtState>,
     mut decks: [DeckReader; DECK_COUNT],
     mut sampler_rt: SamplerRt,
+    mut preview_rt: PreviewPlayerRt,
 ) -> Result<Stream, AudioError>
 where
     T: SizedSample + FromSample<f32> + Send + 'static,
@@ -664,6 +676,7 @@ where
                     &mut oscillator,
                     &mut decks,
                     &mut sampler_rt,
+                    &mut preview_rt,
                     &mut mixer,
                 );
             },
@@ -687,6 +700,7 @@ fn render_block<T>(
     oscillator: &mut ToneOscillator,
     decks: &mut [DeckReader; DECK_COUNT],
     sampler: &mut SamplerRt,
+    preview: &mut PreviewPlayerRt,
     mixer: &mut Mixer,
 ) where
     T: SizedSample + FromSample<f32>,
@@ -721,6 +735,7 @@ fn render_block<T>(
     let deck_b_frames = deck_b_samples.len() / 2;
 
     sampler.process_block(frames, 128.0);
+    preview.prepare_block();
 
     let mut peak = 0.0_f32;
     let mut deck_a_peak = 0.0_f32;
@@ -758,8 +773,15 @@ fn render_block<T>(
         } else {
             (0.0, 0.0)
         };
+        let preview_sample = preview.next_sample();
 
-        let mix = mixer.process((left, right), (left_b, right_b), sampler_sample, tone);
+        let mix = mixer.process(
+            (left, right),
+            (left_b, right_b),
+            sampler_sample,
+            preview_sample,
+            tone,
+        );
         master_peak_l = master_peak_l.max(mix.master_l.abs());
         master_peak_r = master_peak_r.max(mix.master_r.abs());
 

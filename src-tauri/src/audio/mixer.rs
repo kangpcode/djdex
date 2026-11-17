@@ -538,13 +538,14 @@ impl Mixer {
         deck_a: (f32, f32),
         deck_b: (f32, f32),
         sampler: (f32, f32),
+        preview: (f32, f32),
         tone: f32,
     ) -> MixerFrame {
         let inputs = [deck_a, deck_b];
         let mut master_l = tone + sampler.0;
         let mut master_r = tone + sampler.1;
-        let mut cue_l = 0.0_f32;
-        let mut cue_r = 0.0_f32;
+        let mut cue_l = preview.0;
+        let mut cue_r = preview.1;
         for (index, input) in inputs.iter().enumerate().take(DECK_CHANNELS) {
             let fx_input = self.fx_chains[index].process(*input, &self.fx_params.chains[index]);
             let ((left, right), cue) = self.channels[index].process(fx_input.0, fx_input.1);
@@ -686,7 +687,7 @@ mod tests {
             ..MixerParams::default()
         };
         mixer.configure(&params, &FxParams::default());
-        let frame = mixer.process((0.5, -0.5), (0.2, -0.2), (0.0, 0.0), 0.0);
+        let frame = mixer.process((0.5, -0.5), (0.2, -0.2), (0.0, 0.0), (0.0, 0.0), 0.0);
         assert_eq!(frame.head_l, 0.0);
         assert_eq!(frame.head_r, 0.0);
     }
@@ -704,7 +705,7 @@ mod tests {
 
         let mut head_peak = 0.0_f32;
         for _ in 0..128 {
-            let frame = mixer.process((0.5, 0.5), (0.25, 0.25), (0.0, 0.0), 0.0);
+            let frame = mixer.process((0.5, 0.5), (0.25, 0.25), (0.0, 0.0), (0.0, 0.0), 0.0);
             head_peak = head_peak.max(frame.head_l.abs());
         }
         assert!(
@@ -726,10 +727,36 @@ mod tests {
         let mut peak = 0.0_f32;
         for index in 0..9_600 {
             let value = (2.0 * std::f32::consts::PI * 200.0 * index as f32 / 48_000.0).sin() * 2.0;
-            let frame = mixer.process((value, value), (value, value), (0.0, 0.0), 0.0);
+            let frame = mixer.process((value, value), (value, value), (0.0, 0.0), (0.0, 0.0), 0.0);
             peak = peak.max(frame.master_l.abs());
         }
         assert!(peak <= 0.99, "peak = {peak}");
         assert!(mixer.take_limiter_reduction_db() > 1.0);
+    }
+
+    #[test]
+    fn preview_routes_to_cue_not_master() {
+        let mut mixer = Mixer::new(48_000.0);
+        let params = MixerParams {
+            master_volume: 1.0,
+            cue_volume: 1.0,
+            cue_mix: 1.0,
+            ..MixerParams::default()
+        };
+        mixer.configure(&params, &FxParams::default());
+
+        let frame = mixer.process(
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (0.42, 0.42),
+            0.0,
+        );
+        // Master harus nol
+        assert_eq!(frame.master_l, 0.0);
+        assert_eq!(frame.master_r, 0.0);
+        // Headphone cue harus menerima preview
+        assert!(frame.head_l > 0.2);
+        assert!(frame.head_r > 0.2);
     }
 }

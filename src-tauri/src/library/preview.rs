@@ -66,6 +66,11 @@ impl PreviewPlayerRt {
         }
     }
 
+    #[inline]
+    pub fn prepare_block(&mut self) {
+        self.handle_commands();
+    }
+
     fn handle_commands(&mut self) {
         while let Ok(cmd) = self.command_rx.try_recv() {
             match cmd {
@@ -112,6 +117,11 @@ impl PreviewPlayerRt {
         self.cursor += 1.0;
 
         (l, r)
+    }
+
+    #[inline]
+    pub fn finish_block(&self) {
+        self.update_ui_atomics();
     }
 
     pub fn update_ui_atomics(&self) {
