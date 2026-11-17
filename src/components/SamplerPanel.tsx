@@ -244,8 +244,13 @@ export function SamplerPanel() {
       </div>
 
       {/* Main Content Area */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Left: Pad Grid or Step Sequencer */}
+      {activeTab === "flstudio" ? (
+        <div className="mt-4">
+          <FlStudioStudio />
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_320px]">
+          {/* Left: Pad Grid or Step Sequencer */}
         <div className="flex flex-col gap-3">
           {activeTab === "pads" ? (
             <div
@@ -772,6 +777,7 @@ export function SamplerPanel() {
           )}
         </div>
       </div>
+      )}
     </Panel>
   );
 }
