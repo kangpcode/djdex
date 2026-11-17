@@ -75,6 +75,9 @@ asio = ["cpal/asio"]
 [profile.dev]
 # Engine audio tetap responsif walau build debug: optimasi level dasar.
 opt-level = 1
+# Nonaktifkan incremental compilation pada profil dev agar rust-lld tidak gagal
+# karena simbol anonim / drop_glue LLVM yang tidak sinkron di libdjdex_lib.rlib.
+incremental = false
 
 [profile.dev.package."*"]
 opt-level = 2
