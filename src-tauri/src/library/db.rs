@@ -11,21 +11,21 @@ use crate::error::AudioError;
 #[serde(rename_all = "camelCase")]
 pub struct LibraryTrack {
     pub id: i64,
-    pub filePath: String,
+    pub file_path: String,
     pub title: String,
     pub artist: String,
     pub album: Option<String>,
     pub genre: Option<String>,
     pub year: Option<u32>,
     pub bpm: Option<f64>,
-    pub keyName: Option<String>,
-    pub durationSecs: f64,
+    pub key_name: Option<String>,
+    pub duration_secs: f64,
     pub rating: u32,
     pub color: Option<String>,
-    pub playCount: u32,
-    pub dateAdded: String,
+    pub play_count: u32,
+    pub date_added: String,
     pub analyzed: bool,
-    pub loudnessLufs: Option<f64>,
+    pub loudness_lufs: Option<f64>,
 }
 
 /// Satu entri Crate (kategori folder musik DJ).
@@ -35,18 +35,18 @@ pub struct CrateItem {
     pub id: i64,
     pub name: String,
     pub color: Option<String>,
-    pub trackCount: usize,
+    pub track_count: usize,
 }
 
 /// Definisi filter untuk Smart Playlist otomatis.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SmartFilter {
-    pub minBpm: Option<f64>,
-    pub maxBpm: Option<f64>,
-    pub keyName: Option<String>,
+    pub min_bpm: Option<f64>,
+    pub max_bpm: Option<f64>,
+    pub key_name: Option<String>,
     pub genre: Option<String>,
-    pub minRating: Option<u32>,
+    pub min_rating: Option<u32>,
 }
 
 /// Satu entri Playlist (manual atau smart playlist berbasis aturan).
@@ -55,9 +55,9 @@ pub struct SmartFilter {
 pub struct PlaylistItem {
     pub id: i64,
     pub name: String,
-    pub isSmart: bool,
-    pub smartFilter: Option<SmartFilter>,
-    pub trackCount: usize,
+    pub is_smart: bool,
+    pub smart_filter: Option<SmartFilter>,
+    pub track_count: usize,
 }
 
 /// Riwayat pemutaran track (History).
@@ -65,12 +65,12 @@ pub struct PlaylistItem {
 #[serde(rename_all = "camelCase")]
 pub struct HistoryItem {
     pub id: i64,
-    pub trackId: i64,
+    pub track_id: i64,
     pub title: String,
     pub artist: String,
-    pub deckSlot: usize,
-    pub playedAt: String,
-    pub durationSecs: f64,
+    pub deck_slot: usize,
+    pub played_at: String,
+    pub duration_secs: f64,
 }
 
 /// Parameter query pencarian dan penyortiran track.
@@ -78,10 +78,10 @@ pub struct HistoryItem {
 #[serde(rename_all = "camelCase")]
 pub struct TrackQuery {
     pub search: Option<String>,
-    pub sortColumn: Option<String>,
-    pub sortDescending: Option<bool>,
-    pub crateId: Option<i64>,
-    pub playlistId: Option<i64>,
+    pub sort_column: Option<String>,
+    pub sort_descending: Option<bool>,
+    pub crate_id: Option<i64>,
+    pub playlist_id: Option<i64>,
     pub limit: Option<usize>,
 }
 
@@ -205,21 +205,21 @@ impl LibraryDb {
                 duration_secs = excluded.duration_secs
             ",
             params![
-                track.filePath,
+                track.file_path,
                 track.title,
                 track.artist,
                 track.album,
                 track.genre,
                 track.year,
                 track.bpm,
-                track.keyName,
-                track.durationSecs,
+                track.key_name,
+                track.duration_secs,
                 track.rating,
                 track.color,
-                track.playCount,
-                track.dateAdded,
+                track.play_count,
+                track.date_added,
                 if track.analyzed { 1 } else { 0 },
-                track.loudnessLufs,
+                track.loudness_lufs,
             ],
         )
         .map_err(|e| AudioError::Io(format!("Gagal simpan track: {e}")))?;
@@ -286,11 +286,11 @@ impl LibraryDb {
         let mut conditions: Vec<String> = Vec::new();
         let mut param_values: Vec<rusqlite::types::Value> = Vec::new();
 
-        if let Some(crate_id) = query.crateId {
+        if let Some(crate_id) = query.crate_id {
             sql.push_str(" JOIN crate_tracks ct ON t.id = ct.track_id ");
             conditions.push(" ct.crate_id = ? ".to_string());
             param_values.push(crate_id.into());
-        } else if let Some(playlist_id) = query.playlistId {
+        } else if let Some(playlist_id) = query.playlist_id {
             // Periksa apakah ini smart playlist
             let mut stmt = conn
                 .prepare("SELECT is_smart, smart_filter FROM playlists WHERE id = ?1")
@@ -305,15 +305,15 @@ impl LibraryDb {
 
             if let Some((true, Some(filter_str))) = playlist_meta {
                 if let Ok(filter) = serde_json::from_str::<SmartFilter>(&filter_str) {
-                    if let Some(min_bpm) = filter.minBpm {
+                    if let Some(min_bpm) = filter.min_bpm {
                         conditions.push(" t.bpm >= ? ".to_string());
                         param_values.push(min_bpm.into());
                     }
-                    if let Some(max_bpm) = filter.maxBpm {
+                    if let Some(max_bpm) = filter.max_bpm {
                         conditions.push(" t.bpm <= ? ".to_string());
                         param_values.push(max_bpm.into());
                     }
-                    if let Some(key) = filter.keyName {
+                    if let Some(key) = filter.key_name {
                         conditions.push(" t.key_name = ? ".to_string());
                         param_values.push(key.into());
                     }
@@ -321,7 +321,7 @@ impl LibraryDb {
                         conditions.push(" t.genre LIKE ? ".to_string());
                         param_values.push(format!("%{genre}%").into());
                     }
-                    if let Some(rating) = filter.minRating {
+                    if let Some(rating) = filter.min_rating {
                         conditions.push(" t.rating >= ? ".to_string());
                         param_values.push((rating as i64).into());
                     }
@@ -350,18 +350,18 @@ impl LibraryDb {
         }
 
         // Sorting
-        let sort_col = match query.sortColumn.as_deref() {
+        let sort_col = match query.sort_column.as_deref() {
             Some("artist") => "t.artist",
             Some("bpm") => "t.bpm",
-            Some("keyName") => "t.key_name",
+            Some("keyName") | Some("key_name") => "t.key_name",
             Some("genre") => "t.genre",
-            Some("durationSecs") => "t.duration_secs",
+            Some("durationSecs") | Some("duration_secs") => "t.duration_secs",
             Some("rating") => "t.rating",
-            Some("playCount") => "t.play_count",
-            Some("dateAdded") => "t.date_added",
+            Some("playCount") | Some("play_count") => "t.play_count",
+            Some("dateAdded") | Some("date_added") => "t.date_added",
             _ => "t.title",
         };
-        let direction = if query.sortDescending.unwrap_or(false) {
+        let direction = if query.sort_descending.unwrap_or(false) {
             "DESC"
         } else {
             "ASC"
@@ -385,21 +385,21 @@ impl LibraryDb {
             .query_map(params_slice.as_slice(), |row| {
                 Ok(LibraryTrack {
                     id: row.get(0)?,
-                    filePath: row.get(1)?,
+                    file_path: row.get(1)?,
                     title: row.get(2)?,
                     artist: row.get(3)?,
                     album: row.get(4)?,
                     genre: row.get(5)?,
                     year: row.get(6)?,
                     bpm: row.get(7)?,
-                    keyName: row.get(8)?,
-                    durationSecs: row.get(9)?,
+                    key_name: row.get(8)?,
+                    duration_secs: row.get(9)?,
                     rating: row.get(10)?,
                     color: row.get(11)?,
-                    playCount: row.get(12)?,
-                    dateAdded: row.get(13)?,
+                    play_count: row.get(12)?,
+                    date_added: row.get(13)?,
                     analyzed: row.get::<_, i64>(14)? == 1,
-                    loudnessLufs: row.get(15)?,
+                    loudness_lufs: row.get(15)?,
                 })
             })
             .map_err(|e| AudioError::Io(e.to_string()))?;
@@ -458,7 +458,7 @@ impl LibraryDb {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     color: row.get(2)?,
-                    trackCount: row.get::<_, i64>(3)? as usize,
+                    track_count: row.get::<_, i64>(3)? as usize,
                 })
             })
             .map_err(|e| AudioError::Io(e.to_string()))?;
@@ -539,9 +539,9 @@ impl LibraryDb {
                 Ok(PlaylistItem {
                     id: row.get(0)?,
                     name: row.get(1)?,
-                    isSmart: row.get::<_, i64>(2)? == 1,
-                    smartFilter: smart_filter,
-                    trackCount: row.get::<_, i64>(4)? as usize,
+                    is_smart: row.get::<_, i64>(2)? == 1,
+                    smart_filter,
+                    track_count: row.get::<_, i64>(4)? as usize,
                 })
             })
             .map_err(|e| AudioError::Io(e.to_string()))?;
@@ -605,12 +605,12 @@ impl LibraryDb {
             .query_map(params![limit as i64], |row| {
                 Ok(HistoryItem {
                     id: row.get(0)?,
-                    trackId: row.get(1)?,
+                    track_id: row.get(1)?,
                     title: row.get(2)?,
                     artist: row.get(3)?,
-                    deckSlot: row.get::<_, i64>(4)? as usize,
-                    playedAt: row.get(5)?,
-                    durationSecs: row.get(6)?,
+                    deck_slot: row.get::<_, i64>(4)? as usize,
+                    played_at: row.get(5)?,
+                    duration_secs: row.get(6)?,
                 })
             })
             .map_err(|e| AudioError::Io(e.to_string()))?;

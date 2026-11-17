@@ -138,7 +138,7 @@ impl ScannerManager {
                 total_analyze.store(tracks_to_analyze.len(), Ordering::Relaxed);
 
                 for (idx, track) in tracks_to_analyze.iter().enumerate() {
-                    let path = PathBuf::from(&track.filePath);
+                    let path = PathBuf::from(&track.file_path);
                     if let Ok((bpm, key, lufs)) = analyze_track_audio(&path) {
                         let _ = db.update_track_analysis(track.id, bpm, key, lufs);
                     }
