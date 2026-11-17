@@ -98,10 +98,10 @@ pub fn export_m3u(
         .map_err(|e| AudioError::Io(e.to_string()))?;
 
     for track in tracks {
-        let dur = track.durationSecs.round() as i64;
+        let dur = track.duration_secs.round() as i64;
         writeln!(file, "#EXTINF:{dur},{} - {}", track.artist, track.title)
             .map_err(|e| AudioError::Io(e.to_string()))?;
-        writeln!(file, "{}", track.filePath)
+        writeln!(file, "{}", track.file_path)
             .map_err(|e| AudioError::Io(e.to_string()))?;
     }
 
