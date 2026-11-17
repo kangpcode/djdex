@@ -365,8 +365,8 @@ impl SkinManifest {
                 primary_color: "#38bdf8".to_string(), // Sky blue
                 accent_deck_a: "#38bdf8".to_string(),
                 accent_deck_b: "#f97316".to_string(), // Vivid orange
-                accent_deck_c: "#10b981".to_string(), // Emerald
-                accent_deck_d: "#f43f5e".to_string(), // Rose
+                accent_deck_c: Some("#10b981".to_string()), // Emerald
+                accent_deck_d: Some("#f43f5e".to_string()), // Rose
                 background_color: "#080c14".to_string(),
                 surface_color: "#0f172a".to_string(),
                 panel_border_color: "#1e293b".to_string(),
