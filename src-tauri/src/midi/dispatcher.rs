@@ -325,9 +325,9 @@ impl MidiDispatcher {
             DjAction::SamplerPad { pad } => {
                 if is_press {
                     let vel = (value as f32) / 127.0;
-                    let _ = engine.sampler().trigger(*pad, Some(vel));
+                    let _ = engine.sampler().trigger_pad(*pad, Some(vel));
                 } else {
-                    let _ = engine.sampler().release(*pad);
+                    let _ = engine.sampler().release_pad(*pad);
                 }
             }
 
