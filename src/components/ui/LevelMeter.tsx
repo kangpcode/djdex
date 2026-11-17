@@ -110,7 +110,7 @@ export function LevelMeter({
           const litSegments = Math.round(((channelDb + 60) / 60) * segments);
           return (
             <div key={channel} className="flex items-center gap-2">
-              <span className="w-3 text-center font-mono text-[10px] text-ink-faint">
+              <span className="min-w-[28px] shrink-0 text-left font-mono text-[9.5px] font-bold text-slate-400 whitespace-nowrap">
                 {channel}
               </span>
               <div className="flex flex-1 gap-[3px]">
