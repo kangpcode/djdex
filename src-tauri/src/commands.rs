@@ -7,11 +7,13 @@ use tauri::State;
 
 use crate::analysis::waveform::WaveformDto;
 use crate::audio::autodj::{AutoDjStatus, AutoDjUpdate};
+use crate::audio::broadcast::{BroadcastConfig, BroadcastStatus};
 use crate::audio::deck::DeckStatus;
 use crate::audio::device::{list_output_devices, AudioDeviceInfo};
 use crate::audio::engine::{AudioEngine, EngineStatus, StartRequest};
 use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
+use crate::audio::recorder::{RecordFormat, RecorderStatus};
 use crate::library::db::{
     CrateItem, HistoryItem, LibraryTrack, PlaylistItem, SmartFilter, TrackQuery,
 };
@@ -829,4 +831,60 @@ pub fn import_skin_pack(
     zip_path: String,
 ) -> IpcResult<SkinManifest> {
     state.import_skin_pack(std::path::Path::new(&zip_path))
+}
+
+// ---- Recording & Live Streaming Broadcast (Fase 11) ------------------------
+
+#[tauri::command]
+pub fn start_recording(
+    state: State<'_, AppState>,
+    output_path: Option<String>,
+    format: Option<RecordFormat>,
+) -> IpcResult<RecorderStatus> {
+    state
+        .start_recording(output_path, format)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_recording(state: State<'_, AppState>) -> IpcResult<RecorderStatus> {
+    state.stop_recording().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn pause_recording(state: State<'_, AppState>) -> IpcResult<RecorderStatus> {
+    state.pause_recording().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn resume_recording(state: State<'_, AppState>) -> IpcResult<RecorderStatus> {
+    state.resume_recording().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn split_recording(state: State<'_, AppState>) -> IpcResult<RecorderStatus> {
+    state.split_recording().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_recorder_status(state: State<'_, AppState>) -> IpcResult<RecorderStatus> {
+    state.get_recorder_status().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn start_broadcast(
+    state: State<'_, AppState>,
+    config: BroadcastConfig,
+) -> IpcResult<BroadcastStatus> {
+    state.start_broadcast(config).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_broadcast(state: State<'_, AppState>) -> IpcResult<BroadcastStatus> {
+    state.stop_broadcast().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_broadcast_status(state: State<'_, AppState>) -> IpcResult<BroadcastStatus> {
+    state.get_broadcast_status().map_err(|e| e.to_string())
 }

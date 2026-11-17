@@ -121,6 +121,15 @@ pub fn run() {
             commands::delete_skin,
             commands::export_skin_pack,
             commands::import_skin_pack,
+            commands::start_recording,
+            commands::stop_recording,
+            commands::pause_recording,
+            commands::resume_recording,
+            commands::split_recording,
+            commands::get_recorder_status,
+            commands::start_broadcast,
+            commands::stop_broadcast,
+            commands::get_broadcast_status,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan aplikasi DJDeX");

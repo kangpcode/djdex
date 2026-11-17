@@ -765,4 +765,84 @@ impl AppState {
     pub fn import_skin_pack(&self, zip_path: &std::path::Path) -> Result<SkinManifest, String> {
         self.skin.lock().import_skin_pack(zip_path)
     }
+
+    // ---- Recording & Broadcast (Fase 11) -----------------------------------
+
+    pub fn start_recording(
+        &self,
+        output_path: Option<String>,
+        format: Option<RecordFormat>,
+    ) -> Result<RecorderStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        let path = match output_path {
+            Some(p) => std::path::PathBuf::from(p),
+            None => {
+                let timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                default_recordings_dir().join(format!("DJDeX_Mix_{}.wav", timestamp))
+            }
+        };
+        engine.recorder().start(path, format.unwrap_or_default())
+    }
+
+    pub fn stop_recording(&self) -> Result<RecorderStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        engine.recorder().stop()
+    }
+
+    pub fn pause_recording(&self) -> Result<RecorderStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        Ok(engine.recorder().pause())
+    }
+
+    pub fn resume_recording(&self) -> Result<RecorderStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        Ok(engine.recorder().resume())
+    }
+
+    pub fn split_recording(&self) -> Result<RecorderStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        engine.recorder().split()
+    }
+
+    pub fn get_recorder_status(&self) -> Result<RecorderStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        Ok(engine.recorder().status())
+    }
+
+    pub fn start_broadcast(&self, config: BroadcastConfig) -> Result<BroadcastStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        engine.broadcast().start(config)
+    }
+
+    pub fn stop_broadcast(&self) -> Result<BroadcastStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        engine.broadcast().stop()
+    }
+
+    pub fn get_broadcast_status(&self) -> Result<BroadcastStatus, AudioError> {
+        let engine = self.engine.lock();
+        let engine = engine.as_ref().ok_or(AudioError::NotInitialized)?;
+        Ok(engine.broadcast().status())
+    }
+}
+
+fn default_recordings_dir() -> std::path::PathBuf {
+    if let Ok(music) = std::env::var("XDG_MUSIC_DIR") {
+        std::path::PathBuf::from(music).join("DJDeX Recordings")
+    } else if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home).join("Music").join("DJDeX Recordings")
+    } else {
+        std::path::PathBuf::from("recordings")
+    }
 }
