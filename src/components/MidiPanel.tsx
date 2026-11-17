@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMidiStore } from "../stores/midiStore";
 import { Panel } from "./ui/Panel";
-import type { DjAction, JogWheelMode, MidiMapping } from "../lib/ipc";
+import type { DjAction, JogWheelMode } from "../lib/ipc";
 
 const ACTION_CATEGORIES: {
   category: string;
@@ -101,8 +101,6 @@ const ACTION_CATEGORIES: {
 export function MidiPanel() {
   const inputs = useMidiStore((s) => s.inputs);
   const outputs = useMidiStore((s) => s.outputs);
-  const selectedInputId = useMidiStore((s) => s.selectedInputId);
-  const selectedOutputId = useMidiStore((s) => s.selectedOutputId);
   const status = useMidiStore((s) => s.status);
   const mappings = useMidiStore((s) => s.mappings);
   const presets = useMidiStore((s) => s.presets);
@@ -176,7 +174,10 @@ export function MidiPanel() {
   });
 
   return (
-    <Panel title="MIDI Controller & Hardware Mapping Workstation" color="emerald">
+    <Panel
+      title="MIDI Controller & Hardware Mapping Workstation"
+      subtitle="Integrasi Controller MIDI, MIDI Learn Interaktif & Keyboard Shortcuts"
+    >
       {/* Top Device Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line/60 bg-deck-900/60 p-4">
         {/* Device Port Selectors */}

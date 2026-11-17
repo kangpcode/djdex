@@ -3,6 +3,59 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-11-17
+
+### Added — Fase 9: Integrasi MIDI Controller & MIDI Learn + Keyboard Mapping
+
+- **Cross-Platform MIDI I/O Engine (`src-tauri/src/midi/device.rs`) via `midir`**:
+  - Deteksi dan pemindaian port input dan output fisik serta virtual MIDI secara dinamis.
+  - Koneksi thread-safe ke perangkat MIDI fisik dengan callback stream non-blocking berlatensi ultra-rendah (< 1 ms).
+  - Parser pesan biner MIDI standar: `NoteOn`, `NoteOff` (termasuk deteksi NoteOn velocity 0 sebagai NoteOff standar), `ControlChange`, dan `PitchBend` 14-bit.
+  - Encoder `MidiEvent::to_bytes()` untuk serialisasi kembali pesan MIDI ke hardware controller.
+- **Decoding Jog Wheel Relatif Hardware (`src-tauri/src/midi/types.rs`)**:
+  - Dukungan decoding 4 mode gerakan jog wheel DJ profesional:
+    - `RelativeTwoComp`: 7-bit two's complement standar (Pioneer DJ DDJ-400, DDJ-FLX4, DDJ-SB3).
+    - `RelativeBinaryOffset`: center 64 binary offset (Traktor Kontrol, Numark Mixtrack).
+    - `RelativeSignedBit`: sign-magnitude bit 6 (Hercules DJControl Inpulse 200/300).
+    - `Absolute`: pemetaan absolut 0..127.
+  - Translasi delta putaran menjadi seek scrubbing dan nudge tempo secara mulus.
+- **Bidirectional Hardware LED Feedback Engine (`src-tauri/src/midi/dispatcher.rs`)**:
+  - Mengirim kembali status audio engine ke perangkat controller fisik melalui port MIDI Out.
+  - Indikator LED sinkron untuk Play/Pause (menyala saat playing), Cue Point (menyala saat cue point tersedia), Sync, Auto Loop, Headphone Cue (PFL), dan Hot Cues (menyala jika slot cue terisi).
+  - Sinkronisasi instan seluruh status LED saat controller pertama kali tersambung (`sync_all_leds`).
+- **Interactive MIDI Learn Engine (`src-tauri/src/midi/mapping.rs`)**:
+  - Mode interaktif "Listen & Learn" untuk mengaitkan kontrol fisik controller secara langsung: cukup pilih aksi DJ di UI dan gerakkan tombol/fader/knob controller.
+  - Pencegahan false trigger dari event NoteOff atau velocity 0 saat proses learning tombol.
+  - Penimpaan otomatis dan pemetaan dinamis disimpan di RAM dan dapat diekspor ke file JSON.
+- **Factory Presets & Custom Preset Manager**:
+  - Preset bawaan:
+    - *Pioneer DDJ-400 / DDJ-FLX4*: konfigurasi kanal penuh untuk Deck 1 (Ch 0) & Deck 2 (Ch 1), jog wheel two's complement, fader, EQ 3-band, filter Sound Color, PFL headphone cue, auto loop, hot cues 1..8, crossfader, dan browser rotary.
+    - *Hercules DJControl Inpulse 300 / 200*: konfigurasi kanal ganda dengan signed-bit jog wheel decoding.
+    - *Generic 2-Deck DJ Controller*: pemetaan standar 2-deck.
+  - Penyimpanan dan pemuatan preset kustom berbasis format JSON di folder konfigurasi aplikasi.
+- **Sistem Pemetaan Keyboard Komputer (`src-tauri/src/midi/keyboard.rs`)**:
+  - Pintasan keyboard lengkap untuk workstation DJDeX tanpa controller hardware:
+    - Deck 1: `Space` (Play/Pause), `C` (Cue), `S` (Sync), `1..4` (Hot Cues 1..4), `Q/W` (Pitch bend -/+), `E` (Loop toggle), `R/T` (Loop 1/2x & 2x).
+    - Deck 2: `Shift+Space` (Play/Pause), `V` (Cue), `B` (Sync), `5..8` (Hot Cues 1..4), `U/I` (Pitch bend -/+), `O` (Loop toggle), `P/[` (Loop 1/2x & 2x).
+    - Library & Browser: `ArrowUp / ArrowDown` (Scroll), `Enter` (Load to Deck 1), `Shift+Enter` (Load to Deck 2).
+    - Sampler: `F1..F8` (Pemicu Sampler Pad 1..8).
+  - Listener keyboard global terintegrasi di `src/App.tsx` dengan perlindungan fokus input/textarea dan pencegahan scroll pada tombol Space.
+- **Antarmuka Pengguna React & Zustand Store (`src/components/MidiPanel.tsx`, `src/stores/midiStore.ts`)**:
+  - Bilah koneksi perangkat MIDI In & MIDI Out (LED) dengan pemindaian ulang otomatis dan lencana status real-time.
+  - Pemilih dan penyimpan preset controller DJ.
+  - 4 sub-tampilan komprehensif:
+    1. *Interactive MIDI Learn*: kisi kategori kontrol (Deck 1, Deck 2, Mixer, Sampler/FX) dengan status "Listening..." dan tombol "Learn" per aksi.
+    2. *Tabel Pemetaan Aktif*: pencarian dan pemfilteran seluruh pemetaan aktif dengan kolom Channel, Message Type, Control #, Target Action, dan tombol hapus.
+    3. *Pintasan Keyboard*: visualisasi tombol kbd dengan modifier Ctrl/Shift/Alt dan tombol reset pabrik.
+    4. *Monitor Aktivitas MIDI Real-Time*: log streaming event MIDI masuk dengan timestamp, channel, type, control, dan visual bar nilai 0..127.
+- **7 Unit Test Baru di Rust**: pengujian parsing NoteOn/NoteOff, parsing CC & PitchBend, serialisasi biner MIDI `to_bytes`, decoding keempat mode jog wheel, lookup factory presets DDJ-400 & Hercules, alur kerja interactive MIDI Learn, serta keyboard manager lookup & case-insensitivity. Total unit test Rust meningkat menjadi 72 test yang lulus 100%.
+
+### Changed
+
+- Versi aplikasi dinaikkan ke `0.9.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, `App.tsx`, dan UI footer).
+- Modul `midi` diekspos sebagai modul publik di `src-tauri/src/lib.rs` dan diintegrasikan ke `AppState` dan daftar command Tauri.
+- Navigasi panel bawah di `App.tsx` ditambahkan tab "MIDI & Keyboard Mapping" dengan indikator lencana hijau emerald.
+
 ## [0.8.0] - 2026-11-17
 
 ### Added — Fase 8: Library, Database, Analisis Batch, dan Playlist
