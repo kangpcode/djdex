@@ -4,6 +4,7 @@ import { AudioEnginePanel } from "./components/AudioEnginePanel";
 import { DeckPanel } from "./components/DeckPanel";
 import { FxPanel } from "./components/FxPanel";
 import { Header } from "./components/Header";
+import { LibraryPanel } from "./components/LibraryPanel";
 import { MixerPanel } from "./components/MixerPanel";
 import { PhaseStrip } from "./components/PhaseStrip";
 import { SamplerPanel } from "./components/SamplerPanel";
@@ -12,6 +13,7 @@ import { isTauri } from "./lib/ipc";
 import { useAudioStore } from "./stores/audioStore";
 import { useAutoDjStore } from "./stores/autoDjStore";
 import { useDeckAStore, useDeckBStore } from "./stores/deckStore";
+import { useLibraryStore } from "./stores/libraryStore";
 import { useMixerStore } from "./stores/mixerStore";
 import { useSamplerStore } from "./stores/samplerStore";
 
@@ -34,7 +36,7 @@ function isAudioPath(path: string): boolean {
   return AUDIO_EXTENSIONS.has(extension);
 }
 
-type LowerTab = "sampler" | "fx" | "engine" | "all";
+type LowerTab = "library" | "sampler" | "fx" | "engine" | "all";
 
 export default function App() {
   const status = useAudioStore((state) => state.status);
@@ -52,7 +54,10 @@ export default function App() {
   const refreshSampler = useSamplerStore((state) => state.refresh);
   const triggerSamplerPad = useSamplerStore((state) => state.triggerPad);
 
-  const [lowerTab, setLowerTab] = useState<LowerTab>("sampler");
+  const refreshPreview = useLibraryStore((state) => state.refreshPreview);
+  const refreshProgress = useLibraryStore((state) => state.refreshProgress);
+
+  const [lowerTab, setLowerTab] = useState<LowerTab>("library");
 
   useEffect(() => {
     if (!isTauri()) {
@@ -71,6 +76,8 @@ export default function App() {
     void refreshMixer();
     void refreshAutoDj();
     void refreshSampler();
+    void refreshPreview();
+    void refreshProgress();
 
     const timer = window.setInterval(() => {
       void refreshStatus();
@@ -79,6 +86,8 @@ export default function App() {
       void refreshMixer();
       void refreshAutoDj();
       void refreshSampler();
+      void refreshPreview();
+      void refreshProgress();
     }, STATUS_POLL_MS);
 
     return () => window.clearInterval(timer);
@@ -90,6 +99,8 @@ export default function App() {
     refreshMixer,
     refreshAutoDj,
     refreshSampler,
+    refreshPreview,
+    refreshProgress,
   ]);
 
   // Drag & drop file audio dari OS ke jendela aplikasi.
