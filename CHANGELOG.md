@@ -3,6 +3,31 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] - 2026-11-17
+
+### Added — Fase 12: Packaging & CI/CD
+
+- Workflow GitHub Actions `CI` (matrix Ubuntu/Windows/macOS: install, typecheck,
+  build frontend, `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`)
+  dan `release` untuk artefak per tag.
+- Empat manifest template skin disertakan sebagai bundle resource aplikasi
+  (`skins/*/skin.json`) dengan pola eksplisit agar build Tauri deterministik.
+- Dokumentasi build per OS dilengkapi tabel troubleshooting ALSA
+  (`find_matching_chmap`, channel map, buffer, split cue).
+
+### Verified
+
+- 84 unit test Rust lulus, `cargo clippy --all-targets -- -D warnings` bersih,
+  `tsc -b` dan Vite production build bersih.
+- Versi `0.12.0` konsisten di Rust, Tauri, npm, header, dan footer.
+
+### Catatan
+
+- Engine fisik tetap **dua deck**; template keempat bernama **Tour Pro** dan tidak
+  lagi mengklaim empat deck sampai mixer 4-channel + FX per deck diimplementasikan.
+- Mixer saat ini dua channel strip; output perangkat dapat 2 atau 4 channel
+  (master + cue).
+
 ## [0.11.0] - 2026-11-17
 
 ### Added — Fase 11: Modul Rekaman Mix Master & Live Streaming Broadcast (Recording & Broadcast)
@@ -49,14 +74,12 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
   - Pengujian transisi tanpa jeda *Split Track* ke berkas part berikutnya.
   - Pengujian fungsi encoding Base64 RFC 4648.
   - Pengujian siklus inisialisasi controller dan isolasi buffer audio RT.
-  - Total unit test Rust kini mencapai 82 test dan seluruhnya lulus 100%.
+  - Total unit test Rust kini mencapai 84 test dan seluruhnya lulus 100%.
 
 ### Changed
 
 - Versi aplikasi dinaikkan ke `0.11.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, `App.tsx`, dan UI header/footer).
 - Ditambahkan tab panel bawah "Record & Live Broadcast" dengan aksen merah neon di `App.tsx`.
-
-## [0.11.0] - 2026-11-17
 
 ### Fixed — Audio engine & ALSA
 
@@ -84,7 +107,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 - README ditulis ulang sesuai status Fase 11: kemampuan nyata, tabel stack, cara pakai, troubleshooting ALSA, spesifikasi skin, struktur proyek, dan roadmap 11/12.
 - `docs/BUILD_PER_OS.md` menambahkan bagian troubleshooting ALSA (`find_matching_chmap`).
 - `docs/ARSITEKTUR.md` diperbarui ke status implementasi Fase 11.
-- PhaseStrip di UI menandai Fase 7–11 selesai dan Fase 12 sebagai berikutnya.
+- Ringkasan status fase diperbarui (Fase 7–11 selesai, Fase 12 packaging).
 - 2 unit test baru untuk preferensi channel/fallback stereo dan pesan bantuan ALSA; total **84 unit test Rust**.
 
 ## [0.10.0] - 2026-11-17

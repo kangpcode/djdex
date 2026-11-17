@@ -6,9 +6,9 @@
 [![Rust](https://img.shields.io/badge/Rust-1.88+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.x-brightgreen.svg)](https://tauri.app/)
 
-Software DJ virtual cross-platform profesional bertenaga **audio engine Rust real-time** dan UI desktop modern bergaya hardware klub. Menghadirkan dua deck fisik (A/B), mixer audio 4-channel, 3-slot FX chains, Auto DJ transisi beat-synced, Remixer Sampler 16-pad dengan 16-step drum machine sequencer, database SQLite library musik, integrasi kontroler MIDI dengan MIDI Learn interaktif, perekam audio master mix (WAV 16/24/32-bit Float), live streaming broadcast (Icecast 2 & SHOUTcast), serta sistem template/skin layout engine.
+Software DJ virtual cross-platform profesional bertenaga **audio engine Rust real-time** dan UI desktop modern bergaya hardware klub. Menghadirkan dua deck fisik (A/B), mixer 2-channel (routing output hingga 4 channel untuk master + cue), 3-slot FX chains, Auto DJ transisi beat-synced, Remixer Sampler 16-pad dengan 16-step drum machine sequencer, database SQLite library musik, integrasi kontroler MIDI dengan MIDI Learn interaktif, perekam audio master mix (WAV 16/24/32-bit Float), live streaming broadcast (Icecast 2 & SHOUTcast), serta sistem template/skin layout engine.
 
-> **Status: 12 dari 12 Fase Selesai (v0.12.0 — Production Workstation Release).** Seluruh fitur terhubung penuh dari UI React ke audio engine Rust, 82 unit test lulus 100%, installer lintas platform siap didistribusikan (Windows MSI/NSIS, macOS Universal DMG, Linux DEB/RPM/AppImage/Flatpak), serta pipa CI/CD GitHub Actions aktif.
+> **Status: 12 dari 12 Fase Selesai (v0.12.0 — Production Workstation Release).** Fitur inti terhubung dari UI React ke audio engine Rust, **84 unit test lulus 100%**, konfigurasi bundle lintas platform (MSI/NSIS, DMG universal, DEB/RPM/AppImage/Flatpak) serta pipeline CI/CD GitHub Actions tersedia. Engine menyala otomatis saat aplikasi dibuka.
 
 ---
 
@@ -18,14 +18,14 @@ Software DJ virtual cross-platform profesional bertenaga **audio engine Rust rea
 - **CPAL Audio I/O**: Kompatibel dengan WASAPI (Windows), CoreAudio (macOS), dan ALSA / PipeWire / PulseAudio (Linux).
 - **Arsitektur Lock-Free**: Callback audio berjalan tanpa alokasi memori heap, tanpa blocking mutex lock, dan tanpa syscall disk I/O.
 - **Latensi Ultra-Rendah**: Dukungan ukuran buffer fleksibel (64 hingga 1024 frames) dengan latensi output < 10 ms.
-- **Deteksi Otomatis & Pemilihan Konfigurasi Tahan ALSA**: Menangani perangkat multi-channel tanpa crash channel map.
+- **Pemilihan Konfigurasi Tahan ALSA**: Setiap kandidat divalidasi ke `supported_output_configs()` dan fallback ke stereo. Error `find_matching_chmap` tidak lagi menggagalkan engine — lihat [Troubleshooting Audio (ALSA)](#troubleshooting-audio-alsa).
 - **Diagnostik Lengkap**: Pemantauan visual realtime untuk sample rate, buffer size, estimasi latensi, microsecond callback timing, dan penghitung xrun.
 
 ### 2. Dual Deck (A & B) & Platter DJ Realistis
 - **Decoder Audio Multi-Format Symphonia**: Memutar MP3, FLAC, WAV, OGG/Vorbis, AAC/M4A, AIFF, dan ALAC.
 - **Time-Stretch & Master Tempo (Key Lock)**: Algoritma WSOLA mempertahankan nada vokal/musik secara jernih saat pitch tempo diubah (rentang fader ±8%, ±16%, atau ±50%).
 - **Deteksi BPM & Kunci Harmonis Otomatis**: Analisis ketukan percussive onset + autokorelasi, deteksi kunci nada Camelot Wheel / Open Key untuk harmonic mixing.
-- **Waveform Canvas Berfrekuensi Multi-Warna**: Gelombang suara dinamis dengan pemisahan warna frekuensi (Bass merah, Mid hijau, Treble biru), beatgrid vertikal, dan marker penanda.
+- **Waveform Canvas Interaktif**: Gelombang min/max presisi, beatgrid, marker cue/playhead, drag-to-seek, serta orientasi horizontal atau vertikal sesuai skin aktif.
 - **Piringan Virtual Vinyl / CDJ Interaktif**: Animasi rotasi 60 FPS, kendali scratch mouse/touch responsif, mode vinyl scratch vs CDJ pitch bend, dan tekstur piringan dinamis.
 - **Fitur Kinerja DJ**: 8 Hot Cue per deck, Auto Loop (1/32 hingga 32 ketukan), Loop Roll, Beat Jump, CUE sampler, dan Sync otomatis BPM + fase ketukan.
 
@@ -130,6 +130,31 @@ Paket installer installer akan otomatis dibuat di folder `src-tauri/target/relea
 
 ---
 
+## Troubleshooting Audio (ALSA)
+
+Gejala klasik di Linux:
+
+```text
+ALSA lib pcm_route.c:886:(find_matching_chmap) [error.pcm] Found no matching channel map
+```
+
+Pesan ini berasal dari ALSA/driver ketika diminta membuka jumlah channel yang
+tidak memiliki channel map (mis. 4 channel pada output stereo atau HDMI).
+Engine DJDeX menanganinya dengan memvalidasi konfigurasi ke
+`supported_output_configs()` dan mencoba urutan: pilihan pengguna → **stereo** →
+default perangkat → mono. Langkah manual bila masih muncul:
+
+1. Di **Audio Output & Diagnostics**, pilih **Channel output = Auto — stereo**,
+   lalu terapkan ulang konfigurasi.
+2. Gunakan perangkat `default` (PipeWire/PulseAudio) alih-alih `hw:`/HDMI
+   multichannel, atau pastikan channel map `snd_pcm` tersedia.
+3. Periksa perangkat dengan `aplay -l` dan uji stereo `speaker-test -c 2`.
+4. Untuk cue headphone pada output stereo, aktifkan **SPLIT CUE** (L = cue,
+   R = master) atau gunakan antarmuka 4 channel yang mendukung master 1/2 +
+   cue 3/4.
+5. Buffer 64 frame dapat memicu xrun pada sebagian driver; mulai dari 256.
+6. Pada JACK, samakan sample rate JACK dengan sample rate aplikasi.
+
 ## Dokumentasi Teknis
 
 - [Arsitektur Sistem & Spesifikasi Sinyal Audio](docs/ARSITEKTUR.md)
@@ -145,7 +170,7 @@ Paket installer installer akan otomatis dibuat di folder `src-tauri/target/relea
 | Fase | Deskripsi Modul | Status |
 |:---:|---|:---:|
 | **1** | Scaffold Tauri + React, IPC dasar, CPAL output tone test, deteksi perangkat audio | ✅ Selesai (v0.1.0) |
-| **2** | Decoder (Symphonia) + deck tunggal: play/pause/seek/cue + waveform multi-frekuensi | ✅ Selesai (v0.2.0) |
+| **2** | Decoder (Symphonia) + deck tunggal: play/pause/seek/cue + waveform | ✅ Selesai (v0.2.0) |
 | **3** | Time-stretch, pitch fader, key lock, sync, BPM/beatgrid/key detection | ✅ Selesai (v0.3.0) |
 | **4** | Mixer: EQ 3-band + kill, filter HPF/LPF, fader, crossfader, master limiter, PFL cue | ✅ Selesai (v0.4.0) |
 | **5** | Dua deck penuh + jog wheel platter + hot cue + loop + beat jump | ✅ Selesai (v0.5.0) |
@@ -161,7 +186,7 @@ Paket installer installer akan otomatis dibuat di folder `src-tauri/target/relea
 
 ## Pengujian & Kualitas Kode
 
-- **82 Unit Tests di Rust**: Lulus 100% tanpa kegagalan (`cargo test`).
+- **84 Unit Tests di Rust**: Lulus 100% tanpa kegagalan (`cargo test`).
 - **Jalur Audio Real-Time Murni**: Bebas dari alokasi memori heap, mutex lock, dan disk I/O.
 - **Frontend Typecheck & Build**: Lulus `tsc -b` dan Vite production bundle tanpa kesalahan.
 

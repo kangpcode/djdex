@@ -356,9 +356,9 @@ export default function App() {
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.11.0</span>
+        <span>By Kangpcode · v0.12.0 (Production Release)</span>
         <span className="hidden sm:inline">
-          Rust + Tauri 2 · Master Mix Recorder · Icecast 2 & SHOUTcast Live Broadcast · Skin Engine · SQLite Library
+          Rust + Tauri 2 · Universal Cross-Platform Packaging · Master Mix Recorder · Icecast Live Broadcast · SQLite Library
         </span>
         <span className="ml-auto hidden md:inline">
           Skin: {activeSkin?.metadata.name ?? "Classic Club"} · Space = Play/Pause · C / V = Cue Jump
