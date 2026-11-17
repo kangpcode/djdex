@@ -472,6 +472,7 @@ fn audio_host_loop(
                 StreamReport,
                 [Arc<Deck>; DECK_COUNT],
                 Arc<SamplerController>,
+                Arc<PreviewController>,
             ),
             AudioError,
         >,
@@ -829,6 +830,8 @@ fn render_block<T>(
     rt.frames.fetch_add(frames as u64, Ordering::Relaxed);
     rt.peak.fetch_max(peak.to_bits(), Ordering::Relaxed);
 
+    preview.finish_block();
+
     let elapsed_us = started.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
     rt.callback_us_last.store(elapsed_us, Ordering::Relaxed);
     rt.callback_us_max.fetch_max(elapsed_us, Ordering::Relaxed);
@@ -940,6 +943,7 @@ mod tests {
         let (_deck_b, deck_b_reader) = Deck::new(48_000).expect("deck b");
         let mut decks = [deck_a_reader, deck_b_reader];
         let (_sampler_ctrl, mut sampler_rt) = SamplerController::new(48_000);
+        let (_preview_ctrl, mut preview_rt) = PreviewController::new(48_000);
         let mut mixer = Mixer::new(48_000.0);
         let mut buffer = vec![0.0_f32; 256 * 2];
         // Paksa gain ramp mencapai target supaya peak terdeteksi.
@@ -952,6 +956,7 @@ mod tests {
                 &mut oscillator,
                 &mut decks,
                 &mut sampler_rt,
+                &mut preview_rt,
                 &mut mixer,
             );
         }
