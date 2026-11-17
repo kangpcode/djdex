@@ -7,7 +7,6 @@ import { Header } from "./components/Header";
 import { LibraryPanel } from "./components/LibraryPanel";
 import { MidiPanel } from "./components/MidiPanel";
 import { MixerPanel } from "./components/MixerPanel";
-import { PhaseStrip } from "./components/PhaseStrip";
 import { RecordPanel } from "./components/RecordPanel";
 import { SamplerPanel } from "./components/SamplerPanel";
 import { SkinPanel } from "./components/SkinPanel";
@@ -319,8 +318,6 @@ export default function App() {
               <ToneTestPanel />
             </div>
           )}
-
-          {activeSkin?.layout.showPhaseStrip !== false && <PhaseStrip />}
         </div>
       </main>
 
