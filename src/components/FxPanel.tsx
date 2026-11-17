@@ -4,6 +4,7 @@ import type { AutoDjState, FxParams, FxSlotParams, FxType } from "../lib/ipc";
 import { useAutoDjStore } from "../stores/autoDjStore";
 import { useFxStore } from "../stores/fxStore";
 import { Panel } from "./ui/Panel";
+import { IconClose } from "./ui/Icons";
 import { Knob3D } from "./ui/Knob3D";
 import { Slider } from "./ui/Slider";
 
@@ -329,10 +330,10 @@ export function FxPanel() {
               clearFxError();
               clearAutoDjError();
             }}
-            className="rounded px-1 text-ink-dim hover:text-ink"
+            className="rounded p-1 text-ink-dim hover:text-ink transition"
             aria-label="Tutup pesan error FX / Auto DJ"
           >
-            ✕
+            <IconClose className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : null}

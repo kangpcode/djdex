@@ -363,10 +363,10 @@ export function LibraryPanel() {
                           e.stopPropagation();
                           void deleteCrate(crate.id);
                         }}
-                        className="hidden group-hover:inline-block text-slate-500 hover:text-rose-400 text-xs px-1"
+                        className="hidden group-hover:inline-flex items-center text-slate-500 hover:text-rose-400 p-0.5"
                         title="Hapus Crate"
                       >
-                        ✕
+                        <IconClose className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
@@ -811,10 +811,10 @@ export function LibraryPanel() {
                                   e.stopPropagation();
                                   void deleteTrack(track.id);
                                 }}
-                                className="text-slate-600 hover:text-rose-400 p-0.5 text-xs"
+                                className="text-slate-600 hover:text-rose-400 p-1 rounded"
                                 title="Hapus dari Library"
                               >
-                                ✕
+                                <IconClose className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>

@@ -17,6 +17,7 @@ import { useSamplerStore } from "../stores/samplerStore";
 import { useSkinStore } from "../stores/skinStore";
 import { Platter, type PlatterMode } from "./Platter";
 import { Fader3D } from "./ui/Fader3D";
+import { IconClose } from "./ui/Icons";
 import { Knob3D } from "./ui/Knob3D";
 import { LevelMeter } from "./ui/LevelMeter";
 import { Panel } from "./ui/Panel";
@@ -250,7 +251,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             }`}
             title="Buka / Tutup Rack FX Deck Langsung"
           >
-            {showFxRack ? "✕ FX RACK" : "+ FX RACK"}
+            {showFxRack ? "− FX RACK" : "+ FX RACK"}
           </button>
 
           <button
@@ -263,7 +264,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             }`}
             title="Buka / Tutup Quick Sampler Deck Langsung"
           >
-            {showSamplerRack ? "✕ SAMPLER" : "+ SAMPLER"}
+            {showSamplerRack ? "− SAMPLER" : "+ SAMPLER"}
           </button>
 
           <span className="chip text-[10px]">
@@ -1051,10 +1052,10 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
           <button
             type="button"
             onClick={clearError}
-            className="rounded px-1 text-ink-dim hover:text-ink"
+            className="rounded p-1 text-ink-dim hover:text-ink transition"
             aria-label="Tutup pesan error deck"
           >
-            ✕
+            <IconClose className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : null}

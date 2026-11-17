@@ -2,6 +2,7 @@ import { formatInt, formatMs, formatSampleRate } from "../lib/format";
 import { isTauri } from "../lib/ipc";
 import { BUFFER_OPTIONS, useAudioStore } from "../stores/audioStore";
 import { Panel } from "./ui/Panel";
+import { IconClose } from "./ui/Icons";
 import { Select } from "./ui/Select";
 
 export function AudioEnginePanel() {
@@ -218,10 +219,10 @@ export function AudioEnginePanel() {
           <button
             type="button"
             onClick={clearError}
-            className="rounded px-1 text-ink-dim hover:text-ink"
+            className="rounded p-1 text-ink-dim hover:text-ink transition"
             aria-label="Tutup pesan error"
           >
-            ✕
+            <IconClose className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : null}

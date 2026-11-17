@@ -11,6 +11,7 @@ import { useDeckAStore, useDeckBStore } from "../stores/deckStore";
 import { useMixerStore } from "../stores/mixerStore";
 import { useSkinStore } from "../stores/skinStore";
 import { Fader3D } from "./ui/Fader3D";
+import { IconClose } from "./ui/Icons";
 import { Knob3D } from "./ui/Knob3D";
 import { LevelMeter } from "./ui/LevelMeter";
 import { Panel } from "./ui/Panel";
@@ -643,10 +644,10 @@ export function MixerPanel() {
           <button
             type="button"
             onClick={clearError}
-            className="rounded px-1 text-ink-dim hover:text-ink"
+            className="rounded p-1 text-ink-dim hover:text-ink transition"
             aria-label="Tutup pesan error mixer"
           >
-            ✕
+            <IconClose className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : null}
