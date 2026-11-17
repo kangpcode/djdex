@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 interface PanelProps {
   title: string;
@@ -6,11 +6,29 @@ interface PanelProps {
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Warna aksen panel dari skin aktif (deck/mixer). */
+  accentColor?: string;
+  style?: CSSProperties;
 }
 
-export function Panel({ title, subtitle, actions, children, className }: PanelProps) {
+export function Panel({
+  title,
+  subtitle,
+  actions,
+  children,
+  className,
+  accentColor,
+  style,
+}: PanelProps) {
+  const accentStyle = accentColor
+    ? ({ ...style, "--panel-accent": accentColor } as CSSProperties)
+    : style;
+
   return (
-    <section className={`panel ${className ?? ""}`}>
+    <section
+      className={`panel ${accentColor ? "panel-accent" : ""} ${className ?? ""}`}
+      style={accentStyle}
+    >
       <div className="panel-header">
         <div className="min-w-0">
           <h2 className="font-display text-sm font-semibold uppercase tracking-[0.18em] text-ink">

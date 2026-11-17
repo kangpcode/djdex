@@ -11,6 +11,7 @@ export interface AudioDeviceInfo {
   host: string;
   isDefault: boolean;
   maxChannels: number;
+  supportedChannels: number[];
   sampleRates: number[];
   sampleFormats: string[];
   bufferFramesMin: number | null;
@@ -48,6 +49,8 @@ export interface StartRequest {
   deviceName?: string | null;
   bufferSize?: number | null;
   sampleRate?: number | null;
+  /** Jumlah channel output; null/kosong = auto (stereo paling kompatibel). */
+  channels?: number | null;
   toneFreqHz?: number;
   toneGainDb?: number;
 }

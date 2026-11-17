@@ -73,12 +73,15 @@ export const useSkinStore = create<SkinState>((set, get) => ({
     root.style.setProperty("--skin-primary", theme.primaryColor);
     root.style.setProperty("--skin-accent-a", theme.accentDeckA);
     root.style.setProperty("--skin-accent-b", theme.accentDeckB);
+    root.style.setProperty("--skin-accent-c", theme.accentDeckC ?? theme.accentDeckA);
+    root.style.setProperty("--skin-accent-d", theme.accentDeckD ?? theme.accentDeckB);
     root.style.setProperty("--skin-bg", theme.backgroundColor);
     root.style.setProperty("--skin-surface", theme.surfaceColor);
     root.style.setProperty("--skin-border", theme.panelBorderColor);
     root.style.setProperty("--skin-text", theme.textColor);
     if (theme.fontFamily) {
       root.style.setProperty("--skin-font", theme.fontFamily);
+      root.style.setProperty("--font-sans", theme.fontFamily);
     }
 
     // Injeksi custom CSS dinamis jika ada

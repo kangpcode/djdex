@@ -14,12 +14,12 @@ const PHASES: Phase[] = [
   { number: 4, title: "Mixer", detail: "EQ, filter, crossfader, limiter, cue", state: "selesai" },
   { number: 5, title: "Dua Deck Penuh", detail: "Sync, jog wheel, hot cue, loop, beat jump", state: "selesai" },
   { number: 6, title: "FX + Auto DJ", detail: "Rantai 3 slot, transisi beat-synced", state: "selesai" },
-  { number: 7, title: "Remixer + Sequencer", detail: "Pad grid, bank, step sequencer", state: "rencana" },
-  { number: 8, title: "Library", detail: "SQLite, scan, playlist, analisis batch", state: "rencana" },
-  { number: 9, title: "MIDI + Keyboard", detail: "MIDI Learn, mapping preset", state: "rencana" },
-  { number: 10, title: "Skin Engine", detail: "Manifest JSON, 4 template, theme editor", state: "rencana" },
-  { number: 11, title: "Rekaman + Polish", detail: "WAV/FLAC, audio settings, performa", state: "rencana" },
-  { number: 12, title: "Packaging + CI/CD", detail: "MSI/NSIS, DMG, DEB/RPM/AppImage", state: "rencana" },
+  { number: 7, title: "Remixer + Sequencer", detail: "Pad grid, bank, step sequencer, capture deck", state: "selesai" },
+  { number: 8, title: "Library", detail: "SQLite, scan, playlist, analisis batch", state: "selesai" },
+  { number: 9, title: "MIDI + Keyboard", detail: "MIDI Learn, mapping preset, LED feedback", state: "selesai" },
+  { number: 10, title: "Skin Engine", detail: "Manifest JSON/TOML, 4 template, editor tema", state: "selesai" },
+  { number: 11, title: "Rekaman + Broadcast", detail: "WAV, live streaming, audio settings, polish", state: "selesai" },
+  { number: 12, title: "Packaging + CI/CD", detail: "MSI/NSIS, DMG, DEB/RPM/AppImage", state: "berikutnya" },
 ];
 
 const STATE_STYLES: Record<Phase["state"], string> = {
@@ -39,7 +39,7 @@ export function PhaseStrip() {
     <Panel
       title="Roadmap 12 Fase"
       subtitle="Setiap fase harus bisa dikompilasi dan dijalankan sebelum lanjut."
-      actions={<span className="chip">6 / 12 selesai</span>}
+      actions={<span className="chip">11 / 12 selesai</span>}
     >
       <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {PHASES.map((phase) => (

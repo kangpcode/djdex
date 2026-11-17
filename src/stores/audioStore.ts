@@ -23,6 +23,8 @@ interface AudioStore {
   selectedDeviceId: string;
   bufferSize: number | null;
   sampleRate: number | null;
+  /** null = auto (stereo). 4 channel memisahkan master 1/2 dan cue 3/4. */
+  channels: number | null;
 
   toneFreqHz: number;
   toneGainDb: number;
@@ -35,6 +37,9 @@ interface AudioStore {
   selectDevice: (id: string) => void;
   setBufferSize: (value: number | null) => void;
   setSampleRate: (value: number | null) => void;
+  setChannels: (value: number | null) => void;
+  /** Nyalakan engine sekali saat aplikasi dibuka (idempoten). */
+  ensureEngine: () => Promise<void>;
   setToneFreq: (hz: number) => void;
   setToneGain: (db: number) => void;
   startEngine: () => Promise<void>;
@@ -45,6 +50,7 @@ interface AudioStore {
 }
 
 let toneTimer: ReturnType<typeof setTimeout> | null = null;
+let engineBoot: Promise<void> | null = null;
 
 export const useAudioStore = create<AudioStore>((set, get) => {
   /** Kirim parameter tone terbaru ke engine, di-throttle agar drag tetap mulus. */
@@ -71,6 +77,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     selectedDeviceId: "",
     bufferSize: 256,
     sampleRate: null,
+    channels: null,
 
     toneFreqHz: TONE_DEFAULT_HZ,
     toneGainDb: TONE_DEFAULT_DB,
@@ -107,6 +114,23 @@ export const useAudioStore = create<AudioStore>((set, get) => {
 
     setSampleRate: (value) => set({ sampleRate: value }),
 
+    setChannels: (value) => set({ channels: value }),
+
+    ensureEngine: async () => {
+      if (get().status?.initialized) {
+        return;
+      }
+      if (engineBoot) {
+        return engineBoot;
+      }
+      engineBoot = get()
+        .startEngine()
+        .finally(() => {
+          engineBoot = null;
+        });
+      return engineBoot;
+    },
+
     setToneFreq: (hz) => {
       const clamped = Math.min(TONE_MAX_HZ, Math.max(TONE_MIN_HZ, hz));
       set({ toneFreqHz: clamped });
@@ -122,13 +146,14 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     startEngine: async () => {
       set({ busy: true, error: null });
       try {
-        const { selectedDeviceId, bufferSize, sampleRate, toneFreqHz, toneGainDb } =
+        const { selectedDeviceId, bufferSize, sampleRate, channels, toneFreqHz, toneGainDb } =
           get();
 
         const status = await ipc.startAudioEngine({
           deviceName: selectedDeviceId || null,
           bufferSize,
           sampleRate,
+          channels,
           toneFreqHz,
           toneGainDb,
         });
