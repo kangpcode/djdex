@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use hound::{SampleFormat, WavSpec, WavWriter};
 use parking_lot::Mutex;
@@ -404,4 +405,93 @@ fn make_split_path(base_path: &Path, split_idx: u32) -> PathBuf {
     let parent = base_path.parent().unwrap_or_else(|| Path::new(""));
 
     parent.join(format!("{}_part{:02}.{}", stem, split_idx + 1, ext))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_recorder_workflow_wav16() {
+        let dir = tempdir().expect("temp dir");
+        let file_path = dir.path().join("test_mix.wav");
+
+        let (controller, mut producer) = RecorderController::new(44100);
+        let status = controller.status();
+        assert!(!status.is_recording);
+        assert_eq!(status.frames_recorded, 0);
+
+        let started = controller.start(file_path.clone(), RecordFormat::Wav16).expect("start");
+        assert!(started.is_recording);
+        assert!(!started.is_paused);
+
+        // Kirim 1000 frame audio
+        for i in 0..1000 {
+            let sample = (i as f32 / 1000.0) * 0.8;
+            producer.push(sample, -sample);
+        }
+
+        thread::sleep(Duration::from_millis(60));
+
+        let current = controller.status();
+        assert!(current.frames_recorded > 0);
+        assert!(current.bytes_written > 0);
+
+        // Pause
+        let paused = controller.pause();
+        assert!(paused.is_paused);
+
+        // Push saat pause tidak boleh menambah frame
+        let frames_before = current.frames_recorded;
+        for _ in 0..200 {
+            producer.push(0.5, 0.5);
+        }
+        thread::sleep(Duration::from_millis(40));
+        assert_eq!(controller.status().frames_recorded, frames_before);
+
+        // Resume
+        let resumed = controller.resume();
+        assert!(!resumed.is_paused);
+
+        // Stop
+        let stopped = controller.stop().expect("stop");
+        assert!(!stopped.is_recording);
+
+        assert!(file_path.exists());
+        let reader = hound::WavReader::open(&file_path).expect("open wav");
+        assert_eq!(reader.spec().channels, 2);
+        assert_eq!(reader.spec().sample_rate, 44100);
+        assert_eq!(reader.spec().bits_per_sample, 16);
+    }
+
+    #[test]
+    fn test_recorder_split() {
+        let dir = tempdir().expect("temp dir");
+        let file_path = dir.path().join("split_session.wav");
+
+        let (controller, mut producer) = RecorderController::new(44100);
+        controller.start(file_path.clone(), RecordFormat::Wav32Float).expect("start");
+
+        for _ in 0..500 {
+            producer.push(0.3, -0.3);
+        }
+        thread::sleep(Duration::from_millis(50));
+
+        controller.split().expect("split");
+        thread::sleep(Duration::from_millis(50));
+
+        for _ in 0..500 {
+            producer.push(0.4, -0.4);
+        }
+        thread::sleep(Duration::from_millis(50));
+
+        controller.stop().expect("stop");
+
+        let part1 = dir.path().join("split_session.wav");
+        let part2 = dir.path().join("split_session_part02.wav");
+
+        assert!(part1.exists(), "part1 harus ada");
+        assert!(part2.exists(), "part2 harus ada");
+    }
 }

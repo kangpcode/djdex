@@ -88,14 +88,15 @@ impl BroadcastProducer {
 /// Pengendali sentral siaran langsung (Live Broadcast Controller).
 pub struct BroadcastController {
     is_streaming: Arc<AtomicBool>,
-    should_stop: Arc<AtomicBool>,
+    should_stop_thread: Arc<AtomicBool>,
+    connect_requested: Arc<AtomicBool>,
+    disconnect_requested: Arc<AtomicBool>,
     bytes_sent: Arc<AtomicU64>,
     start_time: Arc<Mutex<Option<Instant>>>,
     last_error: Arc<Mutex<Option<String>>>,
     active_config: Arc<Mutex<Option<BroadcastConfig>>>,
     sample_rate: u32,
     worker_handle: Mutex<Option<JoinHandle<()>>>,
-    consumer: Mutex<Option<Consumer<(f32, f32)>>>,
 }
 
 impl BroadcastController {
@@ -103,7 +104,9 @@ impl BroadcastController {
         let (producer, consumer) = RingBuffer::<(f32, f32)>::new(131_072);
 
         let is_streaming = Arc::new(AtomicBool::new(false));
-        let should_stop = Arc::new(AtomicBool::new(false));
+        let should_stop_thread = Arc::new(AtomicBool::new(false));
+        let connect_requested = Arc::new(AtomicBool::new(false));
+        let disconnect_requested = Arc::new(AtomicBool::new(false));
         let bytes_sent = Arc::new(AtomicU64::new(0));
         let start_time = Arc::new(Mutex::new(None));
         let last_error = Arc::new(Mutex::new(None));
@@ -111,14 +114,15 @@ impl BroadcastController {
 
         let controller = Arc::new(Self {
             is_streaming: Arc::clone(&is_streaming),
-            should_stop: Arc::clone(&should_stop),
+            should_stop_thread: Arc::clone(&should_stop_thread),
+            connect_requested: Arc::clone(&connect_requested),
+            disconnect_requested: Arc::clone(&disconnect_requested),
             bytes_sent: Arc::clone(&bytes_sent),
-            start_time,
-            last_error,
-            active_config,
+            start_time: Arc::clone(&start_time),
+            last_error: Arc::clone(&last_error),
+            active_config: Arc::clone(&active_config),
             sample_rate,
             worker_handle: Mutex::new(None),
-            consumer: Mutex::new(Some(consumer)),
         });
 
         let rt_producer = BroadcastProducer {
@@ -126,7 +130,92 @@ impl BroadcastController {
             is_streaming: Arc::clone(&is_streaming),
         };
 
+        controller.spawn_worker(consumer);
+
         (controller, rt_producer)
+    }
+
+    fn spawn_worker(&self, mut consumer: Consumer<(f32, f32)>) {
+        let is_streaming = Arc::clone(&self.is_streaming);
+        let should_stop_thread = Arc::clone(&self.should_stop_thread);
+        let connect_requested = Arc::clone(&self.connect_requested);
+        let disconnect_requested = Arc::clone(&self.disconnect_requested);
+        let bytes_sent = Arc::clone(&self.bytes_sent);
+        let start_time = Arc::clone(&start_time);
+        let last_error = Arc::clone(&self.last_error);
+        let active_config = Arc::clone(&self.active_config);
+        let sample_rate = self.sample_rate;
+
+        let handle = thread::Builder::new()
+            .name("djdex-broadcast-worker".to_string())
+            .spawn(move || {
+                let mut active_tcp: Option<TcpStream> = None;
+                let mut chunk_buffer = Vec::with_capacity(2048);
+
+                while !should_stop_thread.load(Ordering::Relaxed) {
+                    // Periksa permintaan disconnect
+                    if disconnect_requested.swap(false, Ordering::SeqCst) {
+                        active_tcp = None;
+                        is_streaming.store(false, Ordering::SeqCst);
+                        *start_time.lock() = None;
+                    }
+
+                    // Periksa permintaan connect
+                    if connect_requested.swap(false, Ordering::SeqCst) {
+                        let config_opt = active_config.lock().clone();
+                        if let Some(config) = config_opt {
+                            match connect_and_handshake(&config, sample_rate) {
+                                Ok(stream) => {
+                                    active_tcp = Some(stream);
+                                    bytes_sent.store(0, Ordering::SeqCst);
+                                    *start_time.lock() = Some(Instant::now());
+                                    *last_error.lock() = None;
+                                    is_streaming.store(true, Ordering::SeqCst);
+                                }
+                                Err(e) => {
+                                    active_tcp = None;
+                                    is_streaming.store(false, Ordering::SeqCst);
+                                    *last_error.lock() = Some(e.to_string());
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(ref mut stream) = active_tcp {
+                        chunk_buffer.clear();
+                        while let Ok((l, r)) = consumer.pop() {
+                            let sl = (l.clamp(-1.0, 1.0) * 32767.0) as i16;
+                            let sr = (r.clamp(-1.0, 1.0) * 32767.0) as i16;
+                            chunk_buffer.extend_from_slice(&sl.to_le_bytes());
+                            chunk_buffer.extend_from_slice(&sr.to_le_bytes());
+
+                            if chunk_buffer.len() >= 2048 {
+                                break;
+                            }
+                        }
+
+                        if !chunk_buffer.is_empty() {
+                            if let Err(e) = stream.write_all(&chunk_buffer) {
+                                *last_error.lock() = Some(format!("Gagal streaming audio ke server: {}", e));
+                                active_tcp = None;
+                                is_streaming.store(false, Ordering::SeqCst);
+                                *start_time.lock() = None;
+                            } else {
+                                bytes_sent.fetch_add(chunk_buffer.len() as u64, Ordering::Relaxed);
+                            }
+                        } else {
+                            thread::sleep(Duration::from_millis(10));
+                        }
+                    } else {
+                        // Jika sedang tidak streaming, buang sampel yang masuk
+                        while let Ok(_) = consumer.pop() {}
+                        thread::sleep(Duration::from_millis(25));
+                    }
+                }
+            })
+            .expect("gagal membuat thread broadcast");
+
+        *self.worker_handle.lock() = Some(handle);
     }
 
     /// Mulai siaran langsung ke server streaming yang ditentukan.
@@ -135,62 +224,36 @@ impl BroadcastController {
             return Ok(self.status());
         }
 
-        self.bytes_sent.store(0, Ordering::SeqCst);
-        *self.start_time.lock() = Some(Instant::now());
+        *self.active_config.lock() = Some(config);
         *self.last_error.lock() = None;
-        *self.active_config.lock() = Some(config.clone());
-        self.should_stop.store(false, Ordering::SeqCst);
+        self.disconnect_requested.store(false, Ordering::SeqCst);
+        self.connect_requested.store(true, Ordering::SeqCst);
 
-        // Ambil consumer untuk worker thread
-        let mut consumer_opt = self.consumer.lock();
-        let consumer = consumer_opt.take().ok_or_else(|| {
-            AudioError::BuildStream("Consumer broadcast ring buffer tidak tersedia".to_string())
-        })?;
+        // Tunggu hingga worker berhasil koneksi atau mengembalikan error (maksimal 3,5 detik)
+        let timeout = Instant::now() + Duration::from_millis(3500);
+        while Instant::now() < timeout {
+            if self.is_streaming.load(Ordering::SeqCst) {
+                return Ok(self.status());
+            }
+            if let Some(err) = self.last_error.lock().clone() {
+                return Err(AudioError::Io(err));
+            }
+            thread::sleep(Duration::from_millis(25));
+        }
 
-        let is_streaming = Arc::clone(&self.is_streaming);
-        let should_stop = Arc::clone(&self.should_stop);
-        let bytes_sent = Arc::clone(&self.bytes_sent);
-        let last_error = Arc::clone(&self.last_error);
-        let sample_rate = self.sample_rate;
-
-        let handle = thread::Builder::new()
-            .name("djdex-broadcast-client".to_string())
-            .spawn(move || {
-                let res = run_broadcast_worker(
-                    config,
-                    sample_rate,
-                    consumer,
-                    &is_streaming,
-                    &should_stop,
-                    &bytes_sent,
-                );
-
-                if let Err(e) = res {
-                    *last_error.lock() = Some(e.to_string());
-                }
-                is_streaming.store(false, Ordering::SeqCst);
-            })
-            .map_err(|e| AudioError::BuildStream(format!("Gagal membuat thread broadcast: {}", e)))?;
-
-        *self.worker_handle.lock() = Some(handle);
-        self.is_streaming.store(true, Ordering::SeqCst);
-
-        Ok(self.status())
+        if let Some(err) = self.last_error.lock().clone() {
+            Err(AudioError::Io(err))
+        } else {
+            Err(AudioError::Io("Batas waktu koneksi ke server streaming habis".to_string()))
+        }
     }
 
     /// Hentikan siaran langsung dan putuskan koneksi ke server.
     pub fn stop(&self) -> Result<BroadcastStatus, AudioError> {
-        self.should_stop.store(true, Ordering::SeqCst);
+        self.connect_requested.store(false, Ordering::SeqCst);
+        self.disconnect_requested.store(true, Ordering::SeqCst);
         self.is_streaming.store(false, Ordering::SeqCst);
-
-        if let Some(handle) = self.worker_handle.lock().take() {
-            let _ = handle.join();
-        }
-
-        // Buat ulang ring buffer untuk sesi berikutnya
-        let (producer, consumer) = RingBuffer::<(f32, f32)>::new(131_072);
-        *self.consumer.lock() = Some(consumer);
-
+        thread::sleep(Duration::from_millis(30));
         Ok(self.status())
     }
 
@@ -220,15 +283,17 @@ impl BroadcastController {
     }
 }
 
-fn run_broadcast_worker(
-    config: BroadcastConfig,
-    sample_rate: u32,
-    mut consumer: Consumer<(f32, f32)>,
-    is_streaming: &AtomicBool,
-    should_stop: &AtomicBool,
-    bytes_sent: &AtomicU64,
-) -> Result<(), AudioError> {
-    // Sambungkan ke server via TCP
+impl Drop for BroadcastController {
+    fn drop(&mut self) {
+        self.should_stop_thread.store(true, Ordering::SeqCst);
+        self.disconnect_requested.store(true, Ordering::SeqCst);
+        if let Some(handle) = self.worker_handle.lock().take() {
+            let _ = handle.join();
+        }
+    }
+}
+
+fn connect_and_handshake(config: &BroadcastConfig, sample_rate: u32) -> Result<TcpStream, AudioError> {
     let mut stream = TcpStream::connect_timeout(
         &config
             .server
@@ -238,7 +303,7 @@ fn run_broadcast_worker(
                 Err(_) => Err(()),
             })
             .map_err(|_| AudioError::Io("Alamat server streaming tidak valid".to_string()))?,
-        Duration::from_secs(5),
+        Duration::from_secs(3),
     )
     .map_err(|e| AudioError::Io(format!("Gagal terhubung ke server streaming: {}", e)))?;
 
@@ -253,7 +318,6 @@ fn run_broadcast_worker(
     let auth_str = format!("source:{}", config.password);
     let auth_base64 = base64_encode(auth_str.as_bytes());
 
-    // Kirim HTTP SOURCE handshake request
     let mount_point = if config.mount.starts_with('/') {
         config.mount.clone()
     } else {
@@ -263,7 +327,7 @@ fn run_broadcast_worker(
     let handshake = format!(
         "SOURCE {} HTTP/1.0\r\n\
         Authorization: Basic {}\r\n\
-        User-Agent: DJDeX/0.10.0\r\n\
+        User-Agent: DJDeX/0.11.0\r\n\
         ice-name: {}\r\n\
         ice-genre: {}\r\n\
         ice-description: {}\r\n\
@@ -287,7 +351,6 @@ fn run_broadcast_worker(
         .write_all(handshake.as_bytes())
         .map_err(|e| AudioError::Io(format!("Gagal mengirim handshake: {}", e)))?;
 
-    // Baca respons handshake
     let mut response_buf = [0u8; 512];
     let n = stream
         .read(&mut response_buf)
@@ -301,41 +364,11 @@ fn run_broadcast_worker(
         )));
     }
 
-    is_streaming.store(true, Ordering::SeqCst);
-
-    // Buffer chunk audio PCM 16-bit stereo (misal 512 frame = 2048 byte)
-    let mut chunk_buffer = Vec::with_capacity(2048);
-
-    while !should_stop.load(Ordering::Relaxed) {
-        chunk_buffer.clear();
-
-        // Kumpulkan sampel dari consumer
-        while let Ok((l, r)) = consumer.pop() {
-            let sl = (l.clamp(-1.0, 1.0) * 32767.0) as i16;
-            let sr = (r.clamp(-1.0, 1.0) * 32767.0) as i16;
-            chunk_buffer.extend_from_slice(&sl.to_le_bytes());
-            chunk_buffer.extend_from_slice(&sr.to_le_bytes());
-
-            if chunk_buffer.len() >= 2048 {
-                break;
-            }
-        }
-
-        if !chunk_buffer.is_empty() {
-            stream
-                .write_all(&chunk_buffer)
-                .map_err(|e| AudioError::Io(format!("Gagal streaming audio ke server: {}", e)))?;
-            bytes_sent.fetch_add(chunk_buffer.len() as u64, Ordering::Relaxed);
-        } else {
-            thread::sleep(Duration::from_millis(10));
-        }
-    }
-
-    Ok(())
+    Ok(stream)
 }
 
 /// Fungsi bantu enkripsi standar Base64 murni tanpa dependensi eksternal.
-fn base64_encode(input: &[u8]) -> String {
+pub fn base64_encode(input: &[u8]) -> String {
     const CHARSET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut result = String::with_capacity((input.len() + 2) / 3 * 4);
 
@@ -363,4 +396,30 @@ fn base64_encode(input: &[u8]) -> String {
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_base64_encode() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        assert_eq!(base64_encode(b"source:hackme"), "c291cmNlOmhhY2ttZQ==");
+    }
+
+    #[test]
+    fn test_broadcast_controller_init_status() {
+        let (controller, mut producer) = BroadcastController::new(44100);
+        let status = controller.status();
+        assert!(!status.is_streaming);
+        assert_eq!(status.bytes_sent, 0);
+
+        // Producer push saat tidak streaming harus mengabaikan sampel
+        producer.push(0.5, -0.5);
+        assert!(!producer.is_active());
+    }
 }
