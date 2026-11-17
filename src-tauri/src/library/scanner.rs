@@ -219,21 +219,21 @@ pub fn extract_metadata(path: &Path) -> Result<LibraryTrack, AudioError> {
 
     Ok(LibraryTrack {
         id: 0,
-        filePath: path.to_string_lossy().to_string(),
+        file_path: path.to_string_lossy().to_string(),
         title,
         artist,
         album,
         genre,
         year,
         bpm: None,
-        keyName: None,
-        durationSecs: duration,
+        key_name: None,
+        duration_secs: duration,
         rating: 0,
         color: None,
-        playCount: 0,
-        dateAdded: format!("{now_ts}"),
+        play_count: 0,
+        date_added: format!("{now_ts}"),
         analyzed: false,
-        loudnessLufs: None,
+        loudness_lufs: None,
     })
 }
 
