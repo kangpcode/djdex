@@ -2,6 +2,7 @@
 //! time-stretch.
 
 pub mod autodj;
+pub mod broadcast;
 pub mod deck;
 pub mod decoder;
 pub mod device;
@@ -10,5 +11,6 @@ pub mod fx;
 pub mod gain;
 pub mod limiter;
 pub mod mixer;
+pub mod recorder;
 pub mod resampler;
 pub mod timestretch;
