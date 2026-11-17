@@ -39,11 +39,12 @@ const INSTRUMENT_OPTIONS: Array<{
 
   // Tradisional Sunda (Jawa Barat)
   { id: "sundanese_suling", label: "Suling Sunda Degung (Bambu)", desc: "Tiupan bambu Sunda dengan microtonal vibrato & nafas syahdu", category: "Sunda" },
-  { id: "angklung", label: "Angklung Bambu Sunda", desc: "Resonansi tabung bambu ganda bergetar khas Jawa Barat", category: "Sunda" },
+  { id: "angklung", label: "Angklung Bambu Sunda (Multi-Pitch)", desc: "Resonansi tabung bambu ganda bergetar khas Jawa Barat", category: "Sunda" },
+  { id: "kendang_tuned", label: "Gendang / Kendang (Tuned Pitch)", desc: "Membran kulit gendang bernada untuk melodi bass/riff etnis", category: "Sunda" },
 
   // Tradisional Jawa
   { id: "gamelan_saron", label: "Gamelan Saron Demung (Jawa)", desc: "Wilahan perunggu tebal dengan overtone inharmonic berkilau", category: "Jawa" },
-  { id: "gamelan_gong", label: "Gong Ageng Jawa", desc: "Gong perunggu agung beresonansi panjang & shimmer beating 2.5Hz", category: "Jawa" },
+  { id: "gamelan_gong", label: "Goong & Kempul Gamelan (Tuned)", desc: "Gong perunggu agung beresonansi panjang & shimmer beating 2.5Hz", category: "Jawa" },
 
   // Tradisional Jepang
   { id: "koto", label: "Koto Silk Zither (Jepang)", desc: "Petikan 13 senar sutra tradisional Jepang bernada syahdu", category: "Japan" },
@@ -51,10 +52,24 @@ const INSTRUMENT_OPTIONS: Array<{
 ];
 
 const ETHNIC_PERCUSSION_OPTIONS: Array<{ id: DrumType; label: string; origin: string }> = [
-  { id: "kendang_tung", label: "Kendang Sunda (Tung High Slap)", origin: "Sunda" },
-  { id: "kendang_pak", label: "Kendang Sunda (Pak Sharp Rim)", origin: "Sunda" },
-  { id: "kendang_bem", label: "Kendang Sunda (Bem Deep Bass)", origin: "Sunda" },
-  { id: "kendang_dho", label: "Kendang Koplo Dho/Dut (Pitch Drop)", origin: "Jawa" },
+  // Gendang & Kendang
+  { id: "kendang_tung", label: "Kendang Tung (High Slap 220Hz)", origin: "Sunda" },
+  { id: "kendang_pak", label: "Kendang Pak (Sharp Snappy 380Hz)", origin: "Sunda" },
+  { id: "kendang_bem", label: "Kendang Bem (Bass Low 55Hz)", origin: "Sunda" },
+  { id: "kendang_tong", label: "Kulanter Tong (Resonant Ring 280Hz)", origin: "Sunda" },
+  { id: "kendang_plak", label: "Kendang Plak (Open Slap 460Hz)", origin: "Sunda" },
+  { id: "kendang_ketuk", label: "Ketuk Kayu (Wood Knock Rim 1200Hz)", origin: "Sunda" },
+  { id: "kendang_dho", label: "Kendang Koplo Dut (Pitch Drop 110->42Hz)", origin: "Jawa" },
+  { id: "kendang_indung", label: "Kendang Indung (Sub Boom 46Hz)", origin: "Jawa" },
+
+  // Gong & Goong
+  { id: "goong_ageng", label: "Goong Ageng Heavy Sub (43.65Hz)", origin: "Gong" },
+  { id: "goong_suwukan", label: "Goong Suwukan (65.41Hz)", origin: "Gong" },
+  { id: "kempul_gong", label: "Kempul Resonant Gong (140Hz)", origin: "Gong" },
+  { id: "kenong_gong", label: "Kenong Chime Kettle (280Hz)", origin: "Gong" },
+
+  // Angklung & Perkusi Lain
+  { id: "angklung_hit", label: "Angklung Bamboo Strike (Dual Pitch)", origin: "Angklung" },
   { id: "taiko_heavy", label: "Taiko O-Daiko (Heavy Sub Punch)", origin: "Japan" },
   { id: "taiko_rim", label: "Taiko Bachi Rim (Wood Rimshot)", origin: "Japan" },
   { id: "tom", label: "Studio Low Tom", origin: "Modern" },

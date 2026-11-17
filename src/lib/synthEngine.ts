@@ -1127,6 +1127,119 @@ class SynthAudioEngine {
       osc.connect(gain);
       osc.start(time);
       osc.stop(time + 0.22);
+    } else if (drum === "goong_ageng") {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(43.65, time);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(46.15, time);
+      gain.gain.setValueAtTime(1.2, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 2.8);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + 2.9);
+      osc2.stop(time + 2.9);
+    } else if (drum === "goong_suwukan") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(65.41, time);
+      gain.gain.setValueAtTime(1.0, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 1.8);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 1.9);
+    } else if (drum === "kempul_gong") {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(140.0, time);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(386.4, time);
+      gain.gain.setValueAtTime(0.95, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 1.3);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + 1.4);
+      osc2.stop(time + 1.4);
+    } else if (drum === "kenong_gong") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(280.0, time);
+      gain.gain.setValueAtTime(0.85, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.85);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.9);
+    } else if (drum === "angklung_hit") {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(523.25, time);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(1046.5, time);
+      gain.gain.setValueAtTime(0.9, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.65);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + 0.7);
+      osc2.stop(time + 0.7);
+    } else if (drum === "kendang_tung") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(260, time);
+      osc.frequency.exponentialRampToValueAtTime(180, time + 0.08);
+      gain.gain.setValueAtTime(0.9, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.32);
+    } else if (drum === "kendang_pak") {
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(380, time);
+      osc.frequency.exponentialRampToValueAtTime(120, time + 0.05);
+      gain.gain.setValueAtTime(0.95, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.18);
+    } else if (drum === "kendang_bem" || drum === "kendang_indung") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(95, time);
+      osc.frequency.exponentialRampToValueAtTime(50, time + 0.12);
+      gain.gain.setValueAtTime(1.05, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.48);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.5);
+    } else if (drum === "kendang_dho") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(110, time);
+      osc.frequency.exponentialRampToValueAtTime(42, time + 0.18);
+      gain.gain.setValueAtTime(1.05, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.48);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.5);
+    } else if (drum === "kendang_tong") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(360, time);
+      osc.frequency.exponentialRampToValueAtTime(280, time + 0.08);
+      gain.gain.setValueAtTime(0.9, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.26);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.28);
     } else {
       const osc = ctx.createOscillator();
       osc.type = "sine";
@@ -1150,16 +1263,57 @@ class SynthAudioEngine {
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
 
-    const osc = ctx.createOscillator();
-    osc.type = instrument === "piano" ? "triangle" : instrument === "bass" ? "sine" : "sawtooth";
-    osc.frequency.setValueAtTime(freq, time);
-
-    gain.gain.setValueAtTime(0.7, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.75);
-
-    osc.connect(gain);
-    osc.start(time);
-    osc.stop(time + 0.8);
+    if (instrument === "angklung") {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(freq, time);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(freq * 2, time);
+      gain.gain.setValueAtTime(0.85, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 1.1);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + 1.15);
+      osc2.stop(time + 1.15);
+    } else if (instrument === "gamelan_gong") {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(freq, time);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(freq + (freq < 150 ? 2.5 : 4.0), time);
+      gain.gain.setValueAtTime(0.95, time);
+      const dec = freq < 100 ? 3.0 : 1.8;
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dec);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + dec + 0.1);
+      osc2.stop(time + dec + 0.1);
+    } else if (instrument === "kendang_tuned") {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq * 1.35, time);
+      osc.frequency.exponentialRampToValueAtTime(freq, time + 0.08);
+      gain.gain.setValueAtTime(0.9, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.42);
+    } else {
+      const osc = ctx.createOscillator();
+      osc.type = instrument === "piano" ? "triangle" : instrument === "bass" ? "sine" : "sawtooth";
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(0.7, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.75);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.8);
+    }
   }
 }
 
@@ -1217,6 +1371,108 @@ function writeString(view: DataView, offset: number, string: string) {
 
 // Preset Beats FL Studio & Tradisional Bawaan
 export const FL_STUDIO_PRESETS: BeatPattern[] = [
+  {
+    name: "Remix DJ Angklung Electro (128 BPM)",
+    bpm: 128,
+    swing: 0.08,
+    stepCount: 16,
+    instrument: "angklung",
+    tracks: {
+      kick: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+      snare: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      clap: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+      hihat_open: [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
+      percussion: [false, false, true, false, false, true, false, false, false, false, true, false, false, true, false, true],
+      bass: [
+        { active: true, note: 36 }, // C2
+        { active: false, note: 36 },
+        { active: true, note: 36 },
+        { active: false, note: 36 },
+        { active: true, note: 41 }, // F2
+        { active: false, note: 41 },
+        { active: true, note: 43 }, // G2
+        { active: false, note: 43 },
+        { active: true, note: 36 },
+        { active: false, note: 36 },
+        { active: true, note: 39 }, // D#2
+        { active: false, note: 39 },
+        { active: true, note: 41 },
+        { active: false, note: 41 },
+        { active: true, note: 43 },
+        { active: true, note: 41 },
+      ],
+      melody: [
+        { active: true, note: 60 }, // C4
+        { active: true, note: 61 }, // C#4
+        { active: false, note: 61 },
+        { active: true, note: 65 }, // F4
+        { active: true, note: 67 }, // G4
+        { active: false, note: 67 },
+        { active: true, note: 68 }, // G#4
+        { active: false, note: 68 },
+        { active: true, note: 67 },
+        { active: false, note: 67 },
+        { active: true, note: 65 },
+        { active: false, note: 65 },
+        { active: true, note: 61 },
+        { active: true, note: 60 },
+        { active: false, note: 60 },
+        { active: true, note: 67 },
+      ],
+    },
+  },
+  {
+    name: "Remix DJ Goong Gamelan Bass Trap (130 BPM)",
+    bpm: 130,
+    swing: 0.05,
+    stepCount: 16,
+    instrument: "gamelan_gong",
+    tracks: {
+      kick: [true, false, false, false, false, false, true, false, false, false, true, false, false, false, false, false],
+      snare: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      clap: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+      hihat_open: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false],
+      percussion: [true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false], // Goong Hit
+      bass: [
+        { active: true, note: 29 }, // F1 Goong Sub
+        { active: false, note: 29 },
+        { active: false, note: 29 },
+        { active: false, note: 29 },
+        { active: true, note: 29 },
+        { active: false, note: 29 },
+        { active: true, note: 33 },
+        { active: false, note: 33 },
+        { active: true, note: 34 },
+        { active: false, note: 34 },
+        { active: false, note: 34 },
+        { active: false, note: 34 },
+        { active: true, note: 31 },
+        { active: false, note: 31 },
+        { active: true, note: 33 },
+        { active: false, note: 33 },
+      ],
+      melody: [
+        { active: true, note: 53 }, // Goong F3
+        { active: false, note: 53 },
+        { active: true, note: 60 }, // Kenong C4
+        { active: false, note: 60 },
+        { active: true, note: 65 }, // Kempul F4
+        { active: false, note: 65 },
+        { active: true, note: 67 }, // Kenong G4
+        { active: false, note: 67 },
+        { active: true, note: 53 },
+        { active: false, note: 53 },
+        { active: true, note: 65 },
+        { active: false, note: 65 },
+        { active: true, note: 67 },
+        { active: true, note: 70 },
+        { active: false, note: 70 },
+        { active: true, note: 65 },
+      ],
+    },
+  },
   {
     name: "Sunda Degung Jaipong Trap (128 BPM)",
     bpm: 128,
