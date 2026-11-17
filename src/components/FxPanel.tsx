@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { DeckId, FxParams, FxSlotParams, FxType } from "../lib/ipc";
-import { useDeckAStore, useDeckBStore } from "../stores/deckStore";
+import type { AutoDjState, FxParams, FxSlotParams, FxType } from "../lib/ipc";
+import { useAutoDjStore } from "../stores/autoDjStore";
 import { useFxStore } from "../stores/fxStore";
-import { useMixerStore } from "../stores/mixerStore";
 import { Panel } from "./ui/Panel";
 import { Slider } from "./ui/Slider";
 
@@ -27,6 +26,13 @@ const FX_OPTIONS: Array<{ value: FxType; label: string }> = [
 
 const CHAIN_LABELS = ["Deck A FX", "Deck B FX", "Master FX"];
 
+const AUTO_DJ_STATE_LABEL: Record<AutoDjState, string> = {
+  disabled: "OFF",
+  armed: "ARMED",
+  transitioning: "MIXING",
+  cooldown: "COOLDOWN",
+};
+
 function slotLabel(slot: number): string {
   return `Slot ${slot + 1}`;
 }
@@ -48,77 +54,19 @@ export function FxPanel() {
   const fxError = useFxStore((state) => state.error);
 
   const [chainIndex, setChainIndex] = useState(0);
-  const [autoDj, setAutoDj] = useState(false);
-  const [crossfade, setCrossfade] = useState(8);
-  const [beatmatch, setBeatmatch] = useState(true);
-  const transitioning = useRef(false);
+
+  const autoDj = useAutoDjStore((state) => state.status);
+  const refreshAutoDj = useAutoDjStore((state) => state.refresh);
+  const updateAutoDj = useAutoDjStore((state) => state.update);
+  const triggerAutoDj = useAutoDjStore((state) => state.trigger);
+  const cancelAutoDj = useAutoDjStore((state) => state.cancel);
+  const autoDjError = useAutoDjStore((state) => state.error);
+  const clearAutoDjError = useAutoDjStore((state) => state.clearError);
 
   useEffect(() => {
     void refreshFx();
-  }, [refreshFx]);
-
-  useEffect(() => {
-    if (!autoDj) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      if (transitioning.current) {
-        return;
-      }
-
-      const a = useDeckAStore.getState().status;
-      const b = useDeckBStore.getState().status;
-      const mixer = useMixerStore.getState().status;
-      if (!a?.loaded || !b?.loaded) {
-        return;
-      }
-
-      const cf = mixer?.crossfader ?? 0.5;
-      const activeIsA = cf < 0.5;
-      const active = activeIsA ? a : b;
-      const remaining = active.durationSecs - active.positionSecs;
-      if (!active.playing || remaining > crossfade + 3) {
-        return;
-      }
-
-      const otherStore = activeIsA ? useDeckBStore : useDeckAStore;
-      const other = otherStore.getState().status;
-      if (!other || other.playing) {
-        return;
-      }
-
-      transitioning.current = true;
-      void (async () => {
-        try {
-          if (beatmatch) {
-            const source = (activeIsA ? 0 : 1) as DeckId;
-            const target = (activeIsA ? 1 : 0) as DeckId;
-            await (await import("../lib/ipc")).ipc.syncDecks(source, target);
-          }
-
-          await otherStore.getState().seek(0);
-          await otherStore.getState().play();
-
-          const startCf = cf;
-          const targetCf = activeIsA ? 1 : 0;
-          const steps = Math.max(1, Math.round((crossfade * 1000) / 50));
-          for (let index = 1; index <= steps; index += 1) {
-            const value = startCf + (targetCf - startCf) * (index / steps);
-            useMixerStore.getState().update({ crossfader: value });
-            await new Promise((resolve) => window.setTimeout(resolve, 50));
-          }
-
-          const oldStore = activeIsA ? useDeckAStore : useDeckBStore;
-          await oldStore.getState().pause();
-        } finally {
-          transitioning.current = false;
-        }
-      })();
-    }, 250);
-
-    return () => window.clearInterval(timer);
-  }, [autoDj, crossfade, beatmatch]);
+    void refreshAutoDj();
+  }, [refreshFx, refreshAutoDj]);
 
   const chain = fx?.chains[chainIndex];
   const fallback: FxParams = {
@@ -129,6 +77,7 @@ export function FxPanel() {
     ],
   };
   const data = chain ? fx! : fallback;
+  const panelError = fxError ?? autoDjError;
 
   return (
     <Panel
@@ -253,53 +202,132 @@ export function FxPanel() {
       <section className="mt-3 rounded-lg border border-line bg-deck-850/60 p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="field-label">Auto DJ</span>
-          <button
-            type="button"
-            className={`btn px-2 py-1 text-[10px] ${autoDj ? "btn-primary" : ""}`}
-            onClick={() => setAutoDj((value) => !value)}
-            aria-pressed={autoDj}
-          >
-            {autoDj ? "ON" : "OFF"}
-          </button>
+          <div className="flex items-center gap-2">
+            <span
+              className={`chip ${
+                autoDj?.state === "transitioning" ? "text-cyan-soft" : ""
+              }`}
+            >
+              {AUTO_DJ_STATE_LABEL[autoDj?.state ?? "disabled"]}
+            </span>
+            <button
+              type="button"
+              className={`btn px-2 py-1 text-[10px] ${
+                autoDj?.enabled ? "btn-primary" : ""
+              }`}
+              onClick={() => void updateAutoDj({ enabled: !autoDj?.enabled })}
+              aria-pressed={Boolean(autoDj?.enabled)}
+            >
+              {autoDj?.enabled ? "ON" : "OFF"}
+            </button>
+          </div>
         </div>
+
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="flex items-center gap-2 text-[11px] text-ink-dim">
+            <input
+              type="checkbox"
+              checked={autoDj?.autoStart ?? true}
+              onChange={(event) =>
+                void updateAutoDj({ autoStart: event.target.checked })
+              }
+            />
+            Mulai otomatis di akhir track
+          </label>
+          <label className="flex items-center gap-2 text-[11px] text-ink-dim">
+            <input
+              type="checkbox"
+              checked={autoDj?.beatmatch ?? true}
+              onChange={(event) =>
+                void updateAutoDj({ beatmatch: event.target.checked })
+              }
+            />
+            Beat-match BPM + fase
+          </label>
+        </div>
+
         <div className="mt-2">
           <Slider
             id="autodj-crossfade"
-            label="Crossfade"
-            value={crossfade}
+            label="Panjang crossfade"
+            value={autoDj?.crossfadeBeats ?? 16}
             min={2}
-            max={30}
+            max={64}
             step={1}
-            onChange={setCrossfade}
-            display={`${crossfade} s`}
+            onChange={(value) => void updateAutoDj({ crossfadeBeats: value })}
+            display={`${autoDj?.crossfadeBeats ?? 16} beat`}
           />
         </div>
-        <label className="mt-2 flex items-center gap-2 text-[11px] text-ink-dim">
-          <input
-            type="checkbox"
-            checked={beatmatch}
-            onChange={(event) => setBeatmatch(event.target.checked)}
-          />
-          Beat-match otomatis (BPM + fase)
-        </label>
-        <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
-          Auto DJ bergantian antar dua deck yang sudah dimuat. Atur assign channel A/B dan
-          crossfader default agar transisi terdengar.
-        </p>
+
+        <div className="mt-3 rounded-lg border border-line bg-deck-900/70 p-2">
+          <div className="flex items-center justify-between text-[10.5px] text-ink-dim">
+            <span>
+              Deck {(autoDj?.activeDeck ?? 0) === 0 ? "A" : "B"} → Deck{" "}
+              {(autoDj?.nextDeck ?? 1) === 0 ? "A" : "B"}
+            </span>
+            <span className="readout">
+              {autoDj?.state === "transitioning"
+                ? `${(autoDj.crossfadeSecs * (1 - autoDj.progress)).toFixed(1)} s`
+                : `${(autoDj?.crossfadeBeats ?? 16)} beat`}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan to-magenta transition-[width] duration-100"
+              style={{
+                width: `${Math.round((autoDj?.progress ?? 0) * 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className="btn btn-primary px-2 py-1 text-[10px]"
+            disabled={!autoDj?.enabled || autoDj.state === "transitioning"}
+            onClick={() => void triggerAutoDj()}
+          >
+            Mulai transisi
+          </button>
+          <button
+            type="button"
+            className="btn px-2 py-1 text-[10px]"
+            disabled={autoDj?.state !== "transitioning"}
+            onClick={() => void cancelAutoDj()}
+          >
+            Batalkan
+          </button>
+        </div>
+
+        {autoDj?.message ? (
+          <p className="mt-2 text-[10px] leading-relaxed text-amber">
+            {autoDj.message}
+          </p>
+        ) : (
+          <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
+            Transisi berjalan di engine Rust: target di-sync ke BPM/fase deck aktif,
+            crossfader bergerak beat-synced, lalu deck lama di-pause. Assign channel
+            A/B dan muat track di kedua deck.
+          </p>
+        )}
       </section>
 
-      {fxError ? (
+      {panelError ? (
         <div
           role="alert"
           className="mt-3 flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
         >
           <span className="mt-0.5">▲</span>
-          <p className="flex-1 whitespace-pre-wrap">{fxError}</p>
+          <p className="flex-1 whitespace-pre-wrap">{panelError}</p>
           <button
             type="button"
-            onClick={clearFxError}
+            onClick={() => {
+              clearFxError();
+              clearAutoDjError();
+            }}
             className="rounded px-1 text-ink-dim hover:text-ink"
-            aria-label="Tutup pesan error FX"
+            aria-label="Tutup pesan error FX / Auto DJ"
           >
             ✕
           </button>

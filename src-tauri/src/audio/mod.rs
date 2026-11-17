@@ -1,6 +1,7 @@
 //! Modul audio: device, engine real-time, decoder, deck, resampler, dan
 //! time-stretch.
 
+pub mod autodj;
 pub mod deck;
 pub mod decoder;
 pub mod device;

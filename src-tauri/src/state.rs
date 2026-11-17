@@ -7,6 +7,7 @@
 use parking_lot::Mutex;
 
 use crate::analysis::waveform::WaveformDto;
+use crate::audio::autodj::{AutoDjStatus, AutoDjUpdate};
 use crate::audio::deck::{Deck, DeckStatus};
 use crate::audio::engine::{AudioEngine, EngineStatus};
 use crate::audio::fx::{FxParams, FxSlotUpdate};
@@ -216,6 +217,37 @@ impl AppState {
         self.with_engine(|engine| {
             engine.apply_fx(update);
             Ok(engine.fx_status())
+        })
+    }
+
+    // ---- Auto DJ (Fase 6) -------------------------------------------------
+
+    pub fn auto_dj_status(&self) -> AutoDjStatus {
+        self.engine
+            .lock()
+            .as_ref()
+            .map(AudioEngine::auto_dj_status)
+            .unwrap_or_default()
+    }
+
+    pub fn set_auto_dj(&self, update: AutoDjUpdate) -> Result<AutoDjStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.apply_auto_dj(update);
+            Ok(engine.auto_dj_status())
+        })
+    }
+
+    pub fn trigger_auto_dj(&self) -> Result<AutoDjStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.trigger_auto_dj();
+            Ok(engine.auto_dj_status())
+        })
+    }
+
+    pub fn cancel_auto_dj(&self) -> Result<AutoDjStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.cancel_auto_dj();
+            Ok(engine.auto_dj_status())
         })
     }
 }

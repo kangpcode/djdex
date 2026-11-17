@@ -99,14 +99,14 @@ export function Header({ status }: { status: EngineStatus | null }) {
           </span>
         </div>
         <p className="mt-0.5 text-[11px] text-ink-faint">
-          Virtual DJ workstation · Fase 5: dua deck, hot cue, loop, sync aktif
+          Virtual DJ workstation · Fase 6: FX chain, Auto DJ, dua deck penuh
         </p>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
         <StatusPill status={status} />
-        <span className="chip border-cyan/30 text-cyan-soft">FASE 4</span>
-        <span className="chip">v0.5.0</span>
+        <span className="chip border-cyan/30 text-cyan-soft">FASE 6</span>
+        <span className="chip">v0.6.0</span>
       </div>
     </header>
   );

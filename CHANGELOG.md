@@ -3,6 +3,50 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-17
+
+### Added — Fase 6: FX Chain dan Auto DJ
+
+- DSP FX real-time `dsp/fx.rs`: delay, echo, reverb (comb + all-pass), flanger,
+  phaser, chorus, bitcrusher, gater, trans, roll, brake/spinback approximation,
+  filter sweep, noise, dan wah. Semua buffer dialokasikan saat konstruksi dan
+  tipe efek dapat diganti tanpa alokasi di callback.
+- Rantai FX 3 slot untuk Deck A, Deck B, dan Master; wet/dry, tiga parameter,
+  enable per slot, serta kontrol lock-free `audio/fx.rs` (`get_fx_status`,
+  `set_fx`).
+- Panel `FxPanel`: pemilih rantai, tipe efek, tombol ON/OFF, dan slider
+  wet/dry + parameter per slot.
+- Auto DJ di engine Rust (`audio/autodj.rs`): state machine pada thread
+  `djdex-autodj` 50 Hz. Target di-sync BPM/fase (opsional), di-seek ke downbeat
+  sefase deck aktif, lalu crossfader bergerak selama `crossfade_beats` ketukan.
+  Deck lama di-pause setelah fade selesai.
+- Mode Auto DJ: auto-start saat sisa track mendekati panjang crossfade,
+  transisi manual, dan pembatalan yang mengembalikan crossfader.
+- Snapshot `AutoDjStatus` (state, deck aktif/berikutnya, progress, durasi fade,
+  pesan) + command `get_auto_dj_status`, `set_auto_dj`, `auto_dj_trigger`,
+  `auto_dj_cancel`.
+- `Deck::transport()`: snapshot transport tanpa `swap` meter, sehingga polling
+  Auto DJ tidak mengosongkan peak yang dibaca UI.
+- Store `autoDjStore` + panel Auto DJ terintegrasi di `FxPanel`; progress bar dan
+  status transisi di-polling bersama status deck/mixer.
+- 5 unit test Auto DJ (BPM efektif, posisi crossfader reverse, clamp parameter,
+  pembatalan, roundtrip state); total 53 unit test Rust.
+
+### Changed
+
+- `MixerControls` sekarang dibagi sebagai `Arc` antara callback dan thread Auto
+  DJ; penulisan crossfader tetap atomic.
+- Deck dimiliki sebagai `Arc<Deck>` oleh engine agar thread kontrol dapat
+  memakai API deck yang sama tanpa menyentuh callback audio.
+- Versi aplikasi naik ke 0.6.0 (Rust, Tauri, npm, UI).
+
+### Known limitations
+
+- Auto DJ belum memuat track berikutnya otomatis karena library/queue baru
+  tersedia pada Fase 8; kedua deck harus sudah dimuat.
+- Waktu delay/echo masih dalam milidetik manual; sinkronisasi ketukan penuh dan
+  Macro FX preset akan disempurnakan bersama library/performance phase.
+
 ## [0.5.0] - 2026-11-16
 
 ### Added — Fase 5: Dua Deck Penuh

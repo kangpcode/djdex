@@ -50,6 +50,10 @@ pub fn run() {
             commands::set_mixer,
             commands::get_fx_status,
             commands::set_fx,
+            commands::get_auto_dj_status,
+            commands::set_auto_dj,
+            commands::auto_dj_trigger,
+            commands::auto_dj_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan aplikasi DJDeX");

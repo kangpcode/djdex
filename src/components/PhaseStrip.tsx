@@ -13,8 +13,7 @@ const PHASES: Phase[] = [
   { number: 3, title: "Time-stretch + Key lock", detail: "Pitch, keyshift, BPM/beatgrid/key", state: "selesai" },
   { number: 4, title: "Mixer", detail: "EQ, filter, crossfader, limiter, cue", state: "selesai" },
   { number: 5, title: "Dua Deck Penuh", detail: "Sync, jog wheel, hot cue, loop, beat jump", state: "selesai" },
-  { number: 6, title: "Efek & Auto DJ", detail: "FX chain, macro, auto mix", state: "berikutnya" },
-  { number: 6, title: "FX + Auto DJ", detail: "Rantai 3 slot, transisi otomatis", state: "rencana" },
+  { number: 6, title: "FX + Auto DJ", detail: "Rantai 3 slot, transisi beat-synced", state: "selesai" },
   { number: 7, title: "Remixer + Sequencer", detail: "Pad grid, bank, step sequencer", state: "rencana" },
   { number: 8, title: "Library", detail: "SQLite, scan, playlist, analisis batch", state: "rencana" },
   { number: 9, title: "MIDI + Keyboard", detail: "MIDI Learn, mapping preset", state: "rencana" },
@@ -40,7 +39,7 @@ export function PhaseStrip() {
     <Panel
       title="Roadmap 12 Fase"
       subtitle="Setiap fase harus bisa dikompilasi dan dijalankan sebelum lanjut."
-      actions={<span className="chip">5 / 12 selesai</span>}
+      actions={<span className="chip">6 / 12 selesai</span>}
     >
       <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {PHASES.map((phase) => (

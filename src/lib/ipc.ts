@@ -192,6 +192,33 @@ export interface FxSlotUpdate {
   p3?: number;
 }
 
+export type AutoDjState =
+  | "disabled"
+  | "armed"
+  | "transitioning"
+  | "cooldown";
+
+/** Snapshot Auto DJ; sinkron dengan `audio/autodj.rs`. */
+export interface AutoDjStatus {
+  enabled: boolean;
+  autoStart: boolean;
+  beatmatch: boolean;
+  crossfadeBeats: number;
+  crossfadeSecs: number;
+  progress: number;
+  state: AutoDjState;
+  activeDeck: DeckId;
+  nextDeck: DeckId;
+  message: string | null;
+}
+
+export interface AutoDjUpdate {
+  enabled?: boolean;
+  autoStart?: boolean;
+  beatmatch?: boolean;
+  crossfadeBeats?: number;
+}
+
 /** Pasangan min/max diratakan: [min0, max0, min1, max1, ...]. */
 export interface WaveformData {
   trackId: number;
@@ -321,6 +348,16 @@ export const ipc = {
 
   setFx: (update: FxSlotUpdate) =>
     invokeCommand<FxParams>("set_fx", { update }),
+
+  // Auto DJ (Fase 6)
+  getAutoDjStatus: () => invokeCommand<AutoDjStatus>("get_auto_dj_status"),
+
+  setAutoDj: (update: AutoDjUpdate) =>
+    invokeCommand<AutoDjStatus>("set_auto_dj", { update }),
+
+  triggerAutoDj: () => invokeCommand<AutoDjStatus>("auto_dj_trigger"),
+
+  cancelAutoDj: () => invokeCommand<AutoDjStatus>("auto_dj_cancel"),
 };
 
 /** Ubah error apa pun menjadi pesan yang layak ditampilkan. */

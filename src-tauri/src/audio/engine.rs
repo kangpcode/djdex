@@ -32,10 +32,11 @@ use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
+use crate::audio::autodj::{AutoDj, AutoDjStatus, AutoDjUpdate};
 use crate::audio::deck::{Deck, DeckReader, DeckStatus};
 use crate::audio::device::{find_output_device, host_label, sample_format_label};
-use crate::audio::gain::{db_to_linear, linear_to_db};
 use crate::audio::fx::{FxControls, FxParams, FxSlotUpdate};
+use crate::audio::gain::{db_to_linear, linear_to_db};
 use crate::audio::mixer::{Mixer, MixerControls, MixerParams, MixerUpdate};
 use crate::error::AudioError;
 
@@ -129,7 +130,7 @@ struct RtState {
     tone_enabled: AtomicBool,
     tone_freq: AtomicU32,
     tone_gain: AtomicU32,
-    mixer: MixerControls,
+    mixer: Arc<MixerControls>,
     fx: FxControls,
     peak: AtomicU32,
     master_peak_l: AtomicU32,
@@ -157,7 +158,7 @@ impl RtState {
             tone_enabled: AtomicBool::new(false),
             tone_freq: AtomicU32::new(frequency.to_bits()),
             tone_gain: AtomicU32::new(db_to_linear(gain_db).to_bits()),
-            mixer: MixerControls::new(),
+            mixer: Arc::new(MixerControls::new()),
             fx: FxControls::new(),
             peak: AtomicU32::new(0.0_f32.to_bits()),
             master_peak_l: AtomicU32::new(0.0_f32.to_bits()),
@@ -205,7 +206,7 @@ pub const DECK_COUNT: usize = 2;
 
 struct OpenedStream {
     stream: Stream,
-    decks: [Deck; DECK_COUNT],
+    decks: [Arc<Deck>; DECK_COUNT],
     report: StreamReport,
 }
 
@@ -215,7 +216,8 @@ pub struct AudioEngine {
     info: Arc<Mutex<StreamInfo>>,
     commands: Sender<AudioCommand>,
     worker: Option<JoinHandle<()>>,
-    decks: [Deck; DECK_COUNT],
+    decks: [Arc<Deck>; DECK_COUNT],
+    auto_dj: AutoDj,
 }
 
 impl AudioEngine {
@@ -238,13 +240,27 @@ impl AudioEngine {
             .map_err(|err| AudioError::StreamThreadSpawn(err.to_string()))?;
 
         match ready_rx.recv_timeout(OPEN_TIMEOUT) {
-            Ok(Ok((_report, decks))) => Ok(Self {
-                rt,
-                info,
-                commands,
-                worker: Some(worker),
-                decks,
-            }),
+            Ok(Ok((_report, decks))) => {
+                let auto_dj = match AutoDj::start(
+                    [Arc::clone(&decks[0]), Arc::clone(&decks[1])],
+                    Arc::clone(&rt.mixer),
+                ) {
+                    Ok(auto_dj) => auto_dj,
+                    Err(err) => {
+                        let _ = commands.send(AudioCommand::Shutdown);
+                        let _ = worker.join();
+                        return Err(err);
+                    }
+                };
+                Ok(Self {
+                    rt,
+                    info,
+                    commands,
+                    worker: Some(worker),
+                    decks,
+                    auto_dj,
+                })
+            }
             Ok(Err(err)) => {
                 let _ = worker.join();
                 Err(err)
@@ -308,7 +324,10 @@ impl AudioEngine {
     // ---- Deck API (Fase 2-5) ------------------------------------------
 
     pub fn deck(&self, slot: usize) -> Result<&Deck, AudioError> {
-        self.decks.get(slot).ok_or(AudioError::DeckNotFound(slot))
+        self.decks
+            .get(slot)
+            .map(Arc::as_ref)
+            .ok_or(AudioError::DeckNotFound(slot))
     }
 
     pub fn deck_status(&self, slot: usize) -> Result<DeckStatus, AudioError> {
@@ -391,7 +410,28 @@ impl AudioEngine {
         self.rt.fx.apply(&update);
     }
 
+    // ---- Auto DJ (Fase 6) ------------------------------------------------
+
+    pub fn auto_dj_status(&self) -> AutoDjStatus {
+        self.auto_dj.status()
+    }
+
+    pub fn apply_auto_dj(&self, update: AutoDjUpdate) {
+        self.auto_dj.apply(update);
+    }
+
+    pub fn trigger_auto_dj(&self) {
+        self.auto_dj.trigger();
+    }
+
+    pub fn cancel_auto_dj(&self) {
+        self.auto_dj.cancel();
+    }
+
     fn stop(&mut self) {
+        // Hentikan kontrol Auto DJ lebih dulu agar tidak menulis crossfader
+        // saat stream sedang ditutup.
+        self.auto_dj.stop();
         let _ = self.commands.send(AudioCommand::Shutdown);
         if let Some(worker) = self.worker.take() {
             let _ = worker.join();
@@ -410,7 +450,7 @@ fn audio_host_loop(
     rt: Arc<RtState>,
     info: Arc<Mutex<StreamInfo>>,
     commands: Receiver<AudioCommand>,
-    ready: Sender<Result<(StreamReport, [Deck; DECK_COUNT]), AudioError>>,
+    ready: Sender<Result<(StreamReport, [Arc<Deck>; DECK_COUNT]), AudioError>>,
 ) {
     let opened = match open_stream(&request, Arc::clone(&rt)) {
         Ok(opened) => opened,
@@ -476,7 +516,7 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
     // dimiliki callback audio.
     let (deck_a, reader_a) = Deck::new(sample_rate)?;
     let (deck_b, reader_b) = Deck::new(sample_rate)?;
-    let decks = [deck_a, deck_b];
+    let decks = [Arc::new(deck_a), Arc::new(deck_b)];
 
     let stream = match sample_format {
         SampleFormat::F32 => {

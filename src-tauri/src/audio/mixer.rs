@@ -316,6 +316,11 @@ impl MixerControls {
         }
     }
 
+    /// Set posisi crossfader langsung (dipakai Auto DJ di thread kontrol).
+    pub fn set_crossfader(&self, value: f32) {
+        store_f32(&self.crossfader, value.clamp(0.0, 1.0));
+    }
+
     pub fn apply(&self, update: MixerUpdate) {
         if let Some(channel) = update.channel_a.as_ref() {
             self.channels[0].apply(channel);
@@ -527,14 +532,14 @@ impl Mixer {
         let _ = ();
     }
 
-
     #[inline]
     pub fn process(&mut self, deck_a: (f32, f32), deck_b: (f32, f32), tone: f32) -> MixerFrame {
         let inputs = [deck_a, deck_b];
         let mut master_l = tone;
         let mut master_r = tone;
         let mut cue_l = 0.0_f32;
-        let mut cue_r = 0.0_f32;        for (index, input) in inputs.iter().enumerate().take(DECK_CHANNELS) {
+        let mut cue_r = 0.0_f32;
+        for (index, input) in inputs.iter().enumerate().take(DECK_CHANNELS) {
             let fx_input = self.fx_chains[index].process(*input, &self.fx_params.chains[index]);
             let ((left, right), cue) = self.channels[index].process(fx_input.0, fx_input.1);
             self.cross_gain[index] +=

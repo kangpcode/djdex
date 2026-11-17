@@ -260,6 +260,22 @@ impl DeckStatus {
     }
 }
 
+/// Snapshot ringan untuk Auto DJ / kontrol non-UI. Tidak mengambil (swap)
+/// meter peak, sehingga polling kontrol tidak mencuri data meter dari UI.
+#[derive(Debug, Clone, Copy)]
+pub struct DeckTransport {
+    pub loaded: bool,
+    pub playing: bool,
+    pub eof: bool,
+    pub position_secs: f64,
+    pub duration_secs: f64,
+    pub cue_secs: f64,
+    pub first_beat_secs: f64,
+    pub bpm: f64,
+    pub speed: f32,
+    pub track_id: u64,
+}
+
 /// Sisi callback audio: membaca ring buffer tanpa alokasi maupun lock.
 pub struct DeckReader {
     consumer: Consumer<f32>,
@@ -1010,6 +1026,32 @@ impl Deck {
             },
             reader,
         ))
+    }
+
+    /// Snapshot transport tanpa efek samping pada meter. Dipakai Auto DJ agar
+    /// polling 50 Hz tidak mengosongkan peak yang dibaca UI.
+    pub fn transport(&self) -> DeckTransport {
+        let analysis = self.analysis.lock();
+        let detected_bpm = analysis.as_ref().map_or(0.0, |item| item.bpm);
+        let first_beat_secs = analysis.as_ref().map_or(0.0, |item| item.first_beat_secs);
+        let override_bpm = load_f64(&self.shared.bpm_override);
+
+        DeckTransport {
+            loaded: self.shared.loaded.load(Ordering::Relaxed),
+            playing: self.shared.playing.load(Ordering::Relaxed),
+            eof: self.shared.eof.load(Ordering::Relaxed),
+            position_secs: load_f64(&self.shared.position_secs),
+            duration_secs: load_f64(&self.shared.duration_secs),
+            cue_secs: load_f64(&self.shared.cue_secs),
+            first_beat_secs,
+            bpm: if override_bpm > 0.0 {
+                override_bpm
+            } else {
+                detected_bpm
+            },
+            speed: load_f32(&self.shared.speed),
+            track_id: self.shared.track_id.load(Ordering::Relaxed),
+        }
     }
 
     pub fn status(&self) -> DeckStatus {

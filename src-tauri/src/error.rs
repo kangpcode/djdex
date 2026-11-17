@@ -63,4 +63,7 @@ pub enum AudioError {
 
     #[error("Gagal memulai thread deck: {0}")]
     DeckThreadSpawn(String),
+
+    #[error("Gagal memulai thread Auto DJ: {0}")]
+    AutoDjThreadSpawn(String),
 }

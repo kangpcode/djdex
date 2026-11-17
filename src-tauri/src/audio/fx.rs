@@ -121,7 +121,11 @@ pub struct FxControls {
 impl FxControls {
     pub fn new() -> Self {
         Self {
-            chains: [FxChainControls::new(), FxChainControls::new(), FxChainControls::new()],
+            chains: [
+                FxChainControls::new(),
+                FxChainControls::new(),
+                FxChainControls::new(),
+            ],
         }
     }
 

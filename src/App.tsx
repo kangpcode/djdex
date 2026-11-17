@@ -9,6 +9,7 @@ import { PhaseStrip } from "./components/PhaseStrip";
 import { ToneTestPanel } from "./components/ToneTestPanel";
 import { isTauri } from "./lib/ipc";
 import { useAudioStore } from "./stores/audioStore";
+import { useAutoDjStore } from "./stores/autoDjStore";
 import { useDeckAStore, useDeckBStore } from "./stores/deckStore";
 import { useMixerStore } from "./stores/mixerStore";
 
@@ -42,6 +43,7 @@ export default function App() {
   const togglePlayA = useDeckAStore((state) => state.toggle);
   const refreshDeckB = useDeckBStore((state) => state.refresh);
   const refreshMixer = useMixerStore((state) => state.refresh);
+  const refreshAutoDj = useAutoDjStore((state) => state.refresh);
 
   useEffect(() => {
     if (!isTauri()) {
@@ -58,15 +60,24 @@ export default function App() {
     void refreshDeckA();
     void refreshDeckB();
     void refreshMixer();
+    void refreshAutoDj();
     const timer = window.setInterval(() => {
       void refreshStatus();
       void refreshDeckA();
       void refreshDeckB();
       void refreshMixer();
+      void refreshAutoDj();
     }, STATUS_POLL_MS);
 
     return () => window.clearInterval(timer);
-  }, [engineInitialized, refreshStatus, refreshDeckA, refreshDeckB, refreshMixer]);
+  }, [
+    engineInitialized,
+    refreshStatus,
+    refreshDeckA,
+    refreshDeckB,
+    refreshMixer,
+    refreshAutoDj,
+  ]);
 
   // Drag & drop file audio dari OS ke jendela aplikasi.
   useEffect(() => {
@@ -157,7 +168,7 @@ export default function App() {
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.5.0</span>
+        <span>By Kangpcode · v0.6.0</span>
         <span className="hidden sm:inline">
           Rust + Tauri 2 · Symphonia · CPAL · ring buffer lock-free
         </span>

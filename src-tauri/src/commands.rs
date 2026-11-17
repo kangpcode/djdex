@@ -6,6 +6,7 @@
 use tauri::State;
 
 use crate::analysis::waveform::WaveformDto;
+use crate::audio::autodj::{AutoDjStatus, AutoDjUpdate};
 use crate::audio::deck::DeckStatus;
 use crate::audio::device::{list_output_devices, AudioDeviceInfo};
 use crate::audio::engine::{AudioEngine, EngineStatus, StartRequest};
@@ -306,6 +307,30 @@ pub fn get_fx_status(state: State<'_, AppState>) -> FxParams {
 #[tauri::command]
 pub fn set_fx(state: State<'_, AppState>, update: FxSlotUpdate) -> IpcResult<FxParams> {
     state.set_fx(update).map_err(|err| err.to_string())
+}
+
+// ---- Auto DJ (Fase 6) ----------------------------------------------------
+
+#[tauri::command]
+pub fn get_auto_dj_status(state: State<'_, AppState>) -> AutoDjStatus {
+    state.auto_dj_status()
+}
+
+#[tauri::command]
+pub fn set_auto_dj(state: State<'_, AppState>, update: AutoDjUpdate) -> IpcResult<AutoDjStatus> {
+    state.set_auto_dj(update).map_err(|err| err.to_string())
+}
+
+/// Mulai transisi sekarang tanpa menunggu akhir track.
+#[tauri::command]
+pub fn auto_dj_trigger(state: State<'_, AppState>) -> IpcResult<AutoDjStatus> {
+    state.trigger_auto_dj().map_err(|err| err.to_string())
+}
+
+/// Batalkan transisi yang sedang berjalan dan kembalikan crossfader.
+#[tauri::command]
+pub fn auto_dj_cancel(state: State<'_, AppState>) -> IpcResult<AutoDjStatus> {
+    state.cancel_auto_dj().map_err(|err| err.to_string())
 }
 
 /// Ambil waveform track aktif (downsample di Rust agar payload ringan).

@@ -107,13 +107,11 @@ pub struct FxChainParams {
     pub slots: [FxSlotParams; 3],
 }
 
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FxParams {
     pub chains: [FxChainParams; 3],
 }
-
 
 pub struct FxChain {
     sample_rate: f32,
@@ -207,8 +205,14 @@ impl FxSlot {
                 vec![0.0; ((sample_rate * 0.0449) as usize).max(8)],
             ],
             comb_index: [0; 4],
-            allpass_l: [vec![0.0; ((sample_rate * 0.005) as usize).max(8)], vec![0.0; ((sample_rate * 0.0017) as usize).max(8)]],
-            allpass_r: [vec![0.0; ((sample_rate * 0.005) as usize).max(8)], vec![0.0; ((sample_rate * 0.0017) as usize).max(8)]],
+            allpass_l: [
+                vec![0.0; ((sample_rate * 0.005) as usize).max(8)],
+                vec![0.0; ((sample_rate * 0.0017) as usize).max(8)],
+            ],
+            allpass_r: [
+                vec![0.0; ((sample_rate * 0.005) as usize).max(8)],
+                vec![0.0; ((sample_rate * 0.0017) as usize).max(8)],
+            ],
             allpass_index: [0; 2],
             phaser_state_l: [0.0; 4],
             phaser_state_r: [0.0; 4],
@@ -289,7 +293,8 @@ impl FxSlot {
 
     fn process_delay(&mut self, input: (f32, f32), params: &FxSlotParams) -> (f32, f32) {
         let feedback = params.p2.clamp(0.0, 0.95);
-        let read_index = (self.delay_index + self.delay_l.len() - self.delay_frames) % self.delay_l.len();
+        let read_index =
+            (self.delay_index + self.delay_l.len() - self.delay_frames) % self.delay_l.len();
         let delayed_l = self.delay_l[read_index];
         let delayed_r = self.delay_r[read_index];
         self.delay_l[self.delay_index] = input.0 + delayed_l * feedback;
@@ -359,7 +364,8 @@ impl FxSlot {
         let delay_ms = min_ms * 1000.0 + (max_ms - min_ms) * 1000.0 * (0.5 + 0.5 * lfo);
         let delay_frames = ((delay_ms / 1000.0) * self.sample_rate) as usize;
         let delay_frames = delay_frames.clamp(1, self.delay_l.len() - 1);
-        let read_index = (self.delay_index + self.delay_l.len() - delay_frames) % self.delay_l.len();
+        let read_index =
+            (self.delay_index + self.delay_l.len() - delay_frames) % self.delay_l.len();
         let delayed_l = self.delay_l[read_index];
         let delayed_r = self.delay_r[read_index];
         self.delay_l[self.delay_index] = input.0 + delayed_l * feedback;
@@ -459,9 +465,15 @@ impl FxSlot {
 
     fn process_noise(&mut self, input: (f32, f32), params: &FxSlotParams) -> (f32, f32) {
         let amount = params.p1.clamp(0.0, 1.0);
-        self.noise_seed = self.noise_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        self.noise_seed = self
+            .noise_seed
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
         let noise = ((self.noise_seed as f32) / (u32::MAX as f32)) * 2.0 - 1.0;
-        (input.0 + noise * amount * 0.2, input.1 + noise * amount * 0.2)
+        (
+            input.0 + noise * amount * 0.2,
+            input.1 + noise * amount * 0.2,
+        )
     }
 
     fn process_wah(&mut self, input: (f32, f32), params: &FxSlotParams) -> (f32, f32) {
@@ -472,7 +484,9 @@ impl FxSlot {
         }
         let center = 300.0 + 2000.0 * (0.5 + 0.5 * (self.lfo_phase * std::f32::consts::TAU).sin());
         // Bandpass sederhana via biquad high/low.
-        (input.0 * (center / 5000.0).min(1.0), input.1 * (center / 5000.0).min(1.0))
+        (
+            input.0 * (center / 5000.0).min(1.0),
+            input.1 * (center / 5000.0).min(1.0),
+        )
     }
 }
-
