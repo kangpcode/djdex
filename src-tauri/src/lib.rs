@@ -8,6 +8,7 @@ mod commands;
 mod dsp;
 mod error;
 pub mod library;
+pub mod midi;
 pub mod sampler;
 mod state;
 
