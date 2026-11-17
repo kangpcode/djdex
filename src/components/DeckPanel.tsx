@@ -660,11 +660,89 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
         </div>
       </div>
 
+      {/* Hardware Loop Control Strip (Full Width) */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-[#080d16] border border-[#1a2538] shadow-sm">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider mr-1">
+            LOOP:
+          </span>
+          <select
+            className="bg-[#0c121e] border border-[#223146] text-slate-200 text-[10px] rounded px-2 py-1 font-mono font-bold"
+            value={loopBeats}
+            onChange={(e) => setLoopBeatsState(Number(e.target.value))}
+            disabled={!loaded}
+          >
+            {[1 / 32, 1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32].map((v) => (
+              <option key={v} value={v}>
+                {v < 1 ? `1/${1 / v}` : v} BEAT
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={`px-3 py-1 text-[10px] font-mono font-bold rounded border transition-all ${
+              status?.loopActive
+                ? "bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                : "bg-[#0c121e] border-[#223146] text-slate-300 hover:text-white"
+            }`}
+            onClick={() => {
+              if (status?.loopActive) {
+                void exitLoop();
+              } else {
+                void startLoop(loopBeats);
+              }
+            }}
+            disabled={!loaded || !bpmKnown}
+          >
+            {status?.loopActive ? "EXIT LOOP" : "AUTO LOOP"}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="px-2 py-1 text-[9.5px] font-mono font-bold bg-[#0c121e] border border-[#223146] text-slate-400 hover:text-slate-200 rounded"
+            onClick={() => void halveLoop()}
+            disabled={!status?.loopActive}
+            title="Bagi 2 panjang loop"
+          >
+            ½
+          </button>
+          <button
+            type="button"
+            className="px-2 py-1 text-[9.5px] font-mono font-bold bg-[#0c121e] border border-[#223146] text-slate-400 hover:text-slate-200 rounded"
+            onClick={() => void doubleLoop()}
+            disabled={!status?.loopActive}
+            title="Kali 2 panjang loop"
+          >
+            ×2
+          </button>
+          <button
+            type="button"
+            className="px-2 py-1 text-[9.5px] font-mono font-bold bg-[#0c121e] border border-[#223146] text-slate-400 hover:text-slate-200 rounded"
+            onClick={() => void manualLoopIn()}
+            disabled={!loaded}
+            title="Manual Loop In"
+          >
+            IN
+          </button>
+          <button
+            type="button"
+            className="px-2 py-1 text-[9.5px] font-mono font-bold bg-[#0c121e] border border-[#223146] text-slate-400 hover:text-slate-200 rounded"
+            onClick={() => void manualLoopOut()}
+            disabled={!loaded || pendingLoopIn == null}
+            title="Manual Loop Out"
+          >
+            OUT
+          </button>
+        </div>
+      </div>
+
       {/* Bottom Transport Controls & Performance Pad Strip */}
-      <div className="mt-3 grid gap-3 lg:grid-cols-[auto_1fr] items-start">
+      <div className="mt-3 grid grid-cols-[140px_minmax(0,1fr)] gap-3 items-stretch">
         {/* Left: Pioneer CDJ Large Circular Play & Cue Buttons */}
-        <div className="flex flex-col items-center gap-3 p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center justify-between gap-3 p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md">
+          <div className="flex items-center justify-center gap-2.5 w-full">
             <PioneerButton
               type="cue"
               active={!playing && position === cue}
@@ -681,10 +759,10 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full">
+          <div className="flex items-center gap-1.5 w-full">
             <button
               type="button"
-              className="flex-1 py-1.5 px-2 text-[10px] font-mono font-bold rounded border bg-[#0d1420] border-[#223146] text-amber-400 hover:border-amber-400/80 active:scale-95 transition"
+              className="flex-1 py-1.5 px-1.5 text-[9.5px] font-mono font-bold rounded border bg-[#0d1420] border-[#223146] text-amber-400 hover:border-amber-400/80 active:scale-95 transition text-center"
               onClick={() => void setCue()}
               disabled={!loaded || busy}
               title="Set Cue Point di posisi saat ini"
@@ -694,7 +772,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
 
             <button
               type="button"
-              className="flex-1 py-1.5 px-2 text-[10px] font-mono font-bold rounded border bg-cyan-500/20 border-cyan-400 text-cyan-300 hover:bg-cyan-500/30 shadow-[0_0_8px_rgba(0,229,255,0.25)] active:scale-95 transition"
+              className="flex-1 py-1.5 px-1.5 text-[9.5px] font-mono font-bold rounded border bg-cyan-500/20 border-cyan-400 text-cyan-300 hover:bg-cyan-500/30 shadow-[0_0_8px_rgba(0,229,255,0.25)] active:scale-95 transition text-center"
               onClick={() => void syncToOther()}
               disabled={!loaded || !bpmKnown}
               title="Beat Sync ke Deck lain"
@@ -703,10 +781,10 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-1 w-full text-[9px] font-mono text-slate-400">
+          <div className="flex items-center justify-between gap-1 w-full text-[8.5px] font-mono text-slate-400">
             <button
               type="button"
-              className="px-2 py-1 bg-[#0c121e] border border-[#1c2738] rounded hover:text-slate-200"
+              className="px-1.5 py-1 bg-[#0c121e] border border-[#1c2738] rounded hover:text-slate-200"
               onClick={() => void seek(position - 10)}
               disabled={!loaded}
             >
@@ -714,7 +792,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             </button>
             <button
               type="button"
-              className="px-2 py-1 bg-[#0c121e] border border-[#1c2738] rounded hover:text-slate-200"
+              className="px-1.5 py-1 bg-[#0c121e] border border-[#1c2738] rounded hover:text-slate-200"
               onClick={() => void seek(position + 10)}
               disabled={!loaded}
             >
@@ -722,7 +800,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             </button>
             <button
               type="button"
-              className="px-2 py-1 bg-[#0c121e] border border-[#1c2738] rounded hover:text-red-400"
+              className="px-1.5 py-1 bg-[#0c121e] border border-[#1c2738] rounded hover:text-red-400"
               onClick={() => void unload()}
               disabled={!loaded || busy}
             >
@@ -731,109 +809,36 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
           </div>
         </div>
 
-        {/* Right: Performance Pads Multi-Mode & Loop Section */}
-        <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md">
+        {/* Right: Performance Pads Multi-Mode 4x2 Matrix */}
+        <div className="flex flex-col justify-between gap-2 p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md min-w-0 overflow-hidden">
           {/* Pad Mode Selector Bar */}
-          <div className="flex items-center justify-between pb-2 border-b border-[#162132]">
-            <div className="flex items-center gap-1">
-              {(
-                [
-                  { id: "hotcue", label: "HOT CUE" },
-                  { id: "padfx", label: "PAD FX" },
-                  { id: "sampler", label: "SAMPLER" },
-                  { id: "beatjump", label: "BEAT JUMP" },
-                  { id: "looproll", label: "LOOP ROLL" },
-                ] as const
-              ).map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  className={`px-2.5 py-1 text-[9.5px] font-mono font-bold rounded border transition ${
-                    padMode === mode.id
-                      ? "bg-[#182840] border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(0,229,255,0.3)]"
-                      : "bg-[#0b101a] border-[#1a2538] text-slate-400 hover:text-slate-200"
-                  }`}
-                  onClick={() => setPadMode(mode.id)}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Loop Controls */}
-            <div className="flex items-center gap-1">
-              <select
-                className="bg-[#0c121e] border border-[#1e2a3c] text-slate-300 text-[10px] rounded px-1.5 py-1 font-mono"
-                value={loopBeats}
-                onChange={(e) => setLoopBeatsState(Number(e.target.value))}
-                disabled={!loaded}
-              >
-                {[1 / 32, 1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32].map((v) => (
-                  <option key={v} value={v}>
-                    {v < 1 ? `1/${1 / v}` : v} BEAT
-                  </option>
-                ))}
-              </select>
-
+          <div className="flex flex-wrap items-center gap-1 pb-2 border-b border-[#162132]">
+            {(
+              [
+                { id: "hotcue", label: "HOT CUE" },
+                { id: "padfx", label: "PAD FX" },
+                { id: "sampler", label: "SAMPLER" },
+                { id: "beatjump", label: "BEAT JUMP" },
+                { id: "looproll", label: "LOOP ROLL" },
+              ] as const
+            ).map((mode) => (
               <button
+                key={mode.id}
                 type="button"
-                className={`px-2 py-1 text-[10px] font-mono font-bold rounded border transition ${
-                  status?.loopActive
-                    ? "bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
-                    : "bg-[#0c121e] border-[#1e2a3c] text-slate-400 hover:text-slate-200"
+                className={`px-2 py-1 text-[9px] font-mono font-bold rounded border transition-all ${
+                  padMode === mode.id
+                    ? "bg-[#182840] border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(0,229,255,0.3)]"
+                    : "bg-[#0b101a] border-[#1a2538] text-slate-400 hover:text-slate-200"
                 }`}
-                onClick={() => {
-                  if (status?.loopActive) {
-                    void exitLoop();
-                  } else {
-                    void startLoop(loopBeats);
-                  }
-                }}
-                disabled={!loaded || !bpmKnown}
+                onClick={() => setPadMode(mode.id)}
               >
-                {status?.loopActive ? "EXIT LOOP" : "AUTO LOOP"}
+                {mode.label}
               </button>
-
-              <button
-                type="button"
-                className="px-1.5 py-1 text-[9px] font-mono bg-[#0c121e] border border-[#1e2a3c] text-slate-400 hover:text-slate-200 rounded"
-                onClick={() => void halveLoop()}
-                disabled={!status?.loopActive}
-              >
-                ½
-              </button>
-              <button
-                type="button"
-                className="px-1.5 py-1 text-[9px] font-mono bg-[#0c121e] border border-[#1e2a3c] text-slate-400 hover:text-slate-200 rounded"
-                onClick={() => void doubleLoop()}
-                disabled={!status?.loopActive}
-              >
-                ×2
-              </button>
-
-              <button
-                type="button"
-                className="px-1.5 py-1 text-[9px] font-mono bg-[#0c121e] border border-[#1e2a3c] text-slate-400 hover:text-slate-200 rounded"
-                onClick={() => void manualLoopIn()}
-                disabled={!loaded}
-                title="Manual Loop In"
-              >
-                IN
-              </button>
-              <button
-                type="button"
-                className="px-1.5 py-1 text-[9px] font-mono bg-[#0c121e] border border-[#1e2a3c] text-slate-400 hover:text-slate-200 rounded"
-                onClick={() => void manualLoopOut()}
-                disabled={!loaded || pendingLoopIn == null}
-                title="Manual Loop Out"
-              >
-                OUT
-              </button>
-            </div>
+            ))}
           </div>
 
-          {/* 8 Chunky Rubber Silicon 3D Performance Pads */}
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-1">
+          {/* 8 Chunky Rubber Silicon 3D Performance Pads (4x2 Matrix) */}
+          <div className="grid grid-cols-4 gap-1.5 pt-1">
             {/* Mode 1: HOT CUE */}
             {padMode === "hotcue" &&
               Array.from({ length: 8 }).map((_, slot) => {
