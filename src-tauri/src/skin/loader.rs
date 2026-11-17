@@ -245,25 +245,28 @@ impl SkinManager {
             .map_err(|e| format!("Format arsip skin tidak valid: {}", e))?;
 
         // Cari skin.json atau manifest.json atau skin.toml
-        let mut content = String::new();
-        let mut is_toml = false;
-
-        if let Ok(mut skin_file) = archive.by_name("skin.json") {
-            skin_file
-                .read_to_string(&mut content)
-                .map_err(|e| format!("Gagal membaca skin.json: {}", e))?;
-        } else if let Ok(mut manifest_file) = archive.by_name("manifest.json") {
-            manifest_file
-                .read_to_string(&mut content)
-                .map_err(|e| format!("Gagal membaca manifest.json: {}", e))?;
-        } else if let Ok(mut toml_file) = archive.by_name("skin.toml") {
-            is_toml = true;
-            toml_file
-                .read_to_string(&mut content)
-                .map_err(|e| format!("Gagal membaca skin.toml: {}", e))?;
-        } else {
-            return Err("Arsip tidak berisi file 'skin.json' atau 'skin.toml'".to_string());
+        let mut target_name = None;
+        for i in 0..archive.len() {
+            if let Ok(file) = archive.by_index(i) {
+                let name = file.name();
+                if name == "skin.json" || name == "manifest.json" || name == "skin.toml" {
+                    target_name = Some(name.to_string());
+                    break;
+                }
+            }
         }
+
+        let Some(fname) = target_name else {
+            return Err("Arsip tidak berisi file 'skin.json' atau 'skin.toml'".to_string());
+        };
+
+        let is_toml = fname.ends_with(".toml");
+        let mut content = String::new();
+        archive
+            .by_name(&fname)
+            .map_err(|e| format!("Gagal mengakses file {}: {}", fname, e))?
+            .read_to_string(&mut content)
+            .map_err(|e| format!("Gagal membaca isi {}: {}", fname, e))?;
 
         let manifest = if is_toml {
             SkinManifest::from_toml(&content)?
