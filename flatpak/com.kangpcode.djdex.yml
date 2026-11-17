@@ -1,0 +1,41 @@
+app-id: com.kangpcode.djdex
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.node20
+command: djdex
+finish-args:
+  # Akses tampilan Wayland dan X11
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # Akses audio via PipeWire dan PulseAudio
+  - --socket=pulseaudio
+  # Akses file musik user
+  - --filesystem=xdg-music:ro
+  - --filesystem=xdg-download
+  - --filesystem=home:ro
+  # Akses controller MIDI USB (rawhid / ALSA MIDI)
+  - --device=all
+  # Akses jaringan untuk streaming broadcast Icecast / SHOUTcast
+  - --share=network
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node20/bin
+  env:
+    CARGO_HOME: /run/build/djdex/cargo
+modules:
+  - name: djdex
+    buildsystem: simple
+    build-commands:
+      - npm ci
+      - npm run build
+      - cargo build --release --manifest-path src-tauri/Cargo.toml
+      - install -Dm755 src-tauri/target/release/djdex /app/bin/djdex
+      - install -Dm644 src-tauri/icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.kangpcode.djdex.png
+      - install -Dm644 flatpak/com.kangpcode.djdex.desktop /app/share/applications/com.kangpcode.djdex.desktop
+      - install -Dm644 flatpak/com.kangpcode.djdex.metainfo.xml /app/share/metainfo/com.kangpcode.djdex.metainfo.xml
+    sources:
+      - type: dir
+        path: ..
