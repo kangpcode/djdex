@@ -450,213 +450,353 @@ pub fn create_default_banks(sample_rate: u32) -> [SampleBank; BANK_COUNT] {
         rate,
     );
 
-    // Bank E: Sunda Kendang & Degung (Kit Tradisional Sunda)
-    let mut bank_e = SampleBank::new(4, "Sunda Kendang & Degung");
-    bank_e.pads[0] = SamplePad::new(0, "Kendang Tung", "#10b981").with_audio(
+    // Bank E: Angklung Melodic Set (16 Nada Lengkap C4 s/d G5)
+    let mut bank_e = SampleBank::new(4, "Angklung Melodic Set (16 Nada)");
+    let angklung_notes = [
+        ("Angklung C4", 261.63_f32),
+        ("Angklung C#4", 277.18_f32),
+        ("Angklung D4", 293.66_f32),
+        ("Angklung D#4", 311.13_f32),
+        ("Angklung E4", 329.63_f32),
+        ("Angklung F4", 349.23_f32),
+        ("Angklung F#4", 369.99_f32),
+        ("Angklung G4", 392.00_f32),
+        ("Angklung G#4", 415.30_f32),
+        ("Angklung A4", 440.00_f32),
+        ("Angklung A#4", 466.16_f32),
+        ("Angklung B4", 493.88_f32),
+        ("Angklung C5", 523.25_f32),
+        ("Angklung D5", 587.33_f32),
+        ("Angklung E5", 659.25_f32),
+        ("Angklung G5", 783.99_f32),
+    ];
+    for (idx, &(name, freq)) in angklung_notes.iter().enumerate() {
+        let color = if idx % 2 == 0 { "#10b981" } else { "#34d399" };
+        bank_e.pads[idx] = SamplePad::new(idx, name, color).with_audio(
+            name,
+            color,
+            synth_angklung(rate, 0.70, freq),
+            rate,
+        );
+    }
+
+    // Bank F: Gendang & Kendang Master (16 Pukulan & Nada Jaipong, Koplo, Rampak)
+    let mut bank_f = SampleBank::new(5, "Gendang Master 16 Pukulan");
+    let kendang_hits = [
+        ("Kendang Tung High", 0, 0.32_f32, "#f59e0b"),
+        ("Kendang Pak Sharp", 1, 0.18_f32, "#f59e0b"),
+        ("Kendang Bem Low", 2, 0.45_f32, "#d97706"),
+        ("Kulanter Tong", 4, 0.28_f32, "#fbbf24"),
+        ("Kendang Plak Open", 5, 0.20_f32, "#f59e0b"),
+        ("Ketuk Kayu Rim", 6, 0.12_f32, "#b45309"),
+        ("Tepak Jaipong", 1, 0.22_f32, "#d97706"),
+        ("Koplo Dut Drop", 3, 0.50_f32, "#f59e0b"),
+        ("Koplo Dhot Deep", 7, 0.60_f32, "#b45309"),
+        ("Koplo Tak Snap", 1, 0.15_f32, "#fbbf24"),
+        ("Koplo Tung Mid", 10, 0.35_f32, "#f59e0b"),
+        ("Muted Tepak", 9, 0.14_f32, "#78350f"),
+        ("Kendang Indung Boom", 8, 0.55_f32, "#92400e"),
+        ("Rampak Double Roll", 11, 0.40_f32, "#d97706"),
+        ("Jaipong Kick Sub", 2, 0.45_f32, "#b45309"),
+        ("Kendang Slam Accent", 5, 0.25_f32, "#f59e0b"),
+    ];
+    for (idx, &(name, hit_type, dur, color)) in kendang_hits.iter().enumerate() {
+        bank_f.pads[idx] = SamplePad::new(idx, name, color).with_audio(
+            name,
+            color,
+            synth_kendang(rate, dur, hit_type),
+            rate,
+        );
+    }
+
+    // Bank G: Gong & Goong Gamelan (16 Nada Lengkap)
+    let mut bank_g = SampleBank::new(6, "Gong & Goong 16 Nada");
+    let gong_notes = [
+        ("Goong Ageng F1", 43.65_f32, 2.50_f32, true, "#78350f"),
+        ("Goong Ageng G1", 49.00_f32, 2.30_f32, true, "#78350f"),
+        ("Goong Ageng A1", 55.00_f32, 2.20_f32, true, "#92400e"),
+        ("Goong Suwukan C2", 65.41_f32, 1.80_f32, true, "#92400e"),
+        ("Goong Suwukan D2", 73.42_f32, 1.70_f32, true, "#b45309"),
+        ("Kempul C3 (1)", 130.81_f32, 1.40_f32, true, "#b45309"),
+        ("Kempul D3 (2)", 146.83_f32, 1.35_f32, true, "#d97706"),
+        ("Kempul E3 (3)", 164.81_f32, 1.30_f32, true, "#d97706"),
+        ("Kempul G3 (5)", 196.00_f32, 1.25_f32, true, "#f59e0b"),
+        ("Kempul A3 (6)", 220.00_f32, 1.20_f32, true, "#f59e0b"),
+        ("Kenong C4 (1)", 261.63_f32, 1.00_f32, false, "#fbbf24"),
+        ("Kenong D4 (2)", 293.66_f32, 0.95_f32, false, "#fbbf24"),
+        ("Kenong E4 (3)", 329.63_f32, 0.90_f32, false, "#fde68a"),
+        ("Kenong G4 (5)", 392.00_f32, 0.85_f32, false, "#fde68a"),
+        ("Kenong A4 (6)", 440.00_f32, 0.80_f32, false, "#f59e0b"),
+        ("Bonang Chime C5", 523.25_f32, 0.70_f32, false, "#d97706"),
+    ];
+    for (idx, &(name, freq, dur, is_gong, color)) in gong_notes.iter().enumerate() {
+        bank_g.pads[idx] = SamplePad::new(idx, name, color).with_audio(
+            name,
+            color,
+            synth_gamelan(rate, dur, freq, is_gong),
+            rate,
+        );
+    }
+
+    // Bank H: Sunda Kendang & Degung (Kit Tradisional Sunda)
+    let mut bank_h = SampleBank::new(7, "Sunda Kendang & Degung");
+    bank_h.pads[0] = SamplePad::new(0, "Kendang Tung", "#10b981").with_audio(
         "Kendang Tung", "#10b981", synth_kendang(rate, 0.32, 0), rate
     );
-    bank_e.pads[1] = SamplePad::new(1, "Kendang Pak", "#10b981").with_audio(
+    bank_h.pads[1] = SamplePad::new(1, "Kendang Pak", "#10b981").with_audio(
         "Kendang Pak", "#10b981", synth_kendang(rate, 0.18, 1), rate
     );
-    bank_e.pads[2] = SamplePad::new(2, "Kendang Bem", "#059669").with_audio(
+    bank_h.pads[2] = SamplePad::new(2, "Kendang Bem", "#059669").with_audio(
         "Kendang Bem", "#059669", synth_kendang(rate, 0.45, 2), rate
     );
-    bank_e.pads[3] = SamplePad::new(3, "Kendang Tepung", "#047857").with_audio(
+    bank_h.pads[3] = SamplePad::new(3, "Kendang Tepung", "#047857").with_audio(
         "Kendang Tepung", "#047857", synth_kendang(rate, 0.25, 0), rate
     );
-    bank_e.pads[4] = SamplePad::new(4, "Suling Da (C)", "#34d399").with_audio(
+    bank_h.pads[4] = SamplePad::new(4, "Suling Da (C)", "#34d399").with_audio(
         "Suling Da (C)", "#34d399", synth_suling(rate, 0.85, 261.63), rate
     );
-    bank_e.pads[5] = SamplePad::new(5, "Suling Mi (D#)", "#34d399").with_audio(
+    bank_h.pads[5] = SamplePad::new(5, "Suling Mi (D#)", "#34d399").with_audio(
         "Suling Mi (D#)", "#34d399", synth_suling(rate, 0.85, 311.13), rate
     );
-    bank_e.pads[6] = SamplePad::new(6, "Suling Na (F)", "#6ee7b7").with_audio(
+    bank_h.pads[6] = SamplePad::new(6, "Suling Na (F)", "#6ee7b7").with_audio(
         "Suling Na (F)", "#6ee7b7", synth_suling(rate, 0.85, 349.23), rate
     );
-    bank_e.pads[7] = SamplePad::new(7, "Suling Ti (G)", "#6ee7b7").with_audio(
+    bank_h.pads[7] = SamplePad::new(7, "Suling Ti (G)", "#6ee7b7").with_audio(
         "Suling Ti (G)", "#6ee7b7", synth_suling(rate, 0.85, 392.00), rate
     );
-    bank_e.pads[8] = SamplePad::new(8, "Angklung C", "#a7f3d0").with_audio(
+    bank_h.pads[8] = SamplePad::new(8, "Angklung C", "#a7f3d0").with_audio(
         "Angklung C", "#a7f3d0", synth_angklung(rate, 0.65, 261.63), rate
     );
-    bank_e.pads[9] = SamplePad::new(9, "Angklung E", "#a7f3d0").with_audio(
+    bank_h.pads[9] = SamplePad::new(9, "Angklung E", "#a7f3d0").with_audio(
         "Angklung E", "#a7f3d0", synth_angklung(rate, 0.65, 329.63), rate
     );
-    bank_e.pads[10] = SamplePad::new(10, "Angklung G", "#6ee7b7").with_audio(
+    bank_h.pads[10] = SamplePad::new(10, "Angklung G", "#6ee7b7").with_audio(
         "Angklung G", "#6ee7b7", synth_angklung(rate, 0.65, 392.00), rate
     );
-    bank_e.pads[11] = SamplePad::new(11, "Saron Degung", "#059669").with_audio(
+    bank_h.pads[11] = SamplePad::new(11, "Saron Degung", "#059669").with_audio(
         "Saron Degung", "#059669", synth_gamelan(rate, 0.70, 523.25, false), rate
     );
-    bank_e.pads[12] = SamplePad::new(12, "Bonang Sunda", "#10b981").with_audio(
+    bank_h.pads[12] = SamplePad::new(12, "Bonang Sunda", "#10b981").with_audio(
         "Bonang Sunda", "#10b981", synth_gamelan(rate, 0.55, 659.25, false), rate
     );
-    bank_e.pads[13] = SamplePad::new(13, "Goong Sunda", "#064e3b").with_audio(
+    bank_h.pads[13] = SamplePad::new(13, "Goong Sunda", "#064e3b").with_audio(
         "Goong Sunda", "#064e3b", synth_gamelan(rate, 1.80, 55.0, true), rate
     );
-    bank_e.pads[14] = SamplePad::new(14, "Jaipong Kick", "#047857").with_audio(
+    bank_h.pads[14] = SamplePad::new(14, "Jaipong Kick", "#047857").with_audio(
         "Jaipong Kick", "#047857", synth_kick(rate, 0.40, 160.0, 48.0, 0.7), rate
     );
-    bank_e.pads[15] = SamplePad::new(15, "Jaipong Clack", "#059669").with_audio(
+    bank_h.pads[15] = SamplePad::new(15, "Jaipong Clack", "#059669").with_audio(
         "Jaipong Clack", "#059669", synth_kendang(rate, 0.15, 1), rate
     );
 
-    // Bank F: Jawa Gamelan & Koplo (Kit Gamelan Jawa & Koplo DJ)
-    let mut bank_f = SampleBank::new(5, "Jawa Gamelan & Koplo");
-    bank_f.pads[0] = SamplePad::new(0, "Koplo Tak", "#f59e0b").with_audio(
+    // Bank I: Jawa Gamelan & Koplo (Kit Gamelan Jawa & Koplo DJ)
+    let mut bank_i = SampleBank::new(8, "Jawa Gamelan & Koplo");
+    bank_i.pads[0] = SamplePad::new(0, "Koplo Tak", "#f59e0b").with_audio(
         "Koplo Tak", "#f59e0b", synth_kendang(rate, 0.20, 1), rate
     );
-    bank_f.pads[1] = SamplePad::new(1, "Koplo Tung", "#f59e0b").with_audio(
+    bank_i.pads[1] = SamplePad::new(1, "Koplo Tung", "#f59e0b").with_audio(
         "Koplo Tung", "#f59e0b", synth_kendang(rate, 0.35, 0), rate
     );
-    bank_f.pads[2] = SamplePad::new(2, "Koplo Dho", "#d97706").with_audio(
+    bank_i.pads[2] = SamplePad::new(2, "Koplo Dho", "#d97706").with_audio(
         "Koplo Dho", "#d97706", synth_kendang(rate, 0.50, 3), rate
     );
-    bank_f.pads[3] = SamplePad::new(3, "Ketipung Slap", "#b45309").with_audio(
+    bank_i.pads[3] = SamplePad::new(3, "Ketipung Slap", "#b45309").with_audio(
         "Ketipung Slap", "#b45309", synth_kendang(rate, 0.16, 1), rate
     );
-    bank_f.pads[4] = SamplePad::new(4, "Gong Ageng Jawa", "#78350f").with_audio(
+    bank_i.pads[4] = SamplePad::new(4, "Gong Ageng Jawa", "#78350f").with_audio(
         "Gong Ageng Jawa", "#78350f", synth_gamelan(rate, 2.20, 43.65, true), rate
     );
-    bank_f.pads[5] = SamplePad::new(5, "Kempul Jawa", "#b45309").with_audio(
+    bank_i.pads[5] = SamplePad::new(5, "Kempul Jawa", "#b45309").with_audio(
         "Kempul Jawa", "#b45309", synth_gamelan(rate, 1.20, 130.81, true), rate
     );
-    bank_f.pads[6] = SamplePad::new(6, "Kenong Jawa", "#d97706").with_audio(
+    bank_i.pads[6] = SamplePad::new(6, "Kenong Jawa", "#d97706").with_audio(
         "Kenong Jawa", "#d97706", synth_gamelan(rate, 0.95, 261.63, false), rate
     );
-    bank_f.pads[7] = SamplePad::new(7, "Bonang Barung", "#f59e0b").with_audio(
+    bank_i.pads[7] = SamplePad::new(7, "Bonang Barung", "#f59e0b").with_audio(
         "Bonang Barung", "#f59e0b", synth_gamelan(rate, 0.60, 587.33, false), rate
     );
-    bank_f.pads[8] = SamplePad::new(8, "Saron Demung", "#fbbf24").with_audio(
+    bank_i.pads[8] = SamplePad::new(8, "Saron Demung", "#fbbf24").with_audio(
         "Saron Demung", "#fbbf24", synth_gamelan(rate, 0.75, 440.0, false), rate
     );
-    bank_f.pads[9] = SamplePad::new(9, "Slenthem Jawa", "#d97706").with_audio(
+    bank_i.pads[9] = SamplePad::new(9, "Slenthem Jawa", "#d97706").with_audio(
         "Slenthem Jawa", "#d97706", synth_gamelan(rate, 1.10, 220.0, false), rate
     );
-    bank_f.pads[10] = SamplePad::new(10, "Suling Slendro", "#fde68a").with_audio(
+    bank_i.pads[10] = SamplePad::new(10, "Suling Slendro", "#fde68a").with_audio(
         "Suling Slendro", "#fde68a", synth_suling(rate, 0.90, 440.0), rate
     );
-    bank_f.pads[11] = SamplePad::new(11, "Koplo Sub Kick", "#b45309").with_audio(
+    bank_i.pads[11] = SamplePad::new(11, "Koplo Sub Kick", "#b45309").with_audio(
         "Koplo Sub Kick", "#b45309", synth_kick(rate, 0.45, 140.0, 40.0, 0.6), rate
     );
-    bank_f.pads[12] = SamplePad::new(12, "Koplo Snare Rim", "#f59e0b").with_audio(
+    bank_i.pads[12] = SamplePad::new(12, "Koplo Snare Rim", "#f59e0b").with_audio(
         "Koplo Snare Rim", "#f59e0b", synth_snare(rate, 0.20, 240.0, 0.9), rate
     );
-    bank_f.pads[13] = SamplePad::new(13, "Campursari Hat", "#fbbf24").with_audio(
+    bank_i.pads[13] = SamplePad::new(13, "Campursari Hat", "#fbbf24").with_audio(
         "Campursari Hat", "#fbbf24", synth_hihat(rate, 0.05, false), rate
     );
-    bank_f.pads[14] = SamplePad::new(14, "Gamelan Chime", "#fde68a").with_audio(
+    bank_i.pads[14] = SamplePad::new(14, "Gamelan Chime", "#fde68a").with_audio(
         "Gamelan Chime", "#fde68a", synth_gamelan(rate, 0.80, 880.0, false), rate
     );
-    bank_f.pads[15] = SamplePad::new(15, "Gong Suwukan", "#92400e").with_audio(
+    bank_i.pads[15] = SamplePad::new(15, "Gong Suwukan", "#92400e").with_audio(
         "Gong Suwukan", "#92400e", synth_gamelan(rate, 1.60, 65.41, true), rate
     );
 
-    // Bank G: Japan Taiko & Shamisen (Kit Tradisional Jepang)
-    let mut bank_g = SampleBank::new(6, "Japan Taiko & Shamisen");
-    bank_g.pads[0] = SamplePad::new(0, "O-Daiko Heavy", "#ef4444").with_audio(
+    // Bank J: Japan Taiko & Shamisen (Kit Tradisional Jepang)
+    let mut bank_j = SampleBank::new(9, "Japan Taiko & Shamisen");
+    bank_j.pads[0] = SamplePad::new(0, "O-Daiko Heavy", "#ef4444").with_audio(
         "O-Daiko Heavy", "#ef4444", synth_taiko(rate, 0.65, 0.85), rate
     );
-    bank_g.pads[1] = SamplePad::new(1, "Nagado Taiko", "#ef4444").with_audio(
+    bank_j.pads[1] = SamplePad::new(1, "Nagado Taiko", "#ef4444").with_audio(
         "Nagado Taiko", "#ef4444", synth_taiko(rate, 0.45, 0.70), rate
     );
-    bank_g.pads[2] = SamplePad::new(2, "Shime-Daiko", "#f87171").with_audio(
+    bank_j.pads[2] = SamplePad::new(2, "Shime-Daiko", "#f87171").with_audio(
         "Shime-Daiko", "#f87171", synth_tom(rate, 0.20, 320.0, 160.0), rate
     );
-    bank_g.pads[3] = SamplePad::new(3, "Bachi Rimshot", "#b91c1c").with_audio(
+    bank_j.pads[3] = SamplePad::new(3, "Bachi Rimshot", "#b91c1c").with_audio(
         "Bachi Rimshot", "#b91c1c", synth_snare(rate, 0.15, 300.0, 0.6), rate
     );
-    bank_g.pads[4] = SamplePad::new(4, "Shamisen A", "#dc2626").with_audio(
+    bank_j.pads[4] = SamplePad::new(4, "Shamisen A", "#dc2626").with_audio(
         "Shamisen A", "#dc2626", synth_koto_shamisen(rate, 0.45, 220.0, true), rate
     );
-    bank_g.pads[5] = SamplePad::new(5, "Shamisen C", "#dc2626").with_audio(
+    bank_j.pads[5] = SamplePad::new(5, "Shamisen C", "#dc2626").with_audio(
         "Shamisen C", "#dc2626", synth_koto_shamisen(rate, 0.45, 261.63, true), rate
     );
-    bank_g.pads[6] = SamplePad::new(6, "Shamisen E", "#f87171").with_audio(
+    bank_j.pads[6] = SamplePad::new(6, "Shamisen E", "#f87171").with_audio(
         "Shamisen E", "#f87171", synth_koto_shamisen(rate, 0.45, 329.63, true), rate
     );
-    bank_g.pads[7] = SamplePad::new(7, "Koto Insen D", "#fca5a5").with_audio(
+    bank_j.pads[7] = SamplePad::new(7, "Koto Insen D", "#fca5a5").with_audio(
         "Koto Insen D", "#fca5a5", synth_koto_shamisen(rate, 0.70, 293.66, false), rate
     );
-    bank_g.pads[8] = SamplePad::new(8, "Koto Insen A", "#fca5a5").with_audio(
+    bank_j.pads[8] = SamplePad::new(8, "Koto Insen A", "#fca5a5").with_audio(
         "Koto Insen A", "#fca5a5", synth_koto_shamisen(rate, 0.70, 440.0, false), rate
     );
-    bank_g.pads[9] = SamplePad::new(9, "Shakuhachi Breath", "#ef4444").with_audio(
+    bank_j.pads[9] = SamplePad::new(9, "Shakuhachi Breath", "#ef4444").with_audio(
         "Shakuhachi Breath", "#ef4444", synth_suling(rate, 0.90, 293.66), rate
     );
-    bank_g.pads[10] = SamplePad::new(10, "Hyoshigi Clack", "#b91c1c").with_audio(
+    bank_j.pads[10] = SamplePad::new(10, "Hyoshigi Clack", "#b91c1c").with_audio(
         "Hyoshigi Clack", "#b91c1c", synth_clap(rate, 0.12), rate
     );
-    bank_g.pads[11] = SamplePad::new(11, "Tsuzumi Drum", "#991b1b").with_audio(
+    bank_j.pads[11] = SamplePad::new(11, "Tsuzumi Drum", "#991b1b").with_audio(
         "Tsuzumi Drum", "#991b1b", synth_tom(rate, 0.28, 280.0, 180.0), rate
     );
-    bank_g.pads[12] = SamplePad::new(12, "Cyber Taiko Sub", "#dc2626").with_audio(
+    bank_j.pads[12] = SamplePad::new(12, "Cyber Taiko Sub", "#dc2626").with_audio(
         "Cyber Taiko Sub", "#dc2626", synth_kick(rate, 0.55, 110.0, 35.0, 0.5), rate
     );
-    bank_g.pads[13] = SamplePad::new(13, "Anime Lead Stab", "#f87171").with_audio(
+    bank_j.pads[13] = SamplePad::new(13, "Anime Lead Stab", "#f87171").with_audio(
         "Anime Lead Stab", "#f87171", synth_chord_stab(rate, 0.35, 440.0), rate
     );
-    bank_g.pads[14] = SamplePad::new(14, "Temple Bell Rin", "#fca5a5").with_audio(
+    bank_j.pads[14] = SamplePad::new(14, "Temple Bell Rin", "#fca5a5").with_audio(
         "Temple Bell Rin", "#fca5a5", synth_gamelan(rate, 1.40, 880.0, true), rate
     );
-    bank_g.pads[15] = SamplePad::new(15, "Kabuki FX", "#7f1d1d").with_audio(
+    bank_j.pads[15] = SamplePad::new(15, "Kabuki FX", "#7f1d1d").with_audio(
         "Kabuki FX", "#7f1d1d", synth_fx(rate, 0.60, 3), rate
     );
 
-    // Bank H: World Percussion & Steelpan (Etnis Dunia)
-    let mut bank_h = SampleBank::new(7, "World Percussion & Steelpan");
-    bank_h.pads[0] = SamplePad::new(0, "Steelpan High", "#06b6d4").with_audio(
+    // Bank K: World Percussion & Steelpan (Etnis Dunia)
+    let mut bank_k = SampleBank::new(10, "World Percussion & Steelpan");
+    bank_k.pads[0] = SamplePad::new(0, "Steelpan High", "#06b6d4").with_audio(
         "Steelpan High", "#06b6d4", synth_gamelan(rate, 0.50, 523.25, false), rate
     );
-    bank_h.pads[1] = SamplePad::new(1, "Steelpan Low", "#06b6d4").with_audio(
+    bank_k.pads[1] = SamplePad::new(1, "Steelpan Low", "#06b6d4").with_audio(
         "Steelpan Low", "#06b6d4", synth_gamelan(rate, 0.65, 261.63, false), rate
     );
-    bank_h.pads[2] = SamplePad::new(2, "Bongo High", "#0891b2").with_audio(
+    bank_k.pads[2] = SamplePad::new(2, "Bongo High", "#0891b2").with_audio(
         "Bongo High", "#0891b2", synth_tom(rate, 0.18, 420.0, 260.0), rate
     );
-    bank_h.pads[3] = SamplePad::new(3, "Bongo Low", "#0891b2").with_audio(
+    bank_k.pads[3] = SamplePad::new(3, "Bongo Low", "#0891b2").with_audio(
         "Bongo Low", "#0891b2", synth_tom(rate, 0.22, 280.0, 160.0), rate
     );
-    bank_h.pads[4] = SamplePad::new(4, "Conga Slap", "#0e7490").with_audio(
+    bank_k.pads[4] = SamplePad::new(4, "Conga Slap", "#0e7490").with_audio(
         "Conga Slap", "#0e7490", synth_kendang(rate, 0.18, 1), rate
     );
-    bank_h.pads[5] = SamplePad::new(5, "Conga Open", "#0e7490").with_audio(
+    bank_k.pads[5] = SamplePad::new(5, "Conga Open", "#0e7490").with_audio(
         "Conga Open", "#0e7490", synth_tom(rate, 0.30, 220.0, 140.0), rate
     );
-    bank_h.pads[6] = SamplePad::new(6, "Timbale High", "#155e75").with_audio(
+    bank_k.pads[6] = SamplePad::new(6, "Timbale High", "#155e75").with_audio(
         "Timbale High", "#155e75", synth_snare(rate, 0.22, 380.0, 0.7), rate
     );
-    bank_h.pads[7] = SamplePad::new(7, "Timbale Low", "#155e75").with_audio(
+    bank_k.pads[7] = SamplePad::new(7, "Timbale Low", "#155e75").with_audio(
         "Timbale Low", "#155e75", synth_tom(rate, 0.28, 240.0, 150.0), rate
     );
-    bank_h.pads[8] = SamplePad::new(8, "Kalimba Thumb A", "#22d3ee").with_audio(
+    bank_k.pads[8] = SamplePad::new(8, "Kalimba Thumb A", "#22d3ee").with_audio(
         "Kalimba Thumb A", "#22d3ee", synth_gamelan(rate, 0.60, 440.0, false), rate
     );
-    bank_h.pads[9] = SamplePad::new(9, "Kalimba Thumb C", "#22d3ee").with_audio(
+    bank_k.pads[9] = SamplePad::new(9, "Kalimba Thumb C", "#22d3ee").with_audio(
         "Kalimba Thumb C", "#22d3ee", synth_gamelan(rate, 0.60, 523.25, false), rate
     );
-    bank_h.pads[10] = SamplePad::new(10, "Agogo Bell Low", "#67e8f9").with_audio(
+    bank_k.pads[10] = SamplePad::new(10, "Agogo Bell Low", "#67e8f9").with_audio(
         "Agogo Bell Low", "#67e8f9", synth_gamelan(rate, 0.35, 659.25, false), rate
     );
-    bank_h.pads[11] = SamplePad::new(11, "Agogo Bell High", "#67e8f9").with_audio(
+    bank_k.pads[11] = SamplePad::new(11, "Agogo Bell High", "#67e8f9").with_audio(
         "Agogo Bell High", "#67e8f9", synth_gamelan(rate, 0.30, 880.0, false), rate
     );
-    bank_h.pads[12] = SamplePad::new(12, "Maracas Shaker", "#a5f3fc").with_audio(
+    bank_k.pads[12] = SamplePad::new(12, "Maracas Shaker", "#a5f3fc").with_audio(
         "Maracas Shaker", "#a5f3fc", synth_clap(rate, 0.20), rate
     );
-    bank_h.pads[13] = SamplePad::new(13, "Djembe Slap", "#0891b2").with_audio(
+    bank_k.pads[13] = SamplePad::new(13, "Djembe Slap", "#0891b2").with_audio(
         "Djembe Slap", "#0891b2", synth_kendang(rate, 0.16, 1), rate
     );
-    bank_h.pads[14] = SamplePad::new(14, "Djembe Bass", "#0e7490").with_audio(
+    bank_k.pads[14] = SamplePad::new(14, "Djembe Bass", "#0e7490").with_audio(
         "Djembe Bass", "#0e7490", synth_kick(rate, 0.45, 120.0, 45.0, 0.6), rate
     );
-    bank_h.pads[15] = SamplePad::new(15, "World Chime FX", "#cffafe").with_audio(
+    bank_k.pads[15] = SamplePad::new(15, "World Chime FX", "#cffafe").with_audio(
         "World Chime FX", "#cffafe", synth_fx(rate, 0.65, 3), rate
+    );
+
+    // Bank L: Ethnic DJ Remix Drops & Hits (Remix Tool & Sound Effects)
+    let mut bank_l = SampleBank::new(11, "Ethnic DJ Remix Drops");
+    bank_l.pads[0] = SamplePad::new(0, "Gong Sub Drop", "#a855f7").with_audio(
+        "Gong Sub Drop", "#a855f7", synth_gamelan(rate, 2.0, 40.0, true), rate
+    );
+    bank_l.pads[1] = SamplePad::new(1, "Kendang Jaipong Roll", "#c084fc").with_audio(
+        "Kendang Jaipong Roll", "#c084fc", synth_kendang(rate, 0.45, 11), rate
+    );
+    bank_l.pads[2] = SamplePad::new(2, "Angklung Rattle Chime", "#e879f9").with_audio(
+        "Angklung Rattle Chime", "#e879f9", synth_angklung(rate, 0.80, 523.25), rate
+    );
+    bank_l.pads[3] = SamplePad::new(3, "Suling Degung Riff", "#f472b6").with_audio(
+        "Suling Degung Riff", "#f472b6", synth_suling(rate, 0.95, 392.0), rate
+    );
+    bank_l.pads[4] = SamplePad::new(4, "Koplo Rave Whistle", "#fb7185").with_audio(
+        "Koplo Rave Whistle", "#fb7185", synth_fx(rate, 0.35, 1), rate
+    );
+    bank_l.pads[5] = SamplePad::new(5, "Taiko Heavy Drop", "#f43f5e").with_audio(
+        "Taiko Heavy Drop", "#f43f5e", synth_taiko(rate, 0.70, 0.95), rate
+    );
+    bank_l.pads[6] = SamplePad::new(6, "Gamelan Shimmer FX", "#e11d48").with_audio(
+        "Gamelan Shimmer FX", "#e11d48", synth_gamelan(rate, 1.20, 659.25, false), rate
+    );
+    bank_l.pads[7] = SamplePad::new(7, "Shamisen Snap Shot", "#be123c").with_audio(
+        "Shamisen Snap Shot", "#be123c", synth_koto_shamisen(rate, 0.35, 329.63, true), rate
+    );
+    bank_l.pads[8] = SamplePad::new(8, "Vinyl Spin Stop", "#ec4899").with_audio(
+        "Vinyl Spin Stop", "#ec4899", synth_scratch(rate, 0.60, 0), rate
+    );
+    bank_l.pads[9] = SamplePad::new(9, "Laser Sweep Drop", "#d946ef").with_audio(
+        "Laser Sweep Drop", "#d946ef", synth_fx(rate, 0.28, 0), rate
+    );
+    bank_l.pads[10] = SamplePad::new(10, "Dub Siren Ethnic", "#a855f7").with_audio(
+        "Dub Siren Ethnic", "#a855f7", synth_fx(rate, 0.55, 1), rate
+    );
+    bank_l.pads[11] = SamplePad::new(11, "Airhorn Blast", "#8b5cf6").with_audio(
+        "Airhorn Blast", "#8b5cf6", synth_fx(rate, 0.45, 2), rate
+    );
+    bank_l.pads[12] = SamplePad::new(12, "Impact Sub Boom", "#6366f1").with_audio(
+        "Impact Sub Boom", "#6366f1", synth_kick(rate, 0.75, 120.0, 30.0, 0.4), rate
+    );
+    bank_l.pads[13] = SamplePad::new(13, "Transform Chop FX", "#3b82f6").with_audio(
+        "Transform Chop FX", "#3b82f6", synth_scratch(rate, 0.38, 2), rate
+    );
+    bank_l.pads[14] = SamplePad::new(14, "Festival Clack", "#0ea5e9").with_audio(
+        "Festival Clack", "#0ea5e9", synth_clap(rate, 0.18), rate
+    );
+    bank_l.pads[15] = SamplePad::new(15, "Outro Vinyl Kill", "#06b6d4").with_audio(
+        "Outro Vinyl Kill", "#06b6d4", synth_scratch(rate, 0.50, 1), rate
     );
 
     [
         bank_a, bank_b, bank_c, bank_d,
         bank_e, bank_f, bank_g, bank_h,
+        bank_i, bank_j, bank_k, bank_l,
     ]
 }
 

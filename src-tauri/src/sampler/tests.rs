@@ -27,7 +27,7 @@ fn test_synth_generates_valid_stereo_audio() {
 #[test]
 fn test_default_banks_initialization() {
     let banks = create_default_banks(44100);
-    assert_eq!(banks.len(), 8);
+    assert_eq!(banks.len(), 12);
     for bank in &banks {
         assert_eq!(bank.pads.len(), 16);
         for pad in &bank.pads {
