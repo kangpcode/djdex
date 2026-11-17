@@ -55,6 +55,19 @@ pub fn run() {
             commands::set_auto_dj,
             commands::auto_dj_trigger,
             commands::auto_dj_cancel,
+            commands::get_sampler_status,
+            commands::trigger_sampler_pad,
+            commands::release_sampler_pad,
+            commands::stop_sampler_pad,
+            commands::stop_all_sampler_pads,
+            commands::select_sampler_bank,
+            commands::set_sampler_volume,
+            commands::update_sampler_pad,
+            commands::load_sampler_pad_file,
+            commands::capture_deck_to_pad,
+            commands::update_sequencer,
+            commands::export_sample_pack,
+            commands::import_sample_pack,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan aplikasi DJDeX");

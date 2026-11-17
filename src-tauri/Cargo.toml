@@ -1,6 +1,6 @@
 [package]
 name = "djdex"
-version = "0.6.0"
+version = "0.7.0"
 description = "DJDeX By Kangpcode - real-time audio engine and desktop shell"
 authors = ["Kangpcode"]
 license = "MIT"

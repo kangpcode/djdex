@@ -219,6 +219,79 @@ export interface AutoDjUpdate {
   crossfadeBeats?: number;
 }
 
+// ---- Sampler / Remixer & Step Sequencer (Fase 7) -------------------------
+
+export type PadMode =
+  | "one-shot"
+  | "loop"
+  | "hold"
+  | "stutter"
+  | "drum-pad"
+  | "cue-pad";
+
+export interface PadDto {
+  id: number;
+  name: string;
+  color: string;
+  mode: PadMode;
+  volume: number;
+  pitchSemitones: number;
+  muteGroup: number | null;
+  syncBpm: boolean;
+  baseBpm: number;
+  quantize: boolean;
+  loaded: boolean;
+  durationSecs: number;
+  isPlaying: boolean;
+  progress: number;
+}
+
+export interface PadUpdate {
+  name?: string;
+  color?: string;
+  mode?: PadMode;
+  volume?: number;
+  pitchSemitones?: number;
+  muteGroup?: number | null;
+  syncBpm?: boolean;
+  baseBpm?: number;
+  quantize?: boolean;
+}
+
+export interface SequencerPattern {
+  steps: boolean[][];
+  velocities: number[][];
+}
+
+export interface SequencerStatus {
+  running: boolean;
+  bpm: number;
+  syncToMaster: boolean;
+  swing: number;
+  currentStep: number;
+  currentPattern: number;
+  pattern: SequencerPattern;
+  padMappings: number[];
+}
+
+export interface SequencerUpdate {
+  running?: boolean;
+  bpm?: number;
+  syncToMaster?: boolean;
+  swing?: number;
+  currentPattern?: number;
+  trackStep?: [number, number, boolean];
+  padMappings?: number[];
+}
+
+export interface SamplerStatus {
+  activeBank: number;
+  bankNames: string[];
+  pads: PadDto[];
+  sequencer: SequencerStatus;
+  masterVolume: number;
+}
+
 /** Pasangan min/max diratakan: [min0, max0, min1, max1, ...]. */
 export interface WaveformData {
   trackId: number;
@@ -358,7 +431,48 @@ export const ipc = {
   triggerAutoDj: () => invokeCommand<AutoDjStatus>("auto_dj_trigger"),
 
   cancelAutoDj: () => invokeCommand<AutoDjStatus>("auto_dj_cancel"),
+
+  // Sampler & Sequencer (Fase 7)
+  getSamplerStatus: () => invokeCommand<SamplerStatus>("get_sampler_status"),
+
+  triggerSamplerPad: (pad: number, velocity?: number) =>
+    invokeCommand<void>("trigger_sampler_pad", { pad, velocity }),
+
+  releaseSamplerPad: (pad: number) =>
+    invokeCommand<void>("release_sampler_pad", { pad }),
+
+  stopSamplerPad: (pad: number) =>
+    invokeCommand<void>("stop_sampler_pad", { pad }),
+
+  stopAllSamplerPads: () =>
+    invokeCommand<void>("stop_all_sampler_pads"),
+
+  selectSamplerBank: (bank: number) =>
+    invokeCommand<SamplerStatus>("select_sampler_bank", { bank }),
+
+  setSamplerVolume: (volume: number) =>
+    invokeCommand<SamplerStatus>("set_sampler_volume", { volume }),
+
+  updateSamplerPad: (pad: number, update: PadUpdate) =>
+    invokeCommand<SamplerStatus>("update_sampler_pad", { pad, update }),
+
+  loadSamplerPadFile: (pad: number, path: string) =>
+    invokeCommand<SamplerStatus>("load_sampler_pad_file", { pad, path }),
+
+  captureDeckToPad: (pad: number, deck?: DeckId, beats?: number) =>
+    invokeCommand<SamplerStatus>("capture_deck_to_pad", { pad, deck, beats }),
+
+  updateSequencer: (update: SequencerUpdate) =>
+    invokeCommand<SequencerStatus>("update_sequencer", { update }),
+
+  exportSamplePack: (path: string) =>
+    invokeCommand<void>("export_sample_pack", { path }),
+
+  importSamplePack: (path: string) =>
+    invokeCommand<SamplerStatus>("import_sample_pack", { path }),
 };
+
+export const api = ipc;
 
 /** Ubah error apa pun menjadi pesan yang layak ditampilkan. */
 export function errorMessage(error: unknown): string {

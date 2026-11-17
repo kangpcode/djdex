@@ -165,6 +165,7 @@ impl DeckShared {
 /// Metadata non-RT track yang sedang dimuat.
 #[derive(Debug, Clone, Default)]
 struct DeckMeta {
+    path: Option<PathBuf>,
     file_name: Option<String>,
     codec: Option<String>,
     source_sample_rate: u32,
@@ -793,6 +794,7 @@ impl DeckWorker {
         self.current_track.store(track_id, Ordering::Relaxed);
 
         *self.meta.lock() = DeckMeta {
+            path: Some(path.clone()),
             file_name: Some(info.file_name.clone()),
             codec: Some(info.codec.clone()),
             source_sample_rate: info.source_sample_rate,
@@ -1140,6 +1142,10 @@ impl Deck {
             Ok(Err(err)) => Err(err),
             Err(_) => Err(AudioError::DeckTimeout),
         }
+    }
+
+    pub fn source_path(&self) -> Option<PathBuf> {
+        self.meta.lock().path.clone()
     }
 
     pub fn play(&self) {

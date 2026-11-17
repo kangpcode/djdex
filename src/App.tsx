@@ -1,17 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { AudioEnginePanel } from "./components/AudioEnginePanel";
-import { FxPanel } from "./components/FxPanel";
 import { DeckPanel } from "./components/DeckPanel";
+import { FxPanel } from "./components/FxPanel";
 import { Header } from "./components/Header";
 import { MixerPanel } from "./components/MixerPanel";
 import { PhaseStrip } from "./components/PhaseStrip";
+import { SamplerPanel } from "./components/SamplerPanel";
 import { ToneTestPanel } from "./components/ToneTestPanel";
 import { isTauri } from "./lib/ipc";
 import { useAudioStore } from "./stores/audioStore";
 import { useAutoDjStore } from "./stores/autoDjStore";
 import { useDeckAStore, useDeckBStore } from "./stores/deckStore";
 import { useMixerStore } from "./stores/mixerStore";
+import { useSamplerStore } from "./stores/samplerStore";
 
 const STATUS_POLL_MS = 100;
 
@@ -32,6 +34,8 @@ function isAudioPath(path: string): boolean {
   return AUDIO_EXTENSIONS.has(extension);
 }
 
+type LowerTab = "sampler" | "fx" | "engine" | "all";
+
 export default function App() {
   const status = useAudioStore((state) => state.status);
   const refreshDevices = useAudioStore((state) => state.refreshDevices);
@@ -44,6 +48,11 @@ export default function App() {
   const refreshDeckB = useDeckBStore((state) => state.refresh);
   const refreshMixer = useMixerStore((state) => state.refresh);
   const refreshAutoDj = useAutoDjStore((state) => state.refresh);
+
+  const refreshSampler = useSamplerStore((state) => state.refresh);
+  const triggerSamplerPad = useSamplerStore((state) => state.triggerPad);
+
+  const [lowerTab, setLowerTab] = useState<LowerTab>("sampler");
 
   useEffect(() => {
     if (!isTauri()) {
@@ -61,12 +70,15 @@ export default function App() {
     void refreshDeckB();
     void refreshMixer();
     void refreshAutoDj();
+    void refreshSampler();
+
     const timer = window.setInterval(() => {
       void refreshStatus();
       void refreshDeckA();
       void refreshDeckB();
       void refreshMixer();
       void refreshAutoDj();
+      void refreshSampler();
     }, STATUS_POLL_MS);
 
     return () => window.clearInterval(timer);
@@ -77,6 +89,7 @@ export default function App() {
     refreshDeckB,
     refreshMixer,
     refreshAutoDj,
+    refreshSampler,
   ]);
 
   // Drag & drop file audio dari OS ke jendela aplikasi.
@@ -117,13 +130,9 @@ export default function App() {
     };
   }, [loadTrackA]);
 
-  // Shortcut global sementara; mapping lengkap ada di Fase 9.
+  // Shortcut keyboard global: Space = play/pause Deck A, 1..8 = Trigger Sampler Pads
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.code !== "Space" || event.repeat) {
-        return;
-      }
-
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName.toLowerCase();
       if (
@@ -135,13 +144,22 @@ export default function App() {
         return;
       }
 
-      event.preventDefault();
-      void togglePlayA();
+      if (event.code === "Space" && !event.repeat) {
+        event.preventDefault();
+        void togglePlayA();
+        return;
+      }
+
+      // Tombol angka 1-8 memicu Pad 1-8
+      if (/^[1-8]$/.test(event.key)) {
+        const padIdx = parseInt(event.key, 10) - 1;
+        void triggerSamplerPad(padIdx, 1.0);
+      }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [togglePlayA]);
+  }, [togglePlayA, triggerSamplerPad]);
 
   return (
     <div className="app-shell app-grid relative flex h-full flex-col overflow-hidden">
@@ -149,18 +167,80 @@ export default function App() {
 
       <main className="relative z-10 flex-1 overflow-y-auto px-5 py-5">
         <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5">
+          {/* Dual Deck & Mixer Section */}
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)_minmax(0,1fr)] xl:items-start">
             <DeckPanel deck={0} />
             <MixerPanel />
             <DeckPanel deck={1} />
           </div>
 
-          <FxPanel />
+          {/* Lower Performance Panel Tabs */}
+          <div className="flex items-center justify-between border-b border-line/60 pb-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLowerTab("sampler")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "sampler"
+                    ? "border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(0,229,255,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                Remixer / Sampler & 16-Step Sequencer
+              </button>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <AudioEnginePanel />
-            <ToneTestPanel />
+              <button
+                type="button"
+                onClick={() => setLowerTab("fx")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "fx"
+                    ? "border-purple-400 bg-purple-500/20 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-purple-400" />
+                FX Chains & Auto DJ
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLowerTab("engine")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "engine"
+                    ? "border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                Audio Output & Diagnostics
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setLowerTab(lowerTab === "all" ? "sampler" : "all")}
+              className={`rounded border px-2.5 py-1 text-[11px] font-semibold transition ${
+                lowerTab === "all"
+                  ? "border-cyan-400 bg-cyan-500/20 text-cyan-300"
+                  : "border-line bg-deck-900 text-ink-muted hover:text-ink"
+              }`}
+            >
+              {lowerTab === "all" ? "Single Tab View" : "Show All Panels"}
+            </button>
           </div>
+
+          {/* Tab Views */}
+          {(lowerTab === "sampler" || lowerTab === "all") && <SamplerPanel />}
+
+          {(lowerTab === "fx" || lowerTab === "all") && <FxPanel />}
+
+          {(lowerTab === "engine" || lowerTab === "all") && (
+            <div className="grid gap-5 lg:grid-cols-2">
+              <AudioEnginePanel />
+              <ToneTestPanel />
+            </div>
+          )}
 
           <PhaseStrip />
         </div>
@@ -168,12 +248,12 @@ export default function App() {
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.6.0</span>
+        <span>By Kangpcode · v0.7.0</span>
         <span className="hidden sm:inline">
-          Rust + Tauri 2 · Symphonia · CPAL · ring buffer lock-free
+          Rust + Tauri 2 · Symphonia · CPAL · Remixer/Sampler 16-Pads · 16-Step Sequencer
         </span>
         <span className="ml-auto hidden md:inline">
-          Space = play/pause · target latensi &lt; 15 ms
+          Space = play/pause · Keys 1-8 = Trigger Pads · target latensi &lt; 15 ms
         </span>
       </footer>
     </div>

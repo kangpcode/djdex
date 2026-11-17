@@ -12,6 +12,7 @@ use crate::audio::device::{list_output_devices, AudioDeviceInfo};
 use crate::audio::engine::{AudioEngine, EngineStatus, StartRequest};
 use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
+use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 use crate::state::AppState;
 
 type IpcResult<T> = Result<T, String>;
@@ -346,4 +347,96 @@ pub fn get_waveform(
             max_points.unwrap_or(4096).clamp(64, 16_384),
         )
         .map_err(|err| err.to_string())
+}
+
+// ---- Sampler / Remixer & Step Sequencer (Fase 7) -------------------------
+
+#[tauri::command]
+pub fn get_sampler_status(state: State<'_, AppState>) -> IpcResult<SamplerStatus> {
+    state.sampler_status().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn trigger_sampler_pad(
+    state: State<'_, AppState>,
+    pad: usize,
+    velocity: Option<f32>,
+) -> IpcResult<()> {
+    state.trigger_sampler_pad(pad, velocity).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn release_sampler_pad(state: State<'_, AppState>, pad: usize) -> IpcResult<()> {
+    state.release_sampler_pad(pad).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_sampler_pad(state: State<'_, AppState>, pad: usize) -> IpcResult<()> {
+    state.stop_sampler_pad(pad).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_all_sampler_pads(state: State<'_, AppState>) -> IpcResult<()> {
+    state.stop_all_sampler_pads().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn select_sampler_bank(state: State<'_, AppState>, bank: usize) -> IpcResult<SamplerStatus> {
+    state.select_sampler_bank(bank).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_sampler_volume(state: State<'_, AppState>, volume: f32) -> IpcResult<SamplerStatus> {
+    state.set_sampler_volume(volume).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn update_sampler_pad(
+    state: State<'_, AppState>,
+    pad: usize,
+    update: PadUpdate,
+) -> IpcResult<SamplerStatus> {
+    state.update_sampler_pad(pad, update).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn load_sampler_pad_file(
+    state: State<'_, AppState>,
+    pad: usize,
+    path: String,
+) -> IpcResult<SamplerStatus> {
+    state.load_sampler_pad_file(pad, path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn capture_deck_to_pad(
+    state: State<'_, AppState>,
+    pad: usize,
+    deck: Option<u8>,
+    beats: Option<f32>,
+) -> IpcResult<SamplerStatus> {
+    state
+        .capture_deck_to_pad(pad, deck_slot(deck), beats)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn update_sequencer(
+    state: State<'_, AppState>,
+    update: SequencerUpdate,
+) -> IpcResult<SequencerStatus> {
+    state.update_sequencer(update).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_sample_pack(state: State<'_, AppState>, path: String) -> IpcResult<()> {
+    state.export_sample_pack(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_sample_pack(
+    state: State<'_, AppState>,
+    path: String,
+) -> IpcResult<SamplerStatus> {
+    state.import_sample_pack(path).map_err(|e| e.to_string())
 }

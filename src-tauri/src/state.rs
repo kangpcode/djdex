@@ -9,10 +9,13 @@ use parking_lot::Mutex;
 use crate::analysis::waveform::WaveformDto;
 use crate::audio::autodj::{AutoDjStatus, AutoDjUpdate};
 use crate::audio::deck::{Deck, DeckStatus};
+use crate::audio::decoder::TrackDecoder;
 use crate::audio::engine::{AudioEngine, EngineStatus};
 use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
+use crate::audio::resampler::StereoResampler;
 use crate::error::AudioError;
+use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 
 #[derive(Default)]
 pub struct AppState {
@@ -248,6 +251,175 @@ impl AppState {
         self.with_engine(|engine| {
             engine.cancel_auto_dj();
             Ok(engine.auto_dj_status())
+        })
+    }
+
+    // ---- Sampler / Remixer & Step Sequencer (Fase 7) ----------------------
+
+    pub fn sampler_status(&self) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| Ok(engine.sampler().status()))
+    }
+
+    pub fn trigger_sampler_pad(&self, pad_id: usize, velocity: Option<f32>) -> Result<(), AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().trigger_pad(pad_id, velocity);
+            Ok(())
+        })
+    }
+
+    pub fn release_sampler_pad(&self, pad_id: usize) -> Result<(), AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().release_pad(pad_id);
+            Ok(())
+        })
+    }
+
+    pub fn stop_sampler_pad(&self, pad_id: usize) -> Result<(), AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().stop_pad(pad_id);
+            Ok(())
+        })
+    }
+
+    pub fn stop_all_sampler_pads(&self) -> Result<(), AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().stop_all();
+            Ok(())
+        })
+    }
+
+    pub fn select_sampler_bank(&self, bank_id: usize) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().select_bank(bank_id);
+            Ok(engine.sampler().status())
+        })
+    }
+
+    pub fn set_sampler_volume(&self, vol: f32) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().set_master_volume(vol);
+            Ok(engine.sampler().status())
+        })
+    }
+
+    pub fn update_sampler_pad(&self, pad_id: usize, update: PadUpdate) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().update_pad(pad_id, update);
+            Ok(engine.sampler().status())
+        })
+    }
+
+    pub fn load_sampler_pad_file(&self, pad_id: usize, path_str: String) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| {
+            let path = std::path::PathBuf::from(&path_str);
+            let mut decoder = TrackDecoder::open(&path)?;
+            let mut samples = Vec::new();
+            while decoder.decode_next(&mut samples)? {}
+
+            let source_rate = decoder.info().source_sample_rate;
+            let target_rate = engine.sampler().sample_rate();
+
+            let final_samples = if source_rate != target_rate && source_rate > 0 {
+                let mut resampler = StereoResampler::new(source_rate, target_rate);
+                let mut resampled = Vec::new();
+                resampler.process(&samples, &mut resampled);
+                resampled
+            } else {
+                samples
+            };
+
+            let name = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("Custom")
+                .to_string();
+
+            engine.sampler().load_pad_audio(pad_id, final_samples, target_rate, Some(name));
+            Ok(engine.sampler().status())
+        })
+    }
+
+    pub fn capture_deck_to_pad(
+        &self,
+        pad_id: usize,
+        deck_slot: usize,
+        beats: Option<f32>,
+    ) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| {
+            let deck = engine.deck(deck_slot)?;
+            let deck_status = deck.status();
+            let path = deck
+                .source_path()
+                .ok_or_else(|| AudioError::TrackOpen("Deck belum memuat track".to_string()))?;
+
+            let bpm = if deck_status.bpm > 20.0 {
+                deck_status.bpm
+            } else {
+                128.0
+            };
+
+            let (start_sec, duration_sec) = if deck_status.loop_active {
+                let start = deck_status.loop_start_secs;
+                let dur = (deck_status.loop_end_secs - start).max(0.05);
+                (start, dur)
+            } else {
+                let dur = (beats.unwrap_or(4.0) as f64 * (60.0 / bpm)).clamp(0.1, 30.0);
+                (deck_status.position_secs, dur)
+            };
+
+            let mut decoder = TrackDecoder::open(&path)?;
+            let _ = decoder.seek(start_sec);
+
+            let target_rate = engine.sampler().sample_rate();
+            let source_rate = decoder.info().source_sample_rate;
+            let target_frames = (duration_sec * source_rate as f64) as usize;
+
+            let mut samples = Vec::new();
+            while samples.len() / 2 < target_frames {
+                let prev_len = samples.len();
+                let more = decoder.decode_next(&mut samples)?;
+                if !more || samples.len() == prev_len {
+                    break;
+                }
+            }
+            samples.truncate(target_frames * 2);
+
+            let final_samples = if source_rate != target_rate && source_rate > 0 {
+                let mut resampler = StereoResampler::new(source_rate, target_rate);
+                let mut resampled = Vec::new();
+                resampler.process(&samples, &mut resampled);
+                resampled
+            } else {
+                samples
+            };
+
+            let name = format!(
+                "Deck {} Slice",
+                if deck_slot == 0 { "A" } else { "B" }
+            );
+
+            engine.sampler().load_pad_audio(pad_id, final_samples, target_rate, Some(name));
+            Ok(engine.sampler().status())
+        })
+    }
+
+    pub fn update_sequencer(&self, update: SequencerUpdate) -> Result<SequencerStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().update_sequencer(update);
+            Ok(engine.sampler().status().sequencer)
+        })
+    }
+
+    pub fn export_sample_pack(&self, dest_path: String) -> Result<(), AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().export_pack(std::path::Path::new(&dest_path))
+        })
+    }
+
+    pub fn import_sample_pack(&self, zip_path: String) -> Result<SamplerStatus, AudioError> {
+        self.with_engine(|engine| {
+            engine.sampler().import_pack(std::path::Path::new(&zip_path))?;
+            Ok(engine.sampler().status())
         })
     }
 }

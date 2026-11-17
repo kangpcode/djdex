@@ -39,6 +39,7 @@ use crate::audio::fx::{FxControls, FxParams, FxSlotUpdate};
 use crate::audio::gain::{db_to_linear, linear_to_db};
 use crate::audio::mixer::{Mixer, MixerControls, MixerParams, MixerUpdate};
 use crate::error::AudioError;
+use crate::sampler::{SamplerController, SamplerRt};
 
 /// Batas frekuensi test tone (Hz).
 pub const TONE_MIN_HZ: f32 = 20.0;
@@ -207,6 +208,7 @@ pub const DECK_COUNT: usize = 2;
 struct OpenedStream {
     stream: Stream,
     decks: [Arc<Deck>; DECK_COUNT],
+    sampler: Arc<SamplerController>,
     report: StreamReport,
 }
 
@@ -217,6 +219,7 @@ pub struct AudioEngine {
     commands: Sender<AudioCommand>,
     worker: Option<JoinHandle<()>>,
     decks: [Arc<Deck>; DECK_COUNT],
+    sampler: Arc<SamplerController>,
     auto_dj: AutoDj,
 }
 
@@ -240,7 +243,7 @@ impl AudioEngine {
             .map_err(|err| AudioError::StreamThreadSpawn(err.to_string()))?;
 
         match ready_rx.recv_timeout(OPEN_TIMEOUT) {
-            Ok(Ok((_report, decks))) => {
+            Ok(Ok((_report, decks, sampler))) => {
                 let auto_dj = match AutoDj::start(
                     [Arc::clone(&decks[0]), Arc::clone(&decks[1])],
                     Arc::clone(&rt.mixer),
@@ -258,6 +261,7 @@ impl AudioEngine {
                     commands,
                     worker: Some(worker),
                     decks,
+                    sampler,
                     auto_dj,
                 })
             }
@@ -332,6 +336,10 @@ impl AudioEngine {
 
     pub fn deck_status(&self, slot: usize) -> Result<DeckStatus, AudioError> {
         Ok(self.deck(slot)?.status())
+    }
+
+    pub fn sampler(&self) -> &Arc<SamplerController> {
+        &self.sampler
     }
 
     pub fn load_track(
@@ -450,7 +458,16 @@ fn audio_host_loop(
     rt: Arc<RtState>,
     info: Arc<Mutex<StreamInfo>>,
     commands: Receiver<AudioCommand>,
-    ready: Sender<Result<(StreamReport, [Arc<Deck>; DECK_COUNT]), AudioError>>,
+    ready: Sender<
+        Result<
+            (
+                StreamReport,
+                [Arc<Deck>; DECK_COUNT],
+                Arc<SamplerController>,
+            ),
+            AudioError,
+        >,
+    >,
 ) {
     let opened = match open_stream(&request, Arc::clone(&rt)) {
         Ok(opened) => opened,
@@ -474,7 +491,10 @@ fn audio_host_loop(
         guard.last_error = None;
     }
 
-    if ready.send(Ok((opened.report, opened.decks))).is_err() {
+    if ready
+        .send(Ok((opened.report, opened.decks, opened.sampler)))
+        .is_err()
+    {
         // Pemanggil sudah menyerah; stream akan ditutup saat fungsi kembali.
         info.lock().running = false;
         return;
@@ -517,16 +537,18 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
     let (deck_a, reader_a) = Deck::new(sample_rate)?;
     let (deck_b, reader_b) = Deck::new(sample_rate)?;
     let decks = [Arc::new(deck_a), Arc::new(deck_b)];
+    let (sampler_controller, sampler_rt) = SamplerController::new(sample_rate);
+    let sampler = Arc::new(sampler_controller);
 
     let stream = match sample_format {
         SampleFormat::F32 => {
-            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b])?
+            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt)?
         }
         SampleFormat::I16 => {
-            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b])?
+            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt)?
         }
         SampleFormat::U16 => {
-            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b])?
+            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt)?
         }
         other => {
             return Err(AudioError::UnsupportedSampleFormat(sample_format_label(
@@ -542,6 +564,7 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
     Ok(OpenedStream {
         stream,
         decks,
+        sampler,
         report: StreamReport {
             device_name,
             host: host_label().to_string(),
@@ -616,6 +639,7 @@ fn build_output<T>(
     config: StreamConfig,
     rt: Arc<RtState>,
     mut decks: [DeckReader; DECK_COUNT],
+    mut sampler_rt: SamplerRt,
 ) -> Result<Stream, AudioError>
 where
     T: SizedSample + FromSample<f32> + Send + 'static,
@@ -639,6 +663,7 @@ where
                     &callback_rt,
                     &mut oscillator,
                     &mut decks,
+                    &mut sampler_rt,
                     &mut mixer,
                 );
             },
@@ -661,6 +686,7 @@ fn render_block<T>(
     rt: &RtState,
     oscillator: &mut ToneOscillator,
     decks: &mut [DeckReader; DECK_COUNT],
+    sampler: &mut SamplerRt,
     mixer: &mut Mixer,
 ) where
     T: SizedSample + FromSample<f32>,
@@ -694,6 +720,8 @@ fn render_block<T>(
     let deck_b_samples = deck_b_reader.prepare(frames);
     let deck_b_frames = deck_b_samples.len() / 2;
 
+    sampler.process_block(frames, 128.0);
+
     let mut peak = 0.0_f32;
     let mut deck_a_peak = 0.0_f32;
     let mut deck_b_peak = 0.0_f32;
@@ -725,7 +753,13 @@ fn render_block<T>(
         deck_a_peak = deck_a_peak.max(left.abs()).max(right.abs());
         deck_b_peak = deck_b_peak.max(left_b.abs()).max(right_b.abs());
 
-        let mix = mixer.process((left, right), (left_b, right_b), tone);
+        let sampler_sample = if index < frames {
+            sampler.sample_at(index)
+        } else {
+            (0.0, 0.0)
+        };
+
+        let mix = mixer.process((left, right), (left_b, right_b), sampler_sample, tone);
         master_peak_l = master_peak_l.max(mix.master_l.abs());
         master_peak_r = master_peak_r.max(mix.master_r.abs());
 
@@ -883,6 +917,7 @@ mod tests {
         let (_deck_a, deck_a_reader) = Deck::new(48_000).expect("deck a");
         let (_deck_b, deck_b_reader) = Deck::new(48_000).expect("deck b");
         let mut decks = [deck_a_reader, deck_b_reader];
+        let (_sampler_ctrl, mut sampler_rt) = SamplerController::new(48_000);
         let mut mixer = Mixer::new(48_000.0);
         let mut buffer = vec![0.0_f32; 256 * 2];
         // Paksa gain ramp mencapai target supaya peak terdeteksi.
@@ -894,6 +929,7 @@ mod tests {
                 &rt,
                 &mut oscillator,
                 &mut decks,
+                &mut sampler_rt,
                 &mut mixer,
             );
         }
