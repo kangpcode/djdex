@@ -29,6 +29,7 @@ export type InstrumentType =
   | "angklung"
   | "gamelan_saron"
   | "gamelan_gong"
+  | "kendang_tuned"
   | "koto"
   | "shamisen";
 
@@ -44,6 +45,15 @@ export type DrumType =
   | "kendang_pak"
   | "kendang_bem"
   | "kendang_dho"
+  | "kendang_tong"
+  | "kendang_plak"
+  | "kendang_ketuk"
+  | "kendang_indung"
+  | "goong_ageng"
+  | "goong_suwukan"
+  | "kempul_gong"
+  | "kenong_gong"
+  | "angklung_hit"
   | "taiko_heavy"
   | "taiko_rim";
 
