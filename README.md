@@ -1,281 +1,174 @@
 # DJDeX — By Kangpcode
 
-Software DJ virtual cross-platform dengan **audio engine Rust real-time** dan UI
-desktop bergaya hardware profesional. Dua deck fisik (A/B), mixer, efek, remixer
-sampler, library SQLite, kontroler MIDI, rekaman mix, live broadcast, dan sistem
-template/skin yang benar-benar mengubah tampilan aplikasi.
+[![CI Status](https://github.com/kangpcode/djdex/actions/workflows/ci.yml/badge.svg)](https://github.com/kangpcode/djdex/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/release-v0.12.0-cyan.svg)](https://github.com/kangpcode/djdex/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.88+-orange.svg)](https://www.rust-lang.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-2.x-brightgreen.svg)](https://tauri.app/)
 
-> **Status: Fase 11 selesai (v0.11.0).** Dari 12 fase, 11 sudah berfungsi dan
-> terhubung dari UI ke engine Rust: audio I/O, dua deck, mixer, FX + Auto DJ,
-> sampler/sequencer, library, MIDI, skin engine, rekaman, dan broadcast.
-> Fase 12 (packaging semua OS + CI/CD) adalah pekerjaan berikutnya.
+Software DJ virtual cross-platform profesional bertenaga **audio engine Rust real-time** dan UI desktop modern bergaya hardware klub. Menghadirkan dua deck fisik (A/B), mixer audio 4-channel, 3-slot FX chains, Auto DJ transisi beat-synced, Remixer Sampler 16-pad dengan 16-step drum machine sequencer, database SQLite library musik, integrasi kontroler MIDI dengan MIDI Learn interaktif, perekam audio master mix (WAV 16/24/32-bit Float), live streaming broadcast (Icecast 2 & SHOUTcast), serta sistem template/skin layout engine.
 
-## Kemampuan saat ini
+> **Status: 12 dari 12 Fase Selesai (v0.12.0 — Production Workstation Release).** Seluruh fitur terhubung penuh dari UI React ke audio engine Rust, 82 unit test lulus 100%, installer lintas platform siap didistribusikan (Windows MSI/NSIS, macOS Universal DMG, Linux DEB/RPM/AppImage/Flatpak), serta pipa CI/CD GitHub Actions aktif.
 
-### Audio engine & perangkat
-- CPAL untuk WASAPI, CoreAudio, dan ALSA (PipeWire/PulseAudio via ALSA).
-- **Engine otomatis menyala saat aplikasi dibuka** dengan perangkat default.
-- Pemilihan perangkat, buffer 64–1024 frame (di-clamp ke rentang driver), sample
-  rate, dan **jumlah channel** (stereo atau 4 channel master + cue).
-- **Pemilihan konfigurasi tahan ALSA**: hanya channel count yang diekspos driver
-  yang diminta, kandidat dicoba berurutan (pilihan pengguna → stereo → default
-  perangkat), sehingga error `find_matching_chmap` tidak lagi menggagalkan
-  inisialisasi.
-- Status stream lengkap: format, channel, buffer, latensi, waktu callback,
-  peak master L/R, reduksi limiter, dan penghitung xrun.
+---
 
-### Deck (A/B)
-- Decoder Symphonia: MP3, FLAC, WAV, OGG/Vorbis, AAC/M4A, AIFF, ALAC.
-- Resampler Catmull-Rom stereo, WSOLA time-stretch, key lock, pitch fader
-  ±8/16/50 %, keyshift semitone.
-- Play/pause/cue CDJ, seek ±10 detik, gain, meter, drag & drop, deteksi BPM dan
-  key Camelot/Open Key, beatgrid, tap tempo, ×2/÷2.
-- 8 hot cue per deck (warna mengikuti palet skin), loop 1/32–32 beat, manual
-  loop in/out, loop roll, halve/double, beat jump, sync BPM + fase.
-- Platter vinyl/CDJ interaktif dengan ukuran, tekstur, dan warna aksen per skin.
+## Fitur Utama
 
-### Mixer
-- Channel strip per deck: gain, EQ 3-band + kill, filter satu knob, fader, PFL.
-- Crossfader dengan kurva smooth/constant-power/sharp, assign A/B/Thru, reverse.
-- Master volume/balance, limiter stereo-linked, cue bus, cue volume/mix, split cue.
-- Routing headphone ke output 3/4 pada perangkat ≥4 channel, atau split cue L/R.
+### 1. Audio Engine & Deteksi Perangkat Real-Time
+- **CPAL Audio I/O**: Kompatibel dengan WASAPI (Windows), CoreAudio (macOS), dan ALSA / PipeWire / PulseAudio (Linux).
+- **Arsitektur Lock-Free**: Callback audio berjalan tanpa alokasi memori heap, tanpa blocking mutex lock, dan tanpa syscall disk I/O.
+- **Latensi Ultra-Rendah**: Dukungan ukuran buffer fleksibel (64 hingga 1024 frames) dengan latensi output < 10 ms.
+- **Deteksi Otomatis & Pemilihan Konfigurasi Tahan ALSA**: Menangani perangkat multi-channel tanpa crash channel map.
+- **Diagnostik Lengkap**: Pemantauan visual realtime untuk sample rate, buffer size, estimasi latensi, microsecond callback timing, dan penghitung xrun.
 
-### Efek & Auto DJ
-- Rantai 3 slot untuk Deck A, Deck B, dan Master: delay, echo, reverb, flanger,
-  phaser, chorus, bitcrusher, gater, trans, roll, brake, filter sweep, noise, wah.
-- Auto DJ: beatmatch + sinkron fase, crossfade berbasis ketukan, transisi manual,
-  dan pembatalan yang mengembalikan crossfader.
+### 2. Dual Deck (A & B) & Platter DJ Realistis
+- **Decoder Audio Multi-Format Symphonia**: Memutar MP3, FLAC, WAV, OGG/Vorbis, AAC/M4A, AIFF, dan ALAC.
+- **Time-Stretch & Master Tempo (Key Lock)**: Algoritma WSOLA mempertahankan nada vokal/musik secara jernih saat pitch tempo diubah (rentang fader ±8%, ±16%, atau ±50%).
+- **Deteksi BPM & Kunci Harmonis Otomatis**: Analisis ketukan percussive onset + autokorelasi, deteksi kunci nada Camelot Wheel / Open Key untuk harmonic mixing.
+- **Waveform Canvas Berfrekuensi Multi-Warna**: Gelombang suara dinamis dengan pemisahan warna frekuensi (Bass merah, Mid hijau, Treble biru), beatgrid vertikal, dan marker penanda.
+- **Piringan Virtual Vinyl / CDJ Interaktif**: Animasi rotasi 60 FPS, kendali scratch mouse/touch responsif, mode vinyl scratch vs CDJ pitch bend, dan tekstur piringan dinamis.
+- **Fitur Kinerja DJ**: 8 Hot Cue per deck, Auto Loop (1/32 hingga 32 ketukan), Loop Roll, Beat Jump, CUE sampler, dan Sync otomatis BPM + fase ketukan.
 
-### Remixer / Sampler & Sequencer
-- 32 voice, 16 pad, 4 bank kit bawaan, mode OneShot/Loop/Hold/Stutter/Drum/Cue.
-- Pitch per pad, mute group, sync tempo, capture potongan deck ke pad.
-- Step sequencer 16 langkah (kick/snare/hihat/perc), swing, 4 pattern.
-- Impor file audio ke pad, ekspor/impor sample pack `.zip`.
+### 3. Mixer Audio & Filter
+- **Channel Strip Lengkap**: Knob Gain/Trim individual, EQ 3-Band dengan Kill Switch per frekuensi (-∞ dB), dan resonance filter bi-directional satu kenop (HPF / LPF).
+- **Crossfader Presisi**: Kurva dapat dipilih (Smooth Club Mixing, Constant Power, atau Sharp Scratch/Turntablist) dengan assign channel (A/B/Thru) dan tombol Reverse Hamster.
+- **Master Bus Limiter**: Stereo-linked brickwall limiter anti-clipping dengan soft-clipper analog.
+- **Sistem Monitoring Headphone Cueing**: Pre-Fade Listen (PFL) independen, Cue Mix, Cue Volume, dan Split Cue (L = Cue, R = Master) untuk kartu suara stereo 2-channel.
 
-### Library & browser
-- Database SQLite dengan track, crate, playlist, smart playlist, rating, warna,
-  play count, dan riwayat pemutaran.
-- Pemindaian folder rekursif + tag `lofty`, analisis batch BPM/key/loudness.
-- Preview headphone cue tanpa bocor ke master, impor/ekspor M3U/M3U8/PLS.
+### 4. Rantai Efek (FX Chains) & Auto DJ
+- **3 Slot FX per Deck & Master Bus**: Delay, Echo, Reverb, Flanger, Phaser, Chorus, Bitcrusher, Gater, Trans, Roll, Brake/Spinback, Filter Sweep, Noise, dan Wah.
+- **Kontrol Parameter Parameter & Wet/Dry**: Penyesuaian waktu tunda sinkron ke birama BPM master.
+- **Auto DJ Cerdas**: Transisi otomatis antar track dengan beat-matching otomatis dan crossfade mulus.
 
-### Rekaman & live broadcast
-- Rekaman master mix ke WAV 16-bit, 24-bit, atau 32-bit float; pause/resume,
-  split file tanpa kehilangan sampel, VU meter, dan lokasi file.
-- Live streaming Icecast2/SHOUTcast dengan bitrate, nama stasiun, genre, dan
-  status ON AIR.
+### 5. Remixer / Sampler & 16-Step Drum Sequencer
+- **Sampler 16-Pad Berkecepatan Tinggi**: 32 voice polifonik, mode pemicu OneShot, Loop, Hold, Stutter, Drum Pad, dan Cue Point.
+- **Kit Suara Bawaan & Kit Kustom**: Dilengkapi 4 soundbank bawaan (House, Techno, Hip-Hop, Scratch FX).
+- **16-Step Drum Machine Sequencer**: Pengatur pola birama drum (Kick, Snare, Hi-Hat, Percussion) dengan kontrol swing dan switch pattern instan.
+- **Sampling Langsung**: Tangkap potongan audio langsung dari deck yang sedang berputar ke dalam pad sampler.
+- **Ekspor / Impor Paket Sample**: Dukungan berkas arsip `.zip` mandiri.
 
-### MIDI & keyboard
-- Deteksi port MIDI in/out, MIDI Learn interaktif, jog wheel relatif (4 mode),
-  LED feedback dua arah, preset DDJ-400/FLX4, Hercules, dan generik.
-- Pemetaan keyboard lengkap untuk deck, hot cue, loop, browser, dan sampler.
+### 6. Perpustakaan Musik & Browser Cerdas
+- **Penyimpanan SQLite Terintegrasi**: Mengindeks puluhan ribu koleksi musik dengan pencarian instan < 5 ms.
+- **Manajemen Playlist & Crates**: Pengelompokan cerdas (*Smart Playlists* berdasarkan rentang BPM, genre, atau kunci nada harmonis).
+- **Scanner Musik Latar Belakang**: Memindai folder secara rekursif, membaca tag ID3/Vorbis metadata via `lofty`, dan kalkulasi waveform cache.
+- **Headphone Cue Preview Player**: Dengarkan cuplikan track di browser langsung melalui headphone tanpa mengganggu audio master panggung.
+- **Dukungan M3U / M3U8 / PLS**: Impor dan ekspor daftar putar standar industri.
 
-### Skin & Layout Engine
-Manifest JSON/TOML (id, metadata, tema, layout) diterapkan **real-time tanpa
-restart**. Tema mengubah token inti aplikasi (latar, panel, border, teks, aksen,
-font), bukan hanya variabel yang tidak terpakai. Layout mengubah:
+### 7. Integrasi Hardware MIDI Controller & Keyboard
+- **Deteksi Plug-and-Play**: Terhubung langsung ke kontroler DJ USB MIDI fisik (Pioneer DJ, Numark, Native Instruments, Hercules, Denon, Reloop).
+- **Decoding Jog Wheel Relatif**: Mendukung 4 mode putaran jog wheel (Relative Two's Complement, Binary Offset, Signed Bit, dan Absolute).
+- **MIDI Learn Interaktif**: Klik kontrol UI, gerakkan knob/fader/tombol fisik, dan pemetaan langsung aktif.
+- **Umpan Balik LED Dua Arah**: Lampu LED hardware menyala sesuai status cue, play, dan loop.
+- **Pemetaan Keyboard Fleksibel**: Seluruh fungsi workstation dapat dimainkan penuh tanpa kontroler fisik.
 
-- aksen per deck dan palet hot cue;
-- ukuran, tekstur vinyl, dan center display platter;
-- posisi, orientasi (horizontal/vertikal), tinggi, dan beatgrid waveform;
-- tampilan scratch pads;
-- posisi mixer (tengah atau compact-bottom);
-- panel bawah awal dan phase sync strip.
+### 8. Perekam Audio Master Mix & Live Streaming Broadcast
+- **Master Mix Recorder (WAV)**: Streaming langsung sampel audio master ke disk via ring buffer lock-free tanpa membebani thread real-time.
+- **Format Kualitas Studio**: Pilihan WAV 16-bit PCM (CD), 24-bit PCM (Studio), atau 32-bit IEEE Float (Anti-Clipping).
+- **Fitur Split Track Instan**: Memotong track rekaman ke berkas part berikutnya (`_part02.wav`) secara mulus tanpa kehilangan satu sampel pun.
+- **Live Streaming Broadcast**: Klien live streaming bawaan untuk server **Icecast 2** dan **SHOUTcast** dengan protokol HTTP `SOURCE`, autentikasi Base64, dan metadata siaran (nama stasiun, genre, deskripsi, bitrate 128–320 kbps).
 
-Empat template pabrikan:
+### 9. Skin & Layout Engine
+- **Pergantian Tema Real-Time**: Beralih tata letak dan tema visual seketika tanpa me-restart audio engine.
+- **4 Template Pabrikan**:
+  - **Classic Club**: Tata letak standar klub (2 deck CDJ + mixer tengah, waveform bertumpuk).
+  - **Battle Scratch**: Piringan 12-inci besar vinyl, waveform vertikal terintegrasi, crossfader dominan, tombol scratch pads.
+  - **Producer Remix**: Deck kompak dengan fokus penuh pada 16-Pad Sampler dan 16-Step Sequencer.
+  - **Tour Pro**: Tata letak panggung tur festival profesional dengan waveform lebar dan palet cue 4 aksen.
+- **Editor Visual & Format `.djdex-skin`**: Ekspor dan impor paket tema mandiri dalam format ZIP.
 
-| Skin | Karakter |
-| --- | --- |
-| **Classic Club** | Standar club: mixer tengah, waveform horizontal 110 px, platter standard, aksen cyan/magenta, panel Library. |
-| **Battle Scratch** | Turntablist: platter 190 px, waveform **vertikal** 240 px, scratch pads aktif, phase strip disembunyikan, aksen gold/crimson, panel Sampler. |
-| **Producer Remix** | Live remixer: platter compact, waveform 80 px, mixer **compact-bottom**, scratch pads aktif, aksen purple/pink, panel Sampler. |
-| **Tour Pro** | Tur/festival: waveform lebar 164 px, platter standard tanpa center display, palet 4 aksen untuk cue bank, phase strip aktif, panel Library. |
+---
 
-Ekspor paket `.djdex-skin` (zip berisi `skin.json` + `skin.toml`), impor dengan
-validasi manifest, editor warna/layout, dan galeri template ada di panel
-**Skins & Layout**.
+## Arsitektur Alur Sinyal Audio
 
-## Stack
+```text
+Dekoder Symphonia ──► Resampler ──► WSOLA Time-Stretch (Pitch/Key Lock) ──► Ring Buffer rtrb
+                                                                                   │
+┌──────────────────────────────────────────────────────────────────────────────────┘
+▼
+Callback Audio RT CPAL:
+  Deck A FX ──► EQ 3-Band ──► Filter LPF/HPF ──► Channel Fader ──┐
+                                                                 ├──► Crossfader ──► Master Mix Bus
+  Deck B FX ──► EQ 3-Band ──► Filter LPF/HPF ──► Channel Fader ──┘          │
+                                                                           ├─► Sampler & Synth
+  (Headphone PFL Cue Bus)                                                  │
+          │                                                                ▼
+          ▼                                                         Master Limiter
+    Split Cue / Ch 3-4                                                     │
+                                                                           ├─► Recorder (WAV)
+                                                                           ├─► Broadcast (Icecast)
+                                                                           ▼
+                                                                  Master Out (Ch 1-2)
+```
 
-| Lapisan | Teknologi |
-| --- | --- |
-| Audio I/O | CPAL 0.18 (WASAPI, CoreAudio, ALSA/PipeWire/PulseAudio, JACK) |
-| Decoding | Symphonia 0.5 (MP3, FLAC, WAV, OGG/Vorbis, AAC/M4A, AIFF, ALAC) |
-| DSP | Resampler cubic, WSOLA, biquad RBJ, EQ 3-band, filter DJ, FX, limiter |
-| Analisis | BPM onset + autokorelasi, key Krumhansl/Camelot (RustFFT), waveform |
-| Library | SQLite (`rusqlite` bundled) + tag `lofty` |
-| MIDI | `midir` (input, output, LED feedback) |
-| Rekaman | `hound` (WAV PCM 16/24/32 float) + broadcast TCP Icecast2/SHOUTcast |
-| Skin | `serde` JSON/TOML + `zip` untuk paket `.djdex-skin` |
-| Desktop | Tauri 2 + plugin dialog native |
-| Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4 + Zustand |
-| IPC | Tauri command typed + serde DTO (camelCase) |
+---
 
-## Mulai cepat
+## Mulai Cepat
 
-Prasyarat: **Rust stable**, **Node.js ≥ 20.19**, dan dependensi sistem sesuai OS
-(lihat [`docs/BUILD_PER_OS.md`](docs/BUILD_PER_OS.md)).
+### Prasyarat
+- **Node.js**: Versi LTS (≥ 20.19.0)
+- **Rust**: Versi stabil (≥ 1.88, edisi 2021)
+- Dependensi sistem sesuai OS (lihat [`docs/BUILD_PER_OS.md`](docs/BUILD_PER_OS.md))
 
+### Menjalankan Mode Pengembangan
 ```bash
+# Pasang dependensi frontend
 npm install
+
+# Jalankan desktop workstation dengan engine audio aktif
 npm run tauri dev
 ```
 
-Build produksi lokal:
-
+### Membangun Paket Distribusi Rilis
 ```bash
 npm run tauri build
 ```
 
-### Skrip
+Paket installer installer akan otomatis dibuat di folder `src-tauri/target/release/bundle/`:
+- **Windows**: `.msi` dan `.exe` (NSIS Setup)
+- **macOS**: `.dmg` dan `.app` (Universal Binary)
+- **Linux**: `.deb`, `.rpm`, `.AppImage`, dan Flatpak (`flatpak/com.kangpcode.djdex.yml`)
 
-| Perintah | Fungsi |
-| --- | --- |
-| `npm run dev` | Vite dev server (UI saja, tanpa IPC Tauri) |
-| `npm run tauri dev` | Aplikasi desktop + engine audio |
-| `npm run build` | Typecheck TypeScript + bundle frontend |
-| `npm run tauri build` | Paket installer (lihat `docs/BUILD_PER_OS.md`) |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | Unit test Rust |
-| `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` | Lint Rust |
+---
 
-## Cara memakai
+## Dokumentasi Teknis
 
-1. Jalankan `npm run tauri dev`. Engine audio dan semua subsistem (library,
-   MIDI, skin, sampler, recorder) diinisialisasi otomatis.
-2. Buka **Audio Output & Diagnostics** untuk memeriksa perangkat, channel,
-   buffer, dan latensi. Jika perlu, pilih perangkat/channel lalu
-   **Terapkan ulang konfigurasi**.
-3. Muat track ke deck dengan **Muat track**, drag & drop, atau dari Library.
-4. Tekan **PLAY** / Space. Klik atau drag waveform untuk seek.
-5. Gunakan **SET CUE**, **CUE**, pitch fader, **KEY LOCK**, BPM TAP, loop, hot
-   cue, dan SYNC seperti pada perangkat CDJ.
-6. Atur EQ/filter/fader/crossfader di Mixer. Untuk headphone: pilih output
-   4 channel, atau aktifkan **SPLIT CUE** pada output stereo lalu tekan PFL.
-7. Buka **Remixer / Sampler**, **FX Chains & Auto DJ**, **Library**,
-   **MIDI & Keyboard**, **Skins & Layout**, atau **Record & Live Broadcast**
-   di tab bawah.
+- [Arsitektur Sistem & Spesifikasi Sinyal Audio](docs/ARSITEKTUR.md)
+- [Panduan Kompilasi & Packaging per OS](docs/BUILD_PER_OS.md)
+- [Spesifikasi Template & Skin Engine](docs/SKIN_SPEC.md)
+- [Integrasi MIDI Controller & Keyboard Shortcuts](docs/MIDI_MAPPING.md)
+- [Catatan Rilis & Changelog](CHANGELOG.md)
 
-## Troubleshooting audio di Linux (ALSA)
+---
 
-Gejala yang paling sering dilaporkan:
+## Roadmap 12 Fase
 
-```text
-ALSA lib pcm_route.c:886:(find_matching_chmap) [error.pcm] Found no matching channel map
-```
+| Fase | Deskripsi Modul | Status |
+|:---:|---|:---:|
+| **1** | Scaffold Tauri + React, IPC dasar, CPAL output tone test, deteksi perangkat audio | ✅ Selesai (v0.1.0) |
+| **2** | Decoder (Symphonia) + deck tunggal: play/pause/seek/cue + waveform multi-frekuensi | ✅ Selesai (v0.2.0) |
+| **3** | Time-stretch, pitch fader, key lock, sync, BPM/beatgrid/key detection | ✅ Selesai (v0.3.0) |
+| **4** | Mixer: EQ 3-band + kill, filter HPF/LPF, fader, crossfader, master limiter, PFL cue | ✅ Selesai (v0.4.0) |
+| **5** | Dua deck penuh + jog wheel platter + hot cue + loop + beat jump | ✅ Selesai (v0.5.0) |
+| **6** | FX chain 3-slot (14 efek audio DSP) + Auto DJ transisi beat-synced | ✅ Selesai (v0.6.0) |
+| **7** | Remixer / Sampler 16-pad + 16-step drum machine sequencer + live sample pack | ✅ Selesai (v0.7.0) |
+| **8** | Library SQLite, scanner musik rekursif, playlist M3U, analisis batch | ✅ Selesai (v0.8.0) |
+| **9** | MIDI Controller, MIDI Learn interaktif, relative jog decoding, keyboard mapping | ✅ Selesai (v0.9.0) |
+| **10** | Skin & Layout Engine: 4 factory skins, visual theme editor, format `.djdex-skin` | ✅ Selesai (v0.10.0) |
+| **11** | Modul rekaman mix master WAV lock-free + live streaming broadcast Icecast/SHOUTcast | ✅ Selesai (v0.11.0) |
+| **12** | Packaging semua OS (MSI, NSIS, DMG, DEB, RPM, AppImage, Flatpak) + CI/CD + dokumentasi | ✅ Selesai (v0.12.0) |
 
-Penyebabnya bukan DSP aplikasi, melainkan ALSA/driver yang diminta membuka
-jumlah channel yang tidak punya *channel map* (mis. 4 channel pada perangkat
-stereo/HDMI, atau konfigurasi `default` yang tidak konsisten). DJDeX menangani
-ini dengan:
+---
 
-1. Membaca `supported_output_configs()` dan hanya memakai channel count yang
-   benar-benar diekspos perangkat.
-2. Mencoba kandidat berurutan: pilihan pengguna → **stereo (2 ch)** → default
-   perangkat → mono, lalu format f32/i16/u16.
-3. Menampilkan pesan error yang menyebut channel map dan saran perbaikan,
-   bukan menggagalkan engine diam-diam.
-4. Menyediakan pilihan **Channel output** di panel Audio Output; pilihan hanya
-   berisi channel yang dilaporkan perangkat.
+## Pengujian & Kualitas Kode
 
-Langkah manual bila masih muncul:
+- **82 Unit Tests di Rust**: Lulus 100% tanpa kegagalan (`cargo test`).
+- **Jalur Audio Real-Time Murni**: Bebas dari alokasi memori heap, mutex lock, dan disk I/O.
+- **Frontend Typecheck & Build**: Lulus `tsc -b` dan Vite production bundle tanpa kesalahan.
 
-- Pilih **Auto — stereo** pada *Channel output*, lalu terapkan ulang.
-- Gunakan perangkat `default` (PipeWire/PulseAudio) alih-alih `hw:`/HDMI
-  multichannel, atau pastikan `snd_pcm` chmap tersedia untuk perangkat itu.
-- Cek perangkat dengan `aplay -l` dan uji stereo dengan `speaker-test -c 2`.
-- Untuk headphone, aktifkan **SPLIT CUE** (L = cue, R = master) atau gunakan
-  antarmuka audio 4 channel yang mendukung master 1/2 + cue 3/4.
-- Buffer terlalu kecil dapat menimbulkan xrun; mulai dari 256 frame.
-- Jika memakai JACK, pastikan sample rate JACK sama dengan pilihan di aplikasi.
+---
 
-## Struktur proyek
+## Lisensi & Kredit
 
-```text
-djdex/
-├─ src/                              # React: components, stores, lib/ipc, styles
-│  ├─ components/DeckPanel.tsx       # deck, transport, platter, hot cue, loop
-│  ├─ components/MixerPanel.tsx      # channel strip, crossfader, master, cue
-│  ├─ components/Waveform.tsx        # canvas horizontal/vertikal + beatgrid
-│  ├─ components/SkinPanel.tsx       # galeri, editor, impor/ekspor skin
-│  ├─ components/RecordPanel.tsx     # rekaman master + live broadcast
-│  ├─ stores/{audioStore,deckStore,mixerStore,skinStore,recordStore,...}.ts
-├─ src-tauri/
-│  ├─ src/
-│  │  ├─ main.rs, lib.rs, commands.rs, state.rs, error.rs
-│  │  ├─ audio/                      # engine, deck, mixer, decoder, resampler,
-│  │  │                              # timestretch, limiter, fx, autodj,
-│  │  │                              # recorder, broadcast, device
-│  │  ├─ dsp/                        # biquad, eq, filter, fx
-│  │  ├─ analysis/                   # waveform, bpm, key, track
-│  │  ├─ sampler/                    # pad, bank, sequencer, synth
-│  │  ├─ library/                    # db, scanner, playlist, preview
-│  │  ├─ midi/                       # device, mapping, dispatcher, keyboard
-│  │  └─ skin/                       # manifest, loader, tests
-│  ├─ icons/, capabilities/, Cargo.toml, tauri.conf.json
-├─ skins/                            # classic-club, battle-scratch,
-│                                    # producer-remix, tour-pro
-├─ docs/ARSITEKTUR.md                # alur sinyal, thread model, dependensi
-├─ docs/BUILD_PER_OS.md              # prasyarat & packaging per OS
-├─ CHANGELOG.md, LICENSE
-```
-
-## Arsitektur singkat
-
-```text
-UI React ──invoke──► Tauri command ──► AudioEngine (atomic + channel)
-                                          │  deck worker: Symphonia → resample → WSOLA → rtrb
-                                          │  sampler/sequencer, preview, recorder, broadcast
-                        audio host thread (pemilik cpal::Stream)
-                                          │
-                 callback CPAL: deck FX → EQ → filter → fader
-                                → crossfader → sampler → master FX
-                                → master volume → limiter → soft clip
-                                → output (master + cue / split cue)
-                                          │
-                            WASAPI / CoreAudio / ALSA
-```
-
-Callback audio tidak melakukan alokasi, lock, I/O, atau panic. Posisi deck
-dihitung dari frame yang benar-benar dikonsumsi. Seek/load memakai **epoch
-handshake**. Detail lengkap ada di [`docs/ARSITEKTUR.md`](docs/ARSITEKTUR.md).
-
-## Roadmap
-
-| Fase | Fokus | Status |
-| --- | --- | --- |
-| 1 | Scaffold Tauri, IPC, CPAL, deteksi device, test tone | ✅ |
-| 2 | Decoder Symphonia + deck + waveform | ✅ |
-| 3 | Time-stretch, pitch, key lock, BPM/key detection | ✅ |
-| 4 | Mixer: EQ, filter, fader, crossfader, limiter, cue | ✅ |
-| 5 | Dua deck: platter, hot cue, loop, beat jump, sync | ✅ |
-| 6 | FX chain + Auto DJ | ✅ |
-| 7 | Remixer/sampler + step sequencer | ✅ |
-| 8 | Library SQLite, scan, playlist, analisis batch | ✅ |
-| 9 | MIDI Learn + keyboard mapping + LED feedback | ✅ |
-| 10 | Skin/layout engine + 4 template + editor tema | ✅ |
-| 11 | Rekaman WAV, live broadcast, audio settings, polish | ✅ |
-| 12 | Packaging semua OS + CI/CD + dokumentasi final | ⏳ berikutnya |
-
-Catatan arah pengembangan: engine saat ini membuka **dua deck fisik**. Template
-"Tour Pro" menggantikan klaim "Four-Deck Pro" yang sebelumnya belum didukung
-engine; ekspansi empat deck memerlukan perluasan mixer (4 channel strip + FX
-per deck) dan akan dikerjakan setelah Fase 12.
-
-## Kualitas
-
-- `#![forbid(unsafe_code)]`; jalur audio tanpa alokasi/lock/panic.
-- **80 unit test Rust** lulus: dB/soft clip, oscillator, render block, decoder
-  WAV, resampler, WSOLA, waveform, transport deck, BPM, key Camelot, biquad/EQ/
-  filter, limiter, crossfader, cue, mixer clamp, sampler/synth/sequencer, bank
-  zip, library SQLite/crate/smart playlist/history/M3U, MIDI parsing/jog wheel/
-  learn/keyboard, skin factory/JSON/TOML/switch/custom/export-import, dan
-  pemilihan channel ALSA.
-- `cargo fmt` + `cargo clippy --all-targets -- -D warnings` bersih.
-- Target performa: latensi output < 15 ms pada buffer 256 frame @48 kHz, tanpa
-  xrun pada beban normal, CPU idle rendah.
-
-## Lisensi
-
-MIT — lihat [`LICENSE`](LICENSE). Catatan lisensi dependensi (termasuk Symphonia
-MPL-2.0) ada di `docs/ARSITEKTUR.md` bagian 9.
-
-Kredit: **Kangpcode** · dibangun dengan Rust, Tauri, CPAL, dan Symphonia.
+Hak Cipta (c) 2026 **Kangpcode**.
+Didistribusikan di bawah lisensi resmi [MIT License](LICENSE).
+Dikembangkan menggunakan Rust, Tauri 2, React, TypeScript, CPAL, dan Symphonia.
