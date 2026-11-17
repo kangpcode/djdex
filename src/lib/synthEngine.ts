@@ -132,19 +132,31 @@ export const MUSICAL_SCALES: ScaleDefinition[] = [
   },
 ];
 
+export interface TrackConfig {
+  drumSound?: DrumType;
+  instrument?: InstrumentType;
+  volume?: number; // 0..1.5
+  muted?: boolean;
+  solo?: boolean;
+}
+
+export type DrumTrackKey = "kick" | "snare" | "clap" | "hihat_closed" | "hihat_open" | "percussion";
+export type AllTrackKey = DrumTrackKey | "bass" | "melody";
+
 export interface BeatPattern {
   name: string;
   bpm: number;
   swing: number; // 0..0.75
   stepCount: number; // 8, 12, 13, 14, 16, 24, 32
   instrument: InstrumentType;
+  trackSettings?: Partial<Record<AllTrackKey, TrackConfig>>;
   tracks: {
     kick: boolean[];
     snare: boolean[];
     clap: boolean[];
     hihat_closed: boolean[];
     hihat_open: boolean[];
-    percussion: boolean[]; // Kendang, Taiko, Conga, Tom
+    percussion: boolean[]; // Kendang, Taiko, Conga, Tom, Goong, Angklung
     bass: Array<{ active: boolean; note: number }>;
     melody: Array<{ active: boolean; note: number }>;
   };
@@ -302,7 +314,7 @@ class SynthAudioEngine {
     }
   }
 
-  public noteOn(midiNote: number, velocity = 0.9, instrument: InstrumentType = "piano") {
+  public noteOn(midiNote: number, velocity = 0.9, instrument: InstrumentType = "piano", autoOffMs?: number) {
     const ctx = this.ensureContext();
     const dest = this.waveshaperNode ?? ctx.destination;
 
@@ -628,7 +640,7 @@ class SynthAudioEngine {
       }
     }
 
-    this.activeVoices.set(midiNote, {
+    const voiceObj = {
       stop: () => {
         const stopTime = ctx.currentTime + 0.08;
         try {
@@ -639,7 +651,17 @@ class SynthAudioEngine {
           });
         } catch { /* ignore */ }
       },
-    });
+    };
+
+    this.activeVoices.set(midiNote, voiceObj);
+
+    if (autoOffMs && autoOffMs > 0) {
+      window.setTimeout(() => {
+        if (this.activeVoices.get(midiNote) === voiceObj) {
+          this.noteOff(midiNote);
+        }
+      }, autoOffMs);
+    }
   }
 
   public noteOff(midiNote: number) {
@@ -1066,10 +1088,18 @@ class SynthAudioEngine {
     const secondsPerBeat = 60 / pattern.bpm;
     const stepDuration = secondsPerBeat / 4;
     const totalSteps = (pattern.stepCount || 16) * bars;
-    const totalDuration = totalSteps * stepDuration + 0.5;
+    const totalDuration = totalSteps * stepDuration + 1.0;
 
     const offlineCtx = new OfflineAudioContext(2, Math.floor(sampleRate * totalDuration), sampleRate);
     const stepLen = pattern.stepCount || 16;
+    const ts = pattern.trackSettings ?? {};
+
+    const anySolo = Object.values(ts).some((cfg) => cfg?.solo);
+    const isAudible = (key: AllTrackKey) => {
+      const cfg = ts[key];
+      if (anySolo) return Boolean(cfg?.solo);
+      return !cfg?.muted;
+    };
 
     for (let s = 0; s < totalSteps; s++) {
       const stepIdx = s % stepLen;
@@ -1079,23 +1109,75 @@ class SynthAudioEngine {
         stepTime += stepDuration * pattern.swing * 0.6;
       }
 
-      if (pattern.tracks.kick[stepIdx]) this.renderDrumOffline(offlineCtx, "kick", stepTime);
-      if (pattern.tracks.snare[stepIdx]) this.renderDrumOffline(offlineCtx, "snare", stepTime);
-      if (pattern.tracks.clap[stepIdx]) this.renderDrumOffline(offlineCtx, "clap", stepTime);
-      if (pattern.tracks.hihat_closed[stepIdx]) this.renderDrumOffline(offlineCtx, "hihat_closed", stepTime);
-      if (pattern.tracks.hihat_open[stepIdx]) this.renderDrumOffline(offlineCtx, "hihat_open", stepTime);
-      if (pattern.tracks.percussion && pattern.tracks.percussion[stepIdx]) {
-        this.renderDrumOffline(offlineCtx, "kendang_tung", stepTime);
+      if (pattern.tracks.kick[stepIdx] && isAudible("kick")) {
+        this.renderDrumOffline(
+          offlineCtx,
+          ts.kick?.drumSound ?? "kick",
+          stepTime,
+          ts.kick?.volume ?? 0.95
+        );
+      }
+      if (pattern.tracks.snare[stepIdx] && isAudible("snare")) {
+        this.renderDrumOffline(
+          offlineCtx,
+          ts.snare?.drumSound ?? "snare",
+          stepTime,
+          ts.snare?.volume ?? 0.9
+        );
+      }
+      if (pattern.tracks.clap[stepIdx] && isAudible("clap")) {
+        this.renderDrumOffline(
+          offlineCtx,
+          ts.clap?.drumSound ?? "clap",
+          stepTime,
+          ts.clap?.volume ?? 0.85
+        );
+      }
+      if (pattern.tracks.hihat_closed[stepIdx] && isAudible("hihat_closed")) {
+        this.renderDrumOffline(
+          offlineCtx,
+          ts.hihat_closed?.drumSound ?? "hihat_closed",
+          stepTime,
+          ts.hihat_closed?.volume ?? 0.75
+        );
+      }
+      if (pattern.tracks.hihat_open[stepIdx] && isAudible("hihat_open")) {
+        this.renderDrumOffline(
+          offlineCtx,
+          ts.hihat_open?.drumSound ?? "hihat_open",
+          stepTime,
+          ts.hihat_open?.volume ?? 0.8
+        );
+      }
+      if (pattern.tracks.percussion && pattern.tracks.percussion[stepIdx] && isAudible("percussion")) {
+        this.renderDrumOffline(
+          offlineCtx,
+          ts.percussion?.drumSound ?? "kendang_tung",
+          stepTime,
+          ts.percussion?.volume ?? 0.9
+        );
       }
 
       const bassStep = pattern.tracks.bass[stepIdx];
-      if (bassStep?.active) {
-        this.renderSynthOffline(offlineCtx, bassStep.note, "bass", stepTime);
+      if (bassStep?.active && isAudible("bass")) {
+        this.renderSynthOffline(
+          offlineCtx,
+          bassStep.note,
+          ts.bass?.instrument ?? "bass",
+          stepTime,
+          ts.bass?.volume ?? 0.9
+        );
       }
 
       const melStep = pattern.tracks.melody[stepIdx];
-      if (melStep?.active) {
-        this.renderSynthOffline(offlineCtx, melStep.note, pattern.instrument, stepTime);
+      if (melStep?.active && isAudible("melody")) {
+        this.renderSynthOffline(
+          offlineCtx,
+          melStep.note,
+          ts.melody?.instrument ?? pattern.instrument,
+          stepTime,
+          ts.melody?.volume ?? 0.9
+        );
       }
     }
 
@@ -1103,9 +1185,13 @@ class SynthAudioEngine {
     return audioBufferToWavBlob(renderedBuffer);
   }
 
-  private renderDrumOffline(ctx: BaseAudioContext, drum: DrumType, time: number) {
+  private renderDrumOffline(ctx: BaseAudioContext, drum: DrumType, time: number, vol = 1.0) {
+    const masterDrumGain = ctx.createGain();
+    masterDrumGain.gain.setValueAtTime(vol, time);
+    masterDrumGain.connect(ctx.destination);
+
     const gain = ctx.createGain();
-    gain.connect(ctx.destination);
+    gain.connect(masterDrumGain);
 
     if (drum === "kick") {
       const osc = ctx.createOscillator();
@@ -1257,11 +1343,16 @@ class SynthAudioEngine {
     ctx: BaseAudioContext,
     midiNote: number,
     instrument: InstrumentType,
-    time: number
+    time: number,
+    vol = 1.0
   ) {
     const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+    const masterSynthGain = ctx.createGain();
+    masterSynthGain.gain.setValueAtTime(vol, time);
+    masterSynthGain.connect(ctx.destination);
+
     const gain = ctx.createGain();
-    gain.connect(ctx.destination);
+    gain.connect(masterSynthGain);
 
     if (instrument === "angklung") {
       const osc1 = ctx.createOscillator();
