@@ -740,7 +740,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
       </div>
 
       {/* Bottom Transport Controls & Performance Pad Strip */}
-      <div className="mt-3 grid grid-cols-[140px_minmax(0,1fr)] gap-3 items-stretch">
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-[140px_minmax(0,1fr)] gap-3 items-stretch">
         {/* Left: Pioneer CDJ Large Circular Play & Cue Buttons */}
         <div className="flex flex-col items-center justify-between gap-3 p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md">
           <div className="flex items-center justify-center gap-2.5 w-full">

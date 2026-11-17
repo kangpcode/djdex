@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FL_STUDIO_PRESETS,
+  MUSICAL_SCALES,
   synthEngine,
   type BeatPattern,
+  type DrumType,
   type InstrumentType,
+  type ScaleDefinition,
 } from "../lib/synthEngine";
 import { useDeckAStore, useDeckBStore } from "../stores/deckStore";
 import { useSamplerStore } from "../stores/samplerStore";
@@ -19,25 +22,76 @@ import {
   IconStop,
 } from "./ui/Icons";
 
-const INSTRUMENT_OPTIONS: Array<{ id: InstrumentType; label: string; desc: string }> = [
-  { id: "piano", label: "Acoustic Grand Piano", desc: "Suara tuts piano akustik kaya resonansi dan hammer transient" },
-  { id: "rhodes", label: "Electric Piano (Rhodes)", desc: "Warm bell chime electric piano khas neo-soul & deep house" },
-  { id: "lead", label: "EDM Supersaw Lead", desc: "Detuned saw festival punchy khas Avicii & Martin Garrix" },
-  { id: "bass", label: "808 Sub Bass", desc: "Low-end 40-80 Hz punchy bassline untuk hip hop & tech house" },
-  { id: "organ", label: "Club House Organ", desc: "90s Korg M1 house organ klasik bernuansa garage / rave" },
-  { id: "pluck", label: "Pluck Synth", desc: "Percussive synth pluck pendek untuk progressive house" },
-  { id: "strings", label: "Ambient Synth Strings", desc: "Pad synth atmosferik dengan slow attack stereo" },
+const INSTRUMENT_OPTIONS: Array<{
+  id: InstrumentType;
+  label: string;
+  desc: string;
+  category: "Modern" | "Sunda" | "Jawa" | "Japan";
+}> = [
+  // Modern EDM & Studio
+  { id: "piano", label: "Acoustic Grand Piano", desc: "Suara tuts piano akustik kaya resonansi dan hammer transient", category: "Modern" },
+  { id: "rhodes", label: "Electric Piano (Rhodes)", desc: "Warm bell chime electric piano khas neo-soul & deep house", category: "Modern" },
+  { id: "lead", label: "EDM Supersaw Lead", desc: "Detuned saw festival punchy khas Avicii & Martin Garrix", category: "Modern" },
+  { id: "bass", label: "808 Sub Bass", desc: "Low-end 40-80 Hz punchy bassline untuk hip hop & tech house", category: "Modern" },
+  { id: "organ", label: "Club House Organ", desc: "90s Korg M1 house organ klasik bernuansa garage / rave", category: "Modern" },
+  { id: "pluck", label: "Pluck Synth", desc: "Percussive synth pluck pendek untuk progressive house", category: "Modern" },
+  { id: "strings", label: "Ambient Synth Strings", desc: "Pad synth atmosferik dengan slow attack stereo", category: "Modern" },
+
+  // Tradisional Sunda (Jawa Barat)
+  { id: "sundanese_suling", label: "Suling Sunda Degung (Bambu)", desc: "Tiupan bambu Sunda dengan microtonal vibrato & nafas syahdu", category: "Sunda" },
+  { id: "angklung", label: "Angklung Bambu Sunda", desc: "Resonansi tabung bambu ganda bergetar khas Jawa Barat", category: "Sunda" },
+
+  // Tradisional Jawa
+  { id: "gamelan_saron", label: "Gamelan Saron Demung (Jawa)", desc: "Wilahan perunggu tebal dengan overtone inharmonic berkilau", category: "Jawa" },
+  { id: "gamelan_gong", label: "Gong Ageng Jawa", desc: "Gong perunggu agung beresonansi panjang & shimmer beating 2.5Hz", category: "Jawa" },
+
+  // Tradisional Jepang
+  { id: "koto", label: "Koto Silk Zither (Jepang)", desc: "Petikan 13 senar sutra tradisional Jepang bernada syahdu", category: "Japan" },
+  { id: "shamisen", label: "Shamisen (Jepang)", desc: "Petikan senar 3 dawai Jepang punchy bachi strike", category: "Japan" },
 ];
 
-const CHORD_PRESETS: Array<{ name: string; notes: number[] }> = [
-  { name: "Am", notes: [57, 60, 64] },
-  { name: "F", notes: [53, 57, 60] },
-  { name: "C", notes: [60, 64, 67] },
-  { name: "G", notes: [55, 59, 62] },
-  { name: "Dm", notes: [50, 53, 57] },
-  { name: "Em", notes: [52, 55, 59] },
-  { name: "Bb", notes: [58, 62, 65] },
-  { name: "D", notes: [50, 54, 57] },
+const ETHNIC_PERCUSSION_OPTIONS: Array<{ id: DrumType; label: string; origin: string }> = [
+  { id: "kendang_tung", label: "Kendang Sunda (Tung High Slap)", origin: "Sunda" },
+  { id: "kendang_pak", label: "Kendang Sunda (Pak Sharp Rim)", origin: "Sunda" },
+  { id: "kendang_bem", label: "Kendang Sunda (Bem Deep Bass)", origin: "Sunda" },
+  { id: "kendang_dho", label: "Kendang Koplo Dho/Dut (Pitch Drop)", origin: "Jawa" },
+  { id: "taiko_heavy", label: "Taiko O-Daiko (Heavy Sub Punch)", origin: "Japan" },
+  { id: "taiko_rim", label: "Taiko Bachi Rim (Wood Rimshot)", origin: "Japan" },
+  { id: "tom", label: "Studio Low Tom", origin: "Modern" },
+  { id: "crash", label: "Crash Cymbal", origin: "Modern" },
+];
+
+const STEP_LENGTH_PRESETS = [
+  { steps: 16, label: "16 Steps", sub: "4/4 Standar" },
+  { steps: 13, label: "13 Steps", sub: "Polyrhythm Odd" },
+  { steps: 12, label: "12 Steps", sub: "3/4 Triplet" },
+  { steps: 8, label: "8 Steps", sub: "Short Loop" },
+  { steps: 14, label: "14 Steps", sub: "7/8 Asymmetric" },
+  { steps: 24, label: "24 Steps", sub: "6/8 Compound" },
+  { steps: 32, label: "32 Steps", sub: "2-Bar Full" },
+];
+
+const CHORD_PRESETS: Array<{ name: string; notes: number[]; category: string }> = [
+  // Pop / EDM Modern
+  { name: "Am", notes: [57, 60, 64], category: "Modern" },
+  { name: "F", notes: [53, 57, 60], category: "Modern" },
+  { name: "C", notes: [60, 64, 67], category: "Modern" },
+  { name: "G", notes: [55, 59, 62], category: "Modern" },
+  { name: "Dm", notes: [50, 53, 57], category: "Modern" },
+  { name: "Em", notes: [52, 55, 59], category: "Modern" },
+
+  // Sunda Pelog Degung & Salendro
+  { name: "Degung Da-Mi", notes: [60, 61, 67], category: "Sunda" },
+  { name: "Degung Na-La", notes: [65, 68, 72], category: "Sunda" },
+  { name: "Salendro Barang", notes: [60, 64, 67], category: "Sunda" },
+
+  // Jawa Slendro & Pelog
+  { name: "Slendro Triad", notes: [60, 62, 67], category: "Jawa" },
+  { name: "Pelog Nem", notes: [60, 61, 68], category: "Jawa" },
+
+  // Japan Hirajoshi & Insen
+  { name: "Hirajoshi Koto", notes: [57, 59, 60, 64], category: "Japan" },
+  { name: "Insen Kabuki", notes: [57, 58, 62, 64], category: "Japan" },
 ];
 
 // Peta keyboard komputer (QWERTY) ke nada piano (2 oktaf)
@@ -69,6 +123,11 @@ export function FlStudioStudio() {
   const [baseOctave, setBaseOctave] = useState<number>(4); // Oktaf 4 (C4 = 60)
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
 
+  // Tangga Nada / Scales State
+  const [selectedScaleId, setSelectedScaleId] = useState<string>("chromatic");
+  const [scaleRoot, setScaleRoot] = useState<number>(0); // 0 = C, 1 = C#, ...
+  const [scaleLock, setScaleLock] = useState<boolean>(false); // Quantize input ke skala
+
   // Sequencer State
   const [pattern, setPattern] = useState<BeatPattern>(FL_STUDIO_PRESETS[0]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -76,6 +135,7 @@ export function FlStudioStudio() {
   const [bpm, setBpm] = useState<number>(pattern.bpm);
   const [selectedMelodyNote, setSelectedMelodyNote] = useState<number>(60);
   const [selectedBassNote, setSelectedBassNote] = useState<number>(36);
+  const [selectedPercType, setSelectedPercType] = useState<DrumType>("kendang_tung");
   const [targetPad, setTargetPad] = useState<number>(0);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
@@ -98,6 +158,62 @@ export function FlStudioStudio() {
   const loadDeckB = useDeckBStore((s) => s.load);
   const updatePad = useSamplerStore((s) => s.updatePad);
 
+  const activeScale: ScaleDefinition =
+    MUSICAL_SCALES.find((sc) => sc.id === selectedScaleId) ?? MUSICAL_SCALES[0];
+
+  // Helper untuk mengecek apakah not tertentu termasuk dalam skala aktif
+  const isNoteInScale = (midiNote: number): boolean => {
+    if (activeScale.id === "chromatic") return true;
+    const semitone = (midiNote - scaleRoot + 1200) % 12;
+    return activeScale.intervals.includes(semitone);
+  };
+
+  // Helper untuk mengkuantisasi nada ke tangga nada (Scale Lock)
+  const quantizeToScale = (midiNote: number): number => {
+    if (activeScale.id === "chromatic" || !scaleLock) return midiNote;
+    const semitone = (midiNote - scaleRoot + 1200) % 12;
+    if (activeScale.intervals.includes(semitone)) return midiNote;
+
+    // Cari interval terdekat
+    let closestDiff = 999;
+    let closestInterval = 0;
+    for (const iv of activeScale.intervals) {
+      const diff = Math.abs(iv - semitone);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closestInterval = iv;
+      }
+    }
+    const octaveBase = Math.floor(midiNote / 12) * 12;
+    return octaveBase + scaleRoot + closestInterval;
+  };
+
+  // Label derajat nada etnis
+  const getScaleDegreeLabel = (midiNote: number): string | null => {
+    if (activeScale.id === "chromatic") return null;
+    const semitone = (midiNote - scaleRoot + 1200) % 12;
+    const idx = activeScale.intervals.indexOf(semitone);
+    if (idx === -1) return null;
+
+    if (activeScale.id === "sunda_pelog_degung") {
+      const degungNames = ["Da", "Mi", "Na", "Ti", "La"];
+      return degungNames[idx] ?? `${idx + 1}`;
+    }
+    if (activeScale.id === "sunda_salendro") {
+      const salendroNames = ["Barang", "Kenong", "Panelu", "Gulu", "Pelite"];
+      return salendroNames[idx] ?? `${idx + 1}`;
+    }
+    if (activeScale.id === "jawa_slendro" || activeScale.id === "jawa_pelog") {
+      const jawaDegrees = ["1 (Ji)", "2 (Ro)", "3 (Lu)", "5 (Mo)", "6 (Nem)", "7 (Pel)"];
+      return jawaDegrees[idx] ?? `${idx + 1}`;
+    }
+    if (activeScale.id === "japan_hirajoshi" || activeScale.id === "japan_insen") {
+      const roman = ["I", "II", "III", "IV", "V"];
+      return roman[idx] ?? `${idx + 1}`;
+    }
+    return `${idx + 1}`;
+  };
+
   // Sinkronisasi FX saat parameter berubah
   useEffect(() => {
     synthEngine.updateFx({
@@ -117,7 +233,8 @@ export function FlStudioStudio() {
       const key = e.key.toLowerCase();
       const semitone = KEYBOARD_MAP[key];
       if (semitone !== undefined) {
-        const midi = baseOctave * 12 + semitone;
+        let midi = baseOctave * 12 + semitone;
+        if (scaleLock) midi = quantizeToScale(midi);
         if (!activeNotes.has(midi)) {
           synthEngine.noteOn(midi, 0.9, instrument);
           setActiveNotes((prev) => new Set(prev).add(midi));
@@ -131,7 +248,8 @@ export function FlStudioStudio() {
       const key = e.key.toLowerCase();
       const semitone = KEYBOARD_MAP[key];
       if (semitone !== undefined) {
-        const midi = baseOctave * 12 + semitone;
+        let midi = baseOctave * 12 + semitone;
+        if (scaleLock) midi = quantizeToScale(midi);
         synthEngine.noteOff(midi);
         setActiveNotes((prev) => {
           const next = new Set(prev);
@@ -147,7 +265,7 @@ export function FlStudioStudio() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [baseOctave, instrument, activeNotes]);
+  }, [baseOctave, instrument, activeNotes, scaleLock, selectedScaleId, scaleRoot]);
 
   // Sequencer Web Audio Clock Loop
   useEffect(() => {
@@ -159,7 +277,9 @@ export function FlStudioStudio() {
       return;
     }
 
+    const stepLen = pattern.stepCount || 16;
     const stepIntervalMs = (60 / bpm / 4) * 1000;
+
     seqTimerRef.current = window.setInterval(() => {
       const s = stepRef.current;
       setCurrentStep(s);
@@ -170,6 +290,9 @@ export function FlStudioStudio() {
       if (pattern.tracks.clap[s]) synthEngine.playDrum("clap", 0.85);
       if (pattern.tracks.hihat_closed[s]) synthEngine.playDrum("hihat_closed", 0.75);
       if (pattern.tracks.hihat_open[s]) synthEngine.playDrum("hihat_open", 0.8);
+      if (pattern.tracks.percussion && pattern.tracks.percussion[s]) {
+        synthEngine.playDrum(selectedPercType, 0.9);
+      }
 
       // Trigger Bass
       const bass = pattern.tracks.bass[s];
@@ -183,7 +306,7 @@ export function FlStudioStudio() {
         synthEngine.noteOn(mel.note, 0.9, pattern.instrument);
       }
 
-      stepRef.current = (s + 1) % 16;
+      stepRef.current = (s + 1) % stepLen;
     }, stepIntervalMs);
 
     return () => {
@@ -192,14 +315,16 @@ export function FlStudioStudio() {
         seqTimerRef.current = null;
       }
     };
-  }, [isPlaying, bpm, pattern]);
+  }, [isPlaying, bpm, pattern, selectedPercType]);
 
-  const handleNoteDown = (midi: number) => {
+  const handleNoteDown = (midiInput: number) => {
+    const midi = scaleLock ? quantizeToScale(midiInput) : midiInput;
     synthEngine.noteOn(midi, 0.9, instrument);
     setActiveNotes((prev) => new Set(prev).add(midi));
   };
 
-  const handleNoteUp = (midi: number) => {
+  const handleNoteUp = (midiInput: number) => {
+    const midi = scaleLock ? quantizeToScale(midiInput) : midiInput;
     synthEngine.noteOff(midi);
     setActiveNotes((prev) => {
       const next = new Set(prev);
@@ -215,9 +340,49 @@ export function FlStudioStudio() {
     }, 900);
   };
 
+  // Mengubah Step Length (16, 13, 12, 8, dsb.)
+  const handleSetStepLength = (newCount: number) => {
+    setPattern((prev) => {
+      const resizeBools = (arr?: boolean[]): boolean[] => {
+        const base = arr ? [...arr] : [];
+        while (base.length < newCount) base.push(false);
+        return base.slice(0, newCount);
+      };
+      const resizeNotes = (
+        arr: Array<{ active: boolean; note: number }>,
+        defNote: number,
+      ): Array<{ active: boolean; note: number }> => {
+        const base = [...arr];
+        while (base.length < newCount) base.push({ active: false, note: defNote });
+        return base.slice(0, newCount);
+      };
+
+      return {
+        ...prev,
+        stepCount: newCount,
+        tracks: {
+          kick: resizeBools(prev.tracks.kick),
+          snare: resizeBools(prev.tracks.snare),
+          clap: resizeBools(prev.tracks.clap),
+          hihat_closed: resizeBools(prev.tracks.hihat_closed),
+          hihat_open: resizeBools(prev.tracks.hihat_open),
+          percussion: resizeBools(prev.tracks.percussion),
+          bass: resizeNotes(prev.tracks.bass, 36),
+          melody: resizeNotes(prev.tracks.melody, 60),
+        },
+      };
+    });
+    if (stepRef.current >= newCount) {
+      stepRef.current = 0;
+      setCurrentStep(0);
+    }
+  };
+
   const toggleDrumStep = (track: keyof BeatPattern["tracks"], step: number) => {
     setPattern((prev) => {
-      const trackArray = [...(prev.tracks[track] as boolean[])];
+      const existing = (prev.tracks[track] as boolean[] | undefined) ?? [];
+      const trackArray = [...existing];
+      while (trackArray.length <= step) trackArray.push(false);
       trackArray[step] = !trackArray[step];
       return {
         ...prev,
@@ -232,6 +397,7 @@ export function FlStudioStudio() {
   const toggleMelodyStep = (step: number) => {
     setPattern((prev) => {
       const mel = [...prev.tracks.melody];
+      while (mel.length <= step) mel.push({ active: false, note: selectedMelodyNote });
       const current = mel[step];
       mel[step] = {
         active: !current?.active,
@@ -247,6 +413,7 @@ export function FlStudioStudio() {
   const toggleBassStep = (step: number) => {
     setPattern((prev) => {
       const b = [...prev.tracks.bass];
+      while (b.length <= step) b.push({ active: false, note: selectedBassNote });
       const current = b[step];
       b[step] = {
         active: !current?.active,
@@ -273,7 +440,6 @@ export function FlStudioStudio() {
         a.click();
         setExportNotice("File WAV berhasil diunduh ke komputer!");
       } else if (target === "pad") {
-        // Konfigurasi mode loop pada pad tujuan
         void updatePad(targetPad, {
           name: pattern.name.split(" ")[0] + " Beat",
           mode: "loop",
@@ -296,6 +462,8 @@ export function FlStudioStudio() {
     }
   };
 
+  const effectiveStepCount = pattern.stepCount || 16;
+
   return (
     <div className="flex flex-col gap-4 p-4 rounded-xl bg-[#070b14] border border-[#1a2538] shadow-2xl">
       {/* Header Studio Toolbar */}
@@ -304,11 +472,14 @@ export function FlStudioStudio() {
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse" />
             <h2 className="font-display text-sm font-black tracking-widest text-slate-100 uppercase">
-              FL Studio Beat Maker &amp; Virtual Piano Synthesizer
+              FL Studio Beat Maker &amp; Virtual Synth Studio
             </h2>
           </div>
           <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-[#101827] border border-[#1f2d42] text-fuchsia-400 font-bold">
             64-Bit Polyphonic DSP
+          </span>
+          <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold hidden sm:inline">
+            Ethnic Scales &amp; Multi-Step
           </span>
         </div>
 
@@ -337,7 +508,7 @@ export function FlStudioStudio() {
             }`}
           >
             <IconDrum className="w-3.5 h-3.5" />
-            Step Sequencer Beat Maker
+            Step Sequencer ({effectiveStepCount} Steps)
           </button>
 
           <button
@@ -368,9 +539,9 @@ export function FlStudioStudio() {
       {/* TAB 1: VIRTUAL PIANO KEYBOARD & MULTI-INSTRUMENT */}
       {subTab === "piano" && (
         <div className="flex flex-col gap-4">
-          {/* Controls Bar: Instrument Selector & Octave */}
+          {/* Controls Bar 1: Instrument Selector & Octave */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#090e18] border border-[#1c293c]">
-            {/* Instrument Dropdown */}
+            {/* Instrument Dropdown dengan Kategori Etnis & Modern */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
                 INSTRUMEN:
@@ -380,11 +551,34 @@ export function FlStudioStudio() {
                 onChange={(e) => setInstrument(e.target.value as InstrumentType)}
                 className="bg-[#05080f] border border-[#233348] text-slate-100 text-xs font-bold rounded px-3 py-1.5 focus:border-fuchsia-400 focus:outline-none"
               >
-                {INSTRUMENT_OPTIONS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
+                <optgroup label="Modern EDM &amp; Studio">
+                  {INSTRUMENT_OPTIONS.filter((o) => o.category === "Modern").map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Tradisional Sunda (Jawa Barat)">
+                  {INSTRUMENT_OPTIONS.filter((o) => o.category === "Sunda").map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Tradisional Jawa">
+                  {INSTRUMENT_OPTIONS.filter((o) => o.category === "Jawa").map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Tradisional Jepang">
+                  {INSTRUMENT_OPTIONS.filter((o) => o.category === "Japan").map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -409,23 +603,86 @@ export function FlStudioStudio() {
               ))}
             </div>
 
-            {/* Quick Chord Assistant Bar */}
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider mr-1">
-                CHORDS:
-              </span>
-              {CHORD_PRESETS.map((ch) => (
-                <button
-                  key={ch.name}
-                  type="button"
-                  onClick={() => handlePlayChord(ch.notes)}
-                  className="px-2 py-1 text-[10px] font-mono font-bold rounded bg-[#0c121e] border border-[#202d40] text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 active:scale-95 transition"
-                  title={`Mainkan Chord ${ch.name}`}
-                >
-                  {ch.name}
-                </button>
-              ))}
+            {/* Scale Lock Toggle Button */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setScaleLock(!scaleLock)}
+                className={`px-3 py-1 text-xs font-mono font-bold rounded border transition-all ${
+                  scaleLock
+                    ? "bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                    : "bg-[#0c121e] border-[#1e2a3c] text-slate-400 hover:text-slate-200"
+                }`}
+                title="Kunci tuts keyboard komputer dan klik agar otomatis quantize ke tangga nada tanpa fals"
+              >
+                {scaleLock ? "✓ SCALE LOCK (AKTIF)" : "SCALE LOCK: OFF"}
+              </button>
             </div>
+          </div>
+
+          {/* Controls Bar 2: Musical Scales (Sunda, Jawa, Japan, Pentatonic) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#090e18] border border-[#1c293c]">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-mono font-bold text-cyan-300 uppercase tracking-wider">
+                TANGGA NADA / SKALA:
+              </span>
+              <select
+                value={selectedScaleId}
+                onChange={(e) => setSelectedScaleId(e.target.value)}
+                className="bg-[#05080f] border border-[#233348] text-cyan-300 text-xs font-bold rounded px-3 py-1.5 focus:border-cyan-400 focus:outline-none"
+              >
+                {MUSICAL_SCALES.map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    [{sc.region}] {sc.name}
+                  </option>
+                ))}
+              </select>
+
+              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider ml-2">
+                NADA DASAR (ROOT):
+              </span>
+              <select
+                value={scaleRoot}
+                onChange={(e) => setScaleRoot(Number(e.target.value))}
+                className="bg-[#05080f] border border-[#233348] text-slate-200 text-xs font-bold rounded px-2 py-1.5 focus:border-cyan-400 focus:outline-none"
+              >
+                {NOTE_NAMES.map((n, idx) => (
+                  <option key={n} value={idx}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="text-[10.5px] font-mono text-slate-400 max-w-sm truncate" title={activeScale.description}>
+              {activeScale.description}
+            </p>
+          </div>
+
+          {/* Quick Chords Bar */}
+          <div className="flex items-center gap-1.5 p-2 rounded-xl bg-[#060912] border border-[#162130] flex-wrap">
+            <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider mr-1">
+              CHORD PRESETS:
+            </span>
+            {CHORD_PRESETS.map((ch) => (
+              <button
+                key={ch.name}
+                type="button"
+                onClick={() => handlePlayChord(ch.notes)}
+                className={`px-2 py-1 text-[10px] font-mono font-bold rounded border active:scale-95 transition ${
+                  ch.category === "Sunda"
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25"
+                    : ch.category === "Jawa"
+                    ? "bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25"
+                    : ch.category === "Japan"
+                    ? "bg-rose-500/15 border-rose-500/40 text-rose-300 hover:bg-rose-500/25"
+                    : "bg-[#0c121e] border-[#202d40] text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400"
+                }`}
+                title={`Mainkan Chord ${ch.name} (${ch.category})`}
+              >
+                {ch.name}
+              </button>
+            ))}
           </div>
 
           {/* SKEUOMORPHIC 3D PIANO KEYBOARD (2 FULL OCTAVES: 24 KEYS) */}
@@ -433,13 +690,14 @@ export function FlStudioStudio() {
             <div className="relative flex items-start">
               {/* White Keys */}
               {Array.from({ length: 14 }).map((_, wIdx) => {
-                // Konversi urutan tuts putih ke MIDI note
                 const whiteIntervals = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23];
                 const semitone = whiteIntervals[wIdx];
                 const midiNote = baseOctave * 12 + semitone;
                 const isPressed = activeNotes.has(midiNote);
                 const noteName = NOTE_NAMES[midiNote % 12];
                 const octNum = Math.floor(midiNote / 12) - 1;
+                const inScale = isNoteInScale(midiNote);
+                const degreeLabel = inScale ? getScaleDegreeLabel(midiNote) : null;
 
                 return (
                   <button
@@ -448,12 +706,21 @@ export function FlStudioStudio() {
                     onPointerDown={() => handleNoteDown(midiNote)}
                     onPointerUp={() => handleNoteUp(midiNote)}
                     onPointerLeave={() => handleNoteUp(midiNote)}
-                    className={`relative w-12 sm:w-14 h-48 rounded-b-md border border-[#182334] flex flex-col justify-end items-center pb-2 transition-all ${
+                    className={`relative w-12 sm:w-14 h-48 rounded-b-md border flex flex-col justify-end items-center pb-2 transition-all ${
                       isPressed
                         ? "bg-fuchsia-200 border-fuchsia-500 shadow-[inset_0_4px_8px_rgba(0,0,0,0.4),0_0_12px_rgba(217,70,239,0.6)] translate-y-1"
-                        : "bg-gradient-to-b from-[#e2e8f0] via-[#cbd5e1] to-[#f8fafc] shadow-[inset_0_1px_0_#fff,0_6px_8px_rgba(0,0,0,0.6)] hover:bg-slate-100"
+                        : inScale && activeScale.id !== "chromatic"
+                        ? "bg-gradient-to-b from-[#f1f5f9] via-[#e2e8f0] to-[#ecfeff] border-cyan-400/80 shadow-[inset_0_1px_0_#fff,0_0_10px_rgba(6,182,212,0.25)] hover:bg-slate-100"
+                        : !inScale && activeScale.id !== "chromatic"
+                        ? "bg-gradient-to-b from-[#94a3b8] via-[#64748b] to-[#475569] border-[#334155] opacity-60 hover:opacity-80"
+                        : "bg-gradient-to-b from-[#e2e8f0] via-[#cbd5e1] to-[#f8fafc] border-[#182334] shadow-[inset_0_1px_0_#fff,0_6px_8px_rgba(0,0,0,0.6)] hover:bg-slate-100"
                     }`}
                   >
+                    {degreeLabel && (
+                      <span className="font-mono text-[8px] font-black text-cyan-700 bg-cyan-100 px-1 py-0.5 rounded shadow-sm mb-1">
+                        {degreeLabel}
+                      </span>
+                    )}
                     <span className="font-mono text-[9px] font-black text-slate-800">
                       {noteName}{octNum}
                     </span>
@@ -462,7 +729,6 @@ export function FlStudioStudio() {
               })}
 
               {/* Black Keys (Ebony) */}
-              {/* Posisi tuts hitam di atas tuts putih: C#, D#, F#, G#, A# pada 2 oktaf */}
               {[
                 { offset: 1, midi: baseOctave * 12 + 1 }, // C#
                 { offset: 2, midi: baseOctave * 12 + 3 }, // D#
@@ -477,6 +743,8 @@ export function FlStudioStudio() {
               ].map(({ offset, midi }) => {
                 const isPressed = activeNotes.has(midi);
                 const noteName = NOTE_NAMES[midi % 12];
+                const inScale = isNoteInScale(midi);
+                const degreeLabel = inScale ? getScaleDegreeLabel(midi) : null;
 
                 return (
                   <button
@@ -485,15 +753,24 @@ export function FlStudioStudio() {
                     onPointerDown={() => handleNoteDown(midi)}
                     onPointerUp={() => handleNoteUp(midi)}
                     onPointerLeave={() => handleNoteUp(midi)}
-                    className={`absolute z-10 w-7 sm:w-8 h-28 rounded-b border border-black flex flex-col justify-end items-center pb-1.5 transition-all ${
+                    className={`absolute z-10 w-7 sm:w-8 h-28 rounded-b border flex flex-col justify-end items-center pb-1.5 transition-all ${
                       isPressed
                         ? "bg-fuchsia-700 border-fuchsia-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6),0_0_15px_rgba(217,70,239,0.8)] translate-y-1"
-                        : "bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#020617] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),0_6px_10px_rgba(0,0,0,0.9)] hover:bg-[#111827]"
+                        : inScale && activeScale.id !== "chromatic"
+                        ? "bg-gradient-to-b from-[#164e63] via-[#0e7490] to-[#042f2e] border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+                        : !inScale && activeScale.id !== "chromatic"
+                        ? "bg-gradient-to-b from-[#1e293b] to-[#0f172a] border-[#334155] opacity-40 hover:opacity-60"
+                        : "bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#020617] border-black shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),0_6px_10px_rgba(0,0,0,0.9)] hover:bg-[#111827]"
                     }`}
                     style={{
                       left: `calc(${offset} * 3rem - 0.9rem)`,
                     }}
                   >
+                    {degreeLabel && (
+                      <span className="font-mono text-[7px] font-black text-cyan-200 bg-cyan-900/80 px-0.5 rounded mb-0.5">
+                        {degreeLabel}
+                      </span>
+                    )}
                     <span className="font-mono text-[8px] font-bold text-slate-300">
                       {noteName}
                     </span>
@@ -504,17 +781,17 @@ export function FlStudioStudio() {
           </div>
 
           <p className="text-center font-mono text-[10.5px] text-slate-400">
-            Tip: Kamu bisa memainkan nada langsung dari keyboard fisik PC: <span className="text-cyan-300 font-bold">A, S, D, F, G, H, J, K</span> (Tuts Putih) dan <span className="text-pink-300 font-bold">W, E, T, Y, U, O</span> (Tuts Hitam).
+            Tip: Tuts bersinar biru/tosca adalah not selaras dalam skala <span className="text-cyan-300 font-bold">{activeScale.name}</span>. Mainkan dari keyboard PC: <span className="text-cyan-300 font-bold">A, S, D, F, G, H, J, K</span> (Putih) dan <span className="text-pink-300 font-bold">W, E, T, Y, U, O</span> (Hitam).
           </p>
         </div>
       )}
 
-      {/* TAB 2: FL STUDIO STEP SEQUENCER & BEAT MAKER (BUAT MUSIK DARI NOL) */}
+      {/* TAB 2: FL STUDIO STEP SEQUENCER & BEAT MAKER (16, 13, 12, 8, 24, 32 STEPS) */}
       {subTab === "sequencer" && (
         <div className="flex flex-col gap-3">
-          {/* Top Bar: Preset Selector, Play/Stop, BPM, Swing */}
+          {/* Top Bar: Play/Stop, Presets, Tempo, Swing */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#080d17] border border-[#1c293c]">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setIsPlaying(!isPlaying)}
@@ -537,6 +814,8 @@ export function FlStudioStudio() {
                     if (found) {
                       setPattern(found);
                       setBpm(found.bpm);
+                      stepRef.current = 0;
+                      setCurrentStep(0);
                     }
                   }}
                   className="bg-[#0c121e] border border-[#223146] text-slate-200 text-xs font-bold rounded px-2.5 py-1.5 focus:border-cyan-400 focus:outline-none"
@@ -551,7 +830,7 @@ export function FlStudioStudio() {
             </div>
 
             {/* BPM & Swing Controls */}
-            <div className="flex items-center gap-4 text-xs font-mono">
+            <div className="flex items-center gap-4 text-xs font-mono flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-400 font-bold uppercase">TEMPO:</span>
                 <input
@@ -581,13 +860,45 @@ export function FlStudioStudio() {
             </div>
           </div>
 
-          {/* 16-Step Grid Tracks Matrix (FL Studio 4-Group Blocks) */}
-          <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#05080f] border border-[#162130]">
+          {/* Step Length Selector Strip (16, 13, 12, 8, 14, 24, 32 steps) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-[#080d17] border border-[#1b273a]">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-mono font-bold text-cyan-300 uppercase tracking-wider mr-1">
+                PANJANG STEP ({effectiveStepCount} STEPS):
+              </span>
+              {STEP_LENGTH_PRESETS.map((item) => (
+                <button
+                  key={item.steps}
+                  type="button"
+                  onClick={() => handleSetStepLength(item.steps)}
+                  className={`px-2.5 py-1 text-[10.5px] font-mono font-bold rounded border transition-all ${
+                    effectiveStepCount === item.steps
+                      ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                      : "bg-[#0b101a] border-[#1c2738] text-slate-400 hover:text-slate-200"
+                  }`}
+                  title={`${item.label} - ${item.sub}`}
+                >
+                  <span>{item.label}</span>
+                  <span className="ml-1 text-[8px] opacity-70 hidden sm:inline">({item.sub})</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="text-[10.5px] font-mono text-slate-400">
+              Pattern: <span className="text-emerald-300 font-bold">{effectiveStepCount} Steps</span> | Clock: <span className="text-cyan-300 font-bold">{currentStep + 1}</span>
+            </div>
+          </div>
+
+          {/* Dynamic Grid Tracks Matrix (FL Studio Style) */}
+          <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#05080f] border border-[#162130] overflow-x-auto select-none">
             {/* Step Indicators Header */}
-            <div className="flex items-center gap-2 pb-1 border-b border-[#141c28]">
-              <span className="w-28 text-[9px] font-mono font-bold text-slate-400 uppercase">TRACKS</span>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {Array.from({ length: 16 }).map((_, step) => (
+            <div className="flex items-center gap-2 pb-1 border-b border-[#141c28] min-w-[680px]">
+              <span className="w-32 text-[9px] font-mono font-bold text-slate-400 uppercase">TRACKS ({effectiveStepCount})</span>
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => (
                   <span
                     key={step}
                     className={`text-center font-mono text-[9px] font-bold ${
@@ -605,16 +916,20 @@ export function FlStudioStudio() {
             </div>
 
             {/* 1. Kick Drum Track */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[680px]">
               <button
                 type="button"
                 onClick={() => synthEngine.playDrum("kick")}
-                className="w-28 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-cyan-300 hover:border-cyan-400 truncate"
+                className="w-32 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-cyan-300 hover:border-cyan-400 truncate"
               >
                 1. KICK DRUM
               </button>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.kick.map((active, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const active = pattern.tracks.kick[step] ?? false;
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -638,16 +953,20 @@ export function FlStudioStudio() {
             </div>
 
             {/* 2. Snare Drum Track */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[680px]">
               <button
                 type="button"
                 onClick={() => synthEngine.playDrum("snare")}
-                className="w-28 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-fuchsia-300 hover:border-fuchsia-400 truncate"
+                className="w-32 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-fuchsia-300 hover:border-fuchsia-400 truncate"
               >
                 2. SNARE
               </button>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.snare.map((active, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const active = pattern.tracks.snare[step] ?? false;
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -671,16 +990,20 @@ export function FlStudioStudio() {
             </div>
 
             {/* 3. Hand Clap Track */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[680px]">
               <button
                 type="button"
                 onClick={() => synthEngine.playDrum("clap")}
-                className="w-28 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-amber-300 hover:border-amber-400 truncate"
+                className="w-32 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-amber-300 hover:border-amber-400 truncate"
               >
                 3. CLAP
               </button>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.clap.map((active, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const active = pattern.tracks.clap[step] ?? false;
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -704,16 +1027,20 @@ export function FlStudioStudio() {
             </div>
 
             {/* 4. Closed Hi-Hat Track */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[680px]">
               <button
                 type="button"
                 onClick={() => synthEngine.playDrum("hihat_closed")}
-                className="w-28 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-emerald-300 hover:border-emerald-400 truncate"
+                className="w-32 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-emerald-300 hover:border-emerald-400 truncate"
               >
                 4. CLOSED HAT
               </button>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.hihat_closed.map((active, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const active = pattern.tracks.hihat_closed[step] ?? false;
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -737,16 +1064,20 @@ export function FlStudioStudio() {
             </div>
 
             {/* 5. Open Hi-Hat Track */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[680px]">
               <button
                 type="button"
                 onClick={() => synthEngine.playDrum("hihat_open")}
-                className="w-28 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-teal-300 hover:border-teal-400 truncate"
+                className="w-32 py-1.5 px-2 rounded text-left font-display text-xs font-bold bg-[#0d1422] border border-[#202e42] text-teal-300 hover:border-teal-400 truncate"
               >
                 5. OPEN HAT
               </button>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.hihat_open.map((active, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const active = pattern.tracks.hihat_open[step] ?? false;
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -769,10 +1100,61 @@ export function FlStudioStudio() {
               </div>
             </div>
 
-            {/* 6. 808 Sub Bassline Track */}
-            <div className="flex items-center gap-2 pt-1 border-t border-[#141d2c]">
-              <div className="w-28 flex flex-col">
-                <span className="font-display text-[11px] font-bold text-rose-300">6. 808 BASS</span>
+            {/* 6. Traditional / Ethnic Percussion (Kendang Sunda, Koplo, Taiko) */}
+            <div className="flex items-center gap-2 min-w-[680px] pt-1 border-t border-[#141d2c]">
+              <div className="w-32 flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => synthEngine.playDrum(selectedPercType)}
+                  className="py-1 px-1.5 rounded text-left font-display text-[10.5px] font-bold bg-[#131c2c] border border-cyan-500/40 text-cyan-300 hover:border-cyan-400 truncate"
+                  title="Klik untuk test dengar perkusi etnis ini"
+                >
+                  6. PERKUSI ETNIS
+                </button>
+                <select
+                  value={selectedPercType}
+                  onChange={(e) => setSelectedPercType(e.target.value as DrumType)}
+                  className="bg-[#0c121e] border border-[#1e2a3c] text-[9px] font-mono text-cyan-300 rounded px-1 py-0.5 mt-0.5 truncate"
+                >
+                  {ETHNIC_PERCUSSION_OPTIONS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      [{p.origin}] {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const active = pattern.tracks.percussion ? pattern.tracks.percussion[step] ?? false : false;
+                  const isCurrent = currentStep === step && isPlaying;
+                  const isBeatLead = Math.floor(step / 4) % 2 === 0;
+                  return (
+                    <button
+                      key={step}
+                      type="button"
+                      onClick={() => toggleDrumStep("percussion", step)}
+                      className={`h-8 rounded border transition-all ${
+                        isCurrent ? "ring-2 ring-cyan-300 scale-105" : ""
+                      } ${
+                        active
+                          ? "bg-cyan-500 border-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.8)]"
+                          : isBeatLead
+                          ? "bg-[#111927] border-[#223146] hover:bg-[#1a2538]"
+                          : "bg-[#090e17] border-[#182333] hover:bg-[#131d2c]"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 7. 808 Sub Bassline Track */}
+            <div className="flex items-center gap-2 min-w-[680px]">
+              <div className="w-32 flex flex-col">
+                <span className="font-display text-[11px] font-bold text-rose-300">7. 808 BASS</span>
                 <select
                   value={selectedBassNote}
                   onChange={(e) => setSelectedBassNote(Number(e.target.value))}
@@ -785,8 +1167,12 @@ export function FlStudioStudio() {
                   ))}
                 </select>
               </div>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.bass.map((stepData, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const stepData = pattern.tracks.bass[step] ?? { active: false, note: selectedBassNote };
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -811,10 +1197,12 @@ export function FlStudioStudio() {
               </div>
             </div>
 
-            {/* 7. Piano / Melodic Synth Track */}
-            <div className="flex items-center gap-2">
-              <div className="w-28 flex flex-col">
-                <span className="font-display text-[11px] font-bold text-violet-300">7. PIANO / LEAD</span>
+            {/* 8. Piano / Melodic Synth / Ethnic Instrument Track */}
+            <div className="flex items-center gap-2 min-w-[680px]">
+              <div className="w-32 flex flex-col">
+                <span className="font-display text-[11px] font-bold text-violet-300 truncate">
+                  8. {pattern.instrument.toUpperCase()}
+                </span>
                 <select
                   value={selectedMelodyNote}
                   onChange={(e) => setSelectedMelodyNote(Number(e.target.value))}
@@ -827,8 +1215,12 @@ export function FlStudioStudio() {
                   ))}
                 </select>
               </div>
-              <div className="grid flex-1 grid-cols-16 gap-1">
-                {pattern.tracks.melody.map((stepData, step) => {
+              <div
+                className="grid flex-1 gap-1"
+                style={{ gridTemplateColumns: `repeat(${effectiveStepCount}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: effectiveStepCount }).map((_, step) => {
+                  const stepData = pattern.tracks.melody[step] ?? { active: false, note: selectedMelodyNote };
                   const isCurrent = currentStep === step && isPlaying;
                   const isBeatLead = Math.floor(step / 4) % 2 === 0;
                   return (
@@ -856,7 +1248,7 @@ export function FlStudioStudio() {
 
           {/* Export & DJ Integration Action Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#090e18] border border-[#1c293c]">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
                 TARGET SAMPLER PAD:
               </span>
@@ -882,7 +1274,7 @@ export function FlStudioStudio() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => void handleExportToWav("deckA")}

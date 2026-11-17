@@ -2,12 +2,19 @@
  * DJDeX Web Audio DSP Synthesizer & FL Studio Beat Engine
  *
  * Menyediakan:
- * 1. Multi-instrument polyphonic synth: Acoustic Grand Piano, Rhodes EP, EDM Supersaw Lead,
- *    808 Sub Bass, Club Organ, Pluck, dan Strings/Pad.
- * 2. Dedicated drum synthesizer: Kick, Snare, Clap, Hi-Hat Closed/Open, Tom, Crash.
- * 3. Master FX Rack: Reverb, BPM-synced Delay, Cutoff/Resonance Filter, Distortion/Saturation, Chorus.
- * 4. High-precision 16-step sequencer scheduler berbasis Web Audio clock.
- * 5. WAV Audio Exporter untuk merender loop/melodi langsung ke file audio.
+ * 1. Multi-instrument polyphonic synth:
+ *    - Modern: Acoustic Grand Piano, Rhodes EP, EDM Supersaw Lead, 808 Sub Bass, Club Organ, Pluck, Strings
+ *    - Tradisional Sunda: Suling Sunda Degung, Angklung Bambu
+ *    - Tradisional Jawa: Gamelan Saron Demung, Gong Ageng Jawa
+ *    - Tradisional Jepang: Koto Zither, Shamisen
+ * 2. Dedicated drum synthesizer:
+ *    - Modern: Kick, Snare, Clap, Hi-Hat Closed/Open, Tom, Crash
+ *    - Etnis Sunda & Jawa: Kendang Tung, Kendang Pak, Kendang Bem, Koplo Dho/Dut
+ *    - Etnis Jepang: Taiko Heavy (O-Daiko), Taiko Bachi Rim
+ * 3. Master FX Rack: Reverb, BPM-synced Delay, Cutoff/Resonance Filter, Distortion/Saturation.
+ * 4. Flexible Step Sequencer: 16-step (4/4), 13-step (polyrhythm), 12-step (triplet), 8-step, 24-step, 32-step.
+ * 5. Sistem Tangga Nada Etnis (Sunda Salendro, Sunda Pelog Degung, Jawa Slendro, Jawa Pelog, Japan Hirajoshi, Japan Insen).
+ * 6. WAV Audio Exporter untuk merender loop/melodi langsung ke file audio 44.1kHz.
  */
 
 export type InstrumentType =
@@ -17,7 +24,13 @@ export type InstrumentType =
   | "bass"
   | "organ"
   | "pluck"
-  | "strings";
+  | "strings"
+  | "sundanese_suling"
+  | "angklung"
+  | "gamelan_saron"
+  | "gamelan_gong"
+  | "koto"
+  | "shamisen";
 
 export type DrumType =
   | "kick"
@@ -26,7 +39,13 @@ export type DrumType =
   | "hihat_closed"
   | "hihat_open"
   | "tom"
-  | "crash";
+  | "crash"
+  | "kendang_tung"
+  | "kendang_pak"
+  | "kendang_bem"
+  | "kendang_dho"
+  | "taiko_heavy"
+  | "taiko_rim";
 
 export interface FxSettings {
   reverb: { enabled: boolean; size: number; wet: number };
@@ -36,16 +55,78 @@ export interface FxSettings {
   masterVolume: number;
 }
 
-export interface SequencerTrackStep {
-  active: boolean;
-  midiNote?: number; // untuk track instrumen bernada (piano/bass/lead)
-  velocity?: number; // 0..1
+export interface ScaleDefinition {
+  id: string;
+  name: string;
+  region: "Western" | "Sunda" | "Jawa" | "Japan";
+  description: string;
+  intervals: number[]; // semitone offset dari C (0..11)
 }
+
+export const MUSICAL_SCALES: ScaleDefinition[] = [
+  {
+    id: "chromatic",
+    name: "Chromatic (Semua Nada 12-TET)",
+    region: "Western",
+    description: "Semua 12 nada bebas tanpa batasan tangga nada",
+    intervals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  },
+  {
+    id: "sunda_salendro",
+    name: "Sunda Salendro (Barang, Kenong, Panelu...)",
+    region: "Sunda",
+    description: "Tangga nada 5-nada Salendro Sunda khas Wayang Golek & Jaipongan",
+    intervals: [0, 2, 4, 7, 9],
+  },
+  {
+    id: "sunda_pelog_degung",
+    name: "Sunda Pelog Degung (Da-Mi-Na-Ti-La)",
+    region: "Sunda",
+    description: "Tangga nada Gamelan Degung Sunda khas Jawa Barat yang syahdu",
+    intervals: [0, 1, 5, 7, 8],
+  },
+  {
+    id: "jawa_slendro",
+    name: "Jawa Slendro Gamelan (1 2 3 5 6)",
+    region: "Jawa",
+    description: "Tangga nada Slendro Jawa dengan interval 5 nada berjarak seimbang",
+    intervals: [0, 2, 5, 7, 9],
+  },
+  {
+    id: "jawa_pelog",
+    name: "Jawa Pelog Gamelan (Pathet Nem)",
+    region: "Jawa",
+    description: "Tangga nada Pelog Jawa dengan nuansa mistis megah gamelan keraton",
+    intervals: [0, 1, 3, 7, 8],
+  },
+  {
+    id: "japan_hirajoshi",
+    name: "Japan Hirajoshi (Koto & Shamisen)",
+    region: "Japan",
+    description: "Tangga nada tradisional Jepang untuk Koto & Shamisen (A-B-C-E-F)",
+    intervals: [0, 2, 3, 7, 8],
+  },
+  {
+    id: "japan_insen",
+    name: "Japan Insen (Shakuhachi / Kabuki)",
+    region: "Japan",
+    description: "Tangga nada tradisional Jepang Insen untuk tiupan bambu & teater",
+    intervals: [0, 1, 5, 7, 10],
+  },
+  {
+    id: "minor_pentatonic",
+    name: "Minor Pentatonic / Blues",
+    region: "Western",
+    description: "Tangga nada pentatonik minor untuk EDM drop, Rock & Hip Hop",
+    intervals: [0, 3, 5, 7, 10],
+  },
+];
 
 export interface BeatPattern {
   name: string;
   bpm: number;
   swing: number; // 0..0.75
+  stepCount: number; // 8, 12, 13, 14, 16, 24, 32
   instrument: InstrumentType;
   tracks: {
     kick: boolean[];
@@ -53,6 +134,7 @@ export interface BeatPattern {
     clap: boolean[];
     hihat_closed: boolean[];
     hihat_open: boolean[];
+    percussion: boolean[]; // Kendang, Taiko, Conga, Tom
     bass: Array<{ active: boolean; note: number }>;
     melody: Array<{ active: boolean; note: number }>;
   };
@@ -71,7 +153,6 @@ class SynthAudioEngine {
   private reverbWet: GainNode | null = null;
   private reverbDry: GainNode | null = null;
 
-  // Active voices map: midiNote -> { stop: () => void }
   private activeVoices = new Map<number, { stop: () => void }>();
 
   public fx: FxSettings = {
@@ -97,22 +178,17 @@ class SynthAudioEngine {
   private setupFxChain() {
     if (!this.ctx) return;
 
-    // Master Output Chain:
-    // Voices -> Waveshaper -> Filter -> Delay -> Reverb -> MasterGain -> Destination
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = this.fx.masterVolume;
 
-    // Filter Node
     this.filterNode = this.ctx.createBiquadFilter();
     this.filterNode.type = this.fx.filter.type;
     this.filterNode.frequency.value = this.fx.filter.cutoff;
     this.filterNode.Q.value = this.fx.filter.resonance;
 
-    // Distortion Node
     this.waveshaperNode = this.ctx.createWaveShaper();
     this.updateDistortionCurve(this.fx.distortion.drive);
 
-    // Delay Node (Echo)
     this.delayNode = this.ctx.createDelay(2.0);
     this.delayNode.delayTime.value = this.fx.delay.timeSecs;
     this.delayFeedback = this.ctx.createGain();
@@ -126,7 +202,6 @@ class SynthAudioEngine {
     this.delayFeedback.connect(this.delayNode);
     this.delayNode.connect(this.delayWet);
 
-    // Reverb Node (Convolver with algorithmic synthetic impulse)
     this.reverbConvolver = this.ctx.createConvolver();
     this.createSyntheticImpulse(this.fx.reverb.size);
     this.reverbWet = this.ctx.createGain();
@@ -134,15 +209,10 @@ class SynthAudioEngine {
     this.reverbDry = this.ctx.createGain();
     this.reverbDry.gain.value = 1.0;
 
-    // Routing:
-    // waveshaper -> filter
     this.waveshaperNode.connect(this.filterNode);
-
-    // filter -> delay (dry + wet)
     this.filterNode.connect(this.delayDry);
     this.filterNode.connect(this.delayNode);
 
-    // combine delay outputs -> reverb
     this.delayDry.connect(this.reverbDry);
     this.delayWet.connect(this.reverbDry);
     this.delayDry.connect(this.reverbConvolver);
@@ -150,7 +220,6 @@ class SynthAudioEngine {
 
     this.reverbConvolver.connect(this.reverbWet);
 
-    // reverb outputs -> masterGain -> destination
     this.reverbDry.connect(this.masterGain);
     this.reverbWet.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
@@ -223,18 +292,10 @@ class SynthAudioEngine {
     }
   }
 
-  /**
-   * Mainkan nada instrumen (Polyphonic Note On).
-   */
-  public noteOn(
-    midiNote: number,
-    velocity = 0.9,
-    instrument: InstrumentType = "piano"
-  ) {
+  public noteOn(midiNote: number, velocity = 0.9, instrument: InstrumentType = "piano") {
     const ctx = this.ensureContext();
     const dest = this.waveshaperNode ?? ctx.destination;
 
-    // Hentikan voice lama jika nada sama masih aktif
     this.noteOff(midiNote);
 
     const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
@@ -248,34 +309,17 @@ class SynthAudioEngine {
 
     switch (instrument) {
       case "piano": {
-        // Acoustic Grand Piano Synthesizer:
-        // Hammer strike + fundamental + 2nd, 3rd, 4th harmonics + warm resonance
         const osc1 = ctx.createOscillator();
         const osc2 = ctx.createOscillator();
         const osc3 = ctx.createOscillator();
 
         osc1.type = "triangle";
         osc1.frequency.setValueAtTime(freq, now);
-
         osc2.type = "sine";
         osc2.frequency.setValueAtTime(freq * 2, now);
-
         osc3.type = "sine";
         osc3.frequency.setValueAtTime(freq * 3, now);
 
-        // Hammer transient click di 8ms pertama
-        const hammerOsc = ctx.createOscillator();
-        const hammerGain = ctx.createGain();
-        hammerOsc.type = "square";
-        hammerOsc.frequency.setValueAtTime(freq * 8, now);
-        hammerGain.gain.setValueAtTime(vel * 0.4, now);
-        hammerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
-        hammerOsc.connect(hammerGain);
-        hammerGain.connect(voiceGain);
-        hammerOsc.start(now);
-        hammerOsc.stop(now + 0.015);
-
-        // Amplitudo envelope piano
         voiceGain.gain.setValueAtTime(vel * 0.7, now);
         voiceGain.gain.exponentialRampToValueAtTime(vel * 0.35, now + 0.35);
         voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
@@ -283,23 +327,15 @@ class SynthAudioEngine {
         osc1.connect(voiceGain);
         osc2.connect(voiceGain);
         osc3.connect(voiceGain);
-
-        [osc1, osc2, osc3].forEach((o) => {
-          o.start(now);
-          oscillators.push(o);
-        });
+        [osc1, osc2, osc3].forEach((o) => { o.start(now); oscillators.push(o); });
         break;
       }
 
       case "rhodes": {
-        // Electric Piano / Rhodes:
-        // Pure sine body + bell chime harmonic (x7) + soft tremolo
         const oscBody = ctx.createOscillator();
         const oscBell = ctx.createOscillator();
-
         oscBody.type = "sine";
         oscBody.frequency.setValueAtTime(freq, now);
-
         oscBell.type = "sine";
         oscBell.frequency.setValueAtTime(freq * 4, now);
 
@@ -308,28 +344,19 @@ class SynthAudioEngine {
 
         oscBody.connect(voiceGain);
         oscBell.connect(voiceGain);
-
-        [oscBody, oscBell].forEach((o) => {
-          o.start(now);
-          oscillators.push(o);
-        });
+        [oscBody, oscBell].forEach((o) => { o.start(now); oscillators.push(o); });
         break;
       }
 
       case "lead": {
-        // EDM Supersaw Lead (Martin Garrix / Avicii Festival Style):
-        // 3 saw waves detuned (-12c, 0, +12c) + plucky lowpass filter envelope
         const saw1 = ctx.createOscillator();
         const saw2 = ctx.createOscillator();
         const saw3 = ctx.createOscillator();
-
         saw1.type = "sawtooth";
         saw1.frequency.setValueAtTime(freq, now);
         saw1.detune.setValueAtTime(-12, now);
-
         saw2.type = "sawtooth";
         saw2.frequency.setValueAtTime(freq, now);
-
         saw3.type = "sawtooth";
         saw3.frequency.setValueAtTime(freq, now);
         saw3.detune.setValueAtTime(12, now);
@@ -347,19 +374,13 @@ class SynthAudioEngine {
 
         voiceGain.gain.setValueAtTime(vel * 0.6, now);
         voiceGain.gain.exponentialRampToValueAtTime(vel * 0.4, now + 0.1);
-
-        [saw1, saw2, saw3].forEach((o) => {
-          o.start(now);
-          oscillators.push(o);
-        });
+        [saw1, saw2, saw3].forEach((o) => { o.start(now); oscillators.push(o); });
         break;
       }
 
       case "bass": {
-        // 808 Sub Bass (Deep club 35-80 Hz sine + pitch punch drop):
         const subOsc = ctx.createOscillator();
         subOsc.type = "sine";
-        // Pitch drop dari +12st ke base freq di 20ms pertama
         subOsc.frequency.setValueAtTime(freq * 1.5, now);
         subOsc.frequency.exponentialRampToValueAtTime(freq, now + 0.025);
 
@@ -373,18 +394,13 @@ class SynthAudioEngine {
       }
 
       case "organ": {
-        // 90s House Club Organ:
-        // Harmonic drawbars (1x, 2x, 3x, 4x)
         const harm1 = ctx.createOscillator();
         const harm2 = ctx.createOscillator();
         const harm3 = ctx.createOscillator();
-
         harm1.type = "sine";
         harm1.frequency.setValueAtTime(freq, now);
-
         harm2.type = "sine";
         harm2.frequency.setValueAtTime(freq * 2, now);
-
         harm3.type = "triangle";
         harm3.frequency.setValueAtTime(freq * 3, now);
 
@@ -394,16 +410,11 @@ class SynthAudioEngine {
         harm1.connect(voiceGain);
         harm2.connect(voiceGain);
         harm3.connect(voiceGain);
-
-        [harm1, harm2, harm3].forEach((o) => {
-          o.start(now);
-          oscillators.push(o);
-        });
+        [harm1, harm2, harm3].forEach((o) => { o.start(now); oscillators.push(o); });
         break;
       }
 
       case "pluck": {
-        // Short Pluck Synth:
         const pluckOsc = ctx.createOscillator();
         pluckOsc.type = "sawtooth";
         pluckOsc.frequency.setValueAtTime(freq, now);
@@ -425,14 +436,11 @@ class SynthAudioEngine {
       }
 
       case "strings": {
-        // Ambient Synth Strings / Pad:
         const str1 = ctx.createOscillator();
         const str2 = ctx.createOscillator();
-
         str1.type = "sawtooth";
         str1.frequency.setValueAtTime(freq, now);
         str1.detune.setValueAtTime(-8, now);
-
         str2.type = "sawtooth";
         str2.frequency.setValueAtTime(freq, now);
         str2.detune.setValueAtTime(8, now);
@@ -445,14 +453,142 @@ class SynthAudioEngine {
         str2.connect(filter);
         filter.connect(voiceGain);
 
-        // Slow attack (150ms)
         voiceGain.gain.setValueAtTime(0.001, now);
         voiceGain.gain.linearRampToValueAtTime(vel * 0.5, now + 0.15);
+        [str1, str2].forEach((o) => { o.start(now); oscillators.push(o); });
+        break;
+      }
 
-        [str1, str2].forEach((o) => {
-          o.start(now);
-          oscillators.push(o);
-        });
+      // TRADISIONAL SUNDA: Suling Sunda Degung
+      case "sundanese_suling": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now);
+
+        // LFO vibrato alami 5.2 Hz
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.frequency.value = 5.2;
+        lfoGain.gain.value = 6.0;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        oscillators.push(lfo);
+
+        // Filter udara bambu
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = freq * 1.5;
+        filter.Q.value = 2.0;
+
+        osc.connect(filter);
+        filter.connect(voiceGain);
+
+        voiceGain.gain.setValueAtTime(0.001, now);
+        voiceGain.gain.linearRampToValueAtTime(vel * 0.75, now + 0.08);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+        osc.start(now);
+        oscillators.push(osc);
+        break;
+      }
+
+      // TRADISIONAL SUNDA: Angklung Bambu
+      case "angklung": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = "triangle";
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq * 2, now); // Tabung oktaf ganda
+
+        voiceGain.gain.setValueAtTime(vel * 0.85, now);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+        osc1.connect(voiceGain);
+        osc2.connect(voiceGain);
+        [osc1, osc2].forEach((o) => { o.start(now); oscillators.push(o); });
+        break;
+      }
+
+      // TRADISIONAL JAWA: Gamelan Saron / Bonang
+      case "gamelan_saron": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const osc3 = ctx.createOscillator();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq * 2.76, now); // Inharmonic bronze partial
+        osc3.type = "sine";
+        osc3.frequency.setValueAtTime(freq * 5.40, now);
+
+        voiceGain.gain.setValueAtTime(vel * 0.85, now);
+        voiceGain.gain.exponentialRampToValueAtTime(vel * 0.3, now + 0.15);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+
+        osc1.connect(voiceGain);
+        osc2.connect(voiceGain);
+        osc3.connect(voiceGain);
+        [osc1, osc2, osc3].forEach((o) => { o.start(now); oscillators.push(o); });
+        break;
+      }
+
+      // TRADISIONAL JAWA: Gong Ageng
+      case "gamelan_gong": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq + 2.5, now); // Beating shimmer 2.5 Hz
+
+        voiceGain.gain.setValueAtTime(vel * 0.95, now);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
+
+        osc1.connect(voiceGain);
+        osc2.connect(voiceGain);
+        [osc1, osc2].forEach((o) => { o.start(now); oscillators.push(o); });
+        break;
+      }
+
+      // TRADISIONAL JEPANG: Koto
+      case "koto": {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = "triangle";
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq * 2, now);
+
+        voiceGain.gain.setValueAtTime(vel * 0.8, now);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+
+        osc1.connect(voiceGain);
+        osc2.connect(voiceGain);
+        [osc1, osc2].forEach((o) => { o.start(now); oscillators.push(o); });
+        break;
+      }
+
+      // TRADISIONAL JEPANG: Shamisen
+      case "shamisen": {
+        const osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(freq, now);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = freq * 2.5;
+        filter.Q.value = 1.5;
+
+        osc.connect(filter);
+        filter.connect(voiceGain);
+
+        voiceGain.gain.setValueAtTime(vel * 0.9, now);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+        osc.start(now);
+        oscillators.push(osc);
         break;
       }
     }
@@ -464,22 +600,13 @@ class SynthAudioEngine {
           voiceGain.gain.setValueAtTime(voiceGain.gain.value, ctx.currentTime);
           voiceGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
           oscillators.forEach((o) => {
-            try {
-              o.stop(stopTime + 0.02);
-            } catch {
-              // already stopped
-            }
+            try { o.stop(stopTime + 0.02); } catch { /* ignore */ }
           });
-        } catch {
-          // ignore
-        }
+        } catch { /* ignore */ }
       },
     });
   }
 
-  /**
-   * Hentikan nada (Note Off).
-   */
   public noteOff(midiNote: number) {
     const voice = this.activeVoices.get(midiNote);
     if (voice) {
@@ -488,9 +615,6 @@ class SynthAudioEngine {
     }
   }
 
-  /**
-   * Mainkan pukulan drum sintetis (Kick, Snare, Clap, Hi-Hats, Tom, Crash).
-   */
   public playDrum(drum: DrumType, velocity = 0.95) {
     const ctx = this.ensureContext();
     const dest = this.waveshaperNode ?? ctx.destination;
@@ -502,23 +626,10 @@ class SynthAudioEngine {
 
     switch (drum) {
       case "kick": {
-        // Punchy 808/909 DJ Kick:
         const osc = ctx.createOscillator();
         osc.type = "sine";
         osc.frequency.setValueAtTime(150, now);
         osc.frequency.exponentialRampToValueAtTime(45, now + 0.08);
-
-        // Click transient
-        const click = ctx.createOscillator();
-        const clickGain = ctx.createGain();
-        click.type = "square";
-        click.frequency.setValueAtTime(320, now);
-        clickGain.gain.setValueAtTime(vel * 0.5, now);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.008);
-        click.connect(clickGain);
-        clickGain.connect(dest);
-        click.start(now);
-        click.stop(now + 0.01);
 
         gain.gain.setValueAtTime(vel * 1.1, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
@@ -530,25 +641,14 @@ class SynthAudioEngine {
       }
 
       case "snare": {
-        // Snare = body tone + highpass noise
         const osc = ctx.createOscillator();
         osc.type = "triangle";
         osc.frequency.setValueAtTime(190, now);
         osc.frequency.exponentialRampToValueAtTime(80, now + 0.07);
 
-        const oscGain = ctx.createGain();
-        oscGain.gain.setValueAtTime(vel * 0.7, now);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        osc.connect(oscGain);
-        oscGain.connect(dest);
-        osc.start(now);
-        osc.stop(now + 0.16);
-
-        // Snare wires noise
         const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.22), ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-
         const noise = ctx.createBufferSource();
         noise.buffer = buf;
 
@@ -559,19 +659,21 @@ class SynthAudioEngine {
         gain.gain.setValueAtTime(vel * 0.8, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
 
+        osc.connect(gain);
         noise.connect(filter);
         filter.connect(gain);
+
+        osc.start(now);
         noise.start(now);
+        osc.stop(now + 0.22);
         noise.stop(now + 0.22);
         break;
       }
 
       case "clap": {
-        // Hand Clap: 3 micro bursts lalu decay
         const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.28), ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-
         const noise = ctx.createBufferSource();
         noise.buffer = buf;
 
@@ -580,9 +682,7 @@ class SynthAudioEngine {
         filter.frequency.value = 1200;
         filter.Q.value = 1.2;
 
-        gain.gain.setValueAtTime(vel * 0.6, now);
-        gain.gain.setValueAtTime(vel * 0.7, now + 0.012);
-        gain.gain.setValueAtTime(vel * 0.85, now + 0.024);
+        gain.gain.setValueAtTime(vel * 0.85, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
 
         noise.connect(filter);
@@ -593,11 +693,9 @@ class SynthAudioEngine {
       }
 
       case "hihat_closed": {
-        // Closed Hi-Hat: highpass metallic ring (short decay)
         const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-
         const noise = ctx.createBufferSource();
         noise.buffer = buf;
 
@@ -616,11 +714,9 @@ class SynthAudioEngine {
       }
 
       case "hihat_open": {
-        // Open Hi-Hat: metallic shimmer (longer decay)
         const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.4), ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-
         const noise = ctx.createBufferSource();
         noise.buffer = buf;
 
@@ -639,7 +735,6 @@ class SynthAudioEngine {
       }
 
       case "tom": {
-        // Tom Drum
         const osc = ctx.createOscillator();
         osc.type = "sine";
         osc.frequency.setValueAtTime(140, now);
@@ -655,11 +750,9 @@ class SynthAudioEngine {
       }
 
       case "crash": {
-        // Crash Cymbal
         const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.2), ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-
         const noise = ctx.createBufferSource();
         noise.buffer = buf;
 
@@ -677,57 +770,137 @@ class SynthAudioEngine {
         noise.stop(now + 1.2);
         break;
       }
+
+      // KENDANG SUNDA & JAWA: Tung (Slap Melingkar)
+      case "kendang_tung": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.1);
+
+        gain.gain.setValueAtTime(vel * 0.9, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.35);
+        break;
+      }
+
+      // KENDANG SUNDA: Pak / Tepak Jaipong
+      case "kendang_pak": {
+        const osc = ctx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(380, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.05);
+
+        gain.gain.setValueAtTime(vel * 0.95, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.18);
+        break;
+      }
+
+      // KENDANG SUNDA: Bem (Bass Kulanter)
+      case "kendang_bem": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(95, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.12);
+
+        gain.gain.setValueAtTime(vel * 1.0, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.48);
+        break;
+      }
+
+      // KENDANG KOPLO: Dho / Dut Drop
+      case "kendang_dho": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(42, now + 0.18);
+
+        gain.gain.setValueAtTime(vel * 1.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.52);
+        break;
+      }
+
+      // JEPANG: Taiko O-Daiko Heavy
+      case "taiko_heavy": {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(90, now);
+        osc.frequency.exponentialRampToValueAtTime(36, now + 0.15);
+
+        gain.gain.setValueAtTime(vel * 1.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.68);
+        break;
+      }
+
+      // JEPANG: Taiko Rimshot Bachi
+      case "taiko_rim": {
+        const osc = ctx.createOscillator();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.04);
+
+        gain.gain.setValueAtTime(vel * 0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.14);
+        break;
+      }
     }
   }
 
-  /**
-   * Render seluruh Beat & Piano sequence menjadi file WAV stereo 16-bit.
-   */
   public async renderPatternToWavBlob(pattern: BeatPattern, bars = 2): Promise<Blob> {
     const sampleRate = 44100;
     const secondsPerBeat = 60 / pattern.bpm;
-    const stepDuration = secondsPerBeat / 4; // 16th note
-    const totalSteps = 16 * bars;
-    const totalDuration = totalSteps * stepDuration + 0.5; // + ring decay
+    const stepDuration = secondsPerBeat / 4;
+    const totalSteps = (pattern.stepCount || 16) * bars;
+    const totalDuration = totalSteps * stepDuration + 0.5;
 
     const offlineCtx = new OfflineAudioContext(2, Math.floor(sampleRate * totalDuration), sampleRate);
+    const stepLen = pattern.stepCount || 16;
 
-    // Render loop secara presisi ke offline context
     for (let s = 0; s < totalSteps; s++) {
-      const stepIdx = s % 16;
+      const stepIdx = s % stepLen;
       let stepTime = s * stepDuration;
 
-      // Terapkan swing jika step ganjil
       if (stepIdx % 2 === 1) {
         stepTime += stepDuration * pattern.swing * 0.6;
       }
 
-      // 1. Kick
-      if (pattern.tracks.kick[stepIdx]) {
-        this.renderDrumOffline(offlineCtx, "kick", stepTime);
+      if (pattern.tracks.kick[stepIdx]) this.renderDrumOffline(offlineCtx, "kick", stepTime);
+      if (pattern.tracks.snare[stepIdx]) this.renderDrumOffline(offlineCtx, "snare", stepTime);
+      if (pattern.tracks.clap[stepIdx]) this.renderDrumOffline(offlineCtx, "clap", stepTime);
+      if (pattern.tracks.hihat_closed[stepIdx]) this.renderDrumOffline(offlineCtx, "hihat_closed", stepTime);
+      if (pattern.tracks.hihat_open[stepIdx]) this.renderDrumOffline(offlineCtx, "hihat_open", stepTime);
+      if (pattern.tracks.percussion && pattern.tracks.percussion[stepIdx]) {
+        this.renderDrumOffline(offlineCtx, "kendang_tung", stepTime);
       }
-      // 2. Snare
-      if (pattern.tracks.snare[stepIdx]) {
-        this.renderDrumOffline(offlineCtx, "snare", stepTime);
-      }
-      // 3. Clap
-      if (pattern.tracks.clap[stepIdx]) {
-        this.renderDrumOffline(offlineCtx, "clap", stepTime);
-      }
-      // 4. Closed Hat
-      if (pattern.tracks.hihat_closed[stepIdx]) {
-        this.renderDrumOffline(offlineCtx, "hihat_closed", stepTime);
-      }
-      // 5. Open Hat
-      if (pattern.tracks.hihat_open[stepIdx]) {
-        this.renderDrumOffline(offlineCtx, "hihat_open", stepTime);
-      }
-      // 6. Bass Note
+
       const bassStep = pattern.tracks.bass[stepIdx];
       if (bassStep?.active) {
         this.renderSynthOffline(offlineCtx, bassStep.note, "bass", stepTime);
       }
-      // 7. Piano / Lead Melody Note
+
       const melStep = pattern.tracks.melody[stepIdx];
       if (melStep?.active) {
         this.renderSynthOffline(offlineCtx, melStep.note, pattern.instrument, stepTime);
@@ -747,10 +920,8 @@ class SynthAudioEngine {
       osc.type = "sine";
       osc.frequency.setValueAtTime(150, time);
       osc.frequency.exponentialRampToValueAtTime(45, time + 0.08);
-
       gain.gain.setValueAtTime(1.0, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-
       osc.connect(gain);
       osc.start(time);
       osc.stop(time + 0.38);
@@ -759,65 +930,21 @@ class SynthAudioEngine {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(190, time);
       osc.frequency.exponentialRampToValueAtTime(80, time + 0.07);
-
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      const noise = ctx.createBufferSource();
-      noise.buffer = buf;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = "highpass";
-      filter.frequency.value = 1100;
-
       gain.gain.setValueAtTime(0.85, time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
-
       osc.connect(gain);
-      noise.connect(filter);
-      filter.connect(gain);
-
       osc.start(time);
-      noise.start(time);
-      osc.stop(time + 0.2);
-      noise.stop(time + 0.2);
-    } else if (drum === "hihat_closed") {
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.07), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      const noise = ctx.createBufferSource();
-      noise.buffer = buf;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = "highpass";
-      filter.frequency.value = 7500;
-
-      gain.gain.setValueAtTime(0.7, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      noise.start(time);
-      noise.stop(time + 0.07);
+      osc.stop(time + 0.22);
     } else {
-      // Clap / Open hat fallback
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.25), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      const noise = ctx.createBufferSource();
-      noise.buffer = buf;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = 1400;
-
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(260, time);
+      osc.frequency.exponentialRampToValueAtTime(120, time + 0.08);
       gain.gain.setValueAtTime(0.75, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      noise.start(time);
-      noise.stop(time + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(time + 0.22);
     }
   }
 
@@ -831,57 +958,23 @@ class SynthAudioEngine {
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
 
-    if (instrument === "piano") {
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      osc1.type = "triangle";
-      osc1.frequency.setValueAtTime(freq, time);
-      osc2.type = "sine";
-      osc2.frequency.setValueAtTime(freq * 2, time);
+    const osc = ctx.createOscillator();
+    osc.type = instrument === "piano" ? "triangle" : instrument === "bass" ? "sine" : "sawtooth";
+    osc.frequency.setValueAtTime(freq, time);
 
-      gain.gain.setValueAtTime(0.7, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.8);
+    gain.gain.setValueAtTime(0.7, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.75);
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      osc1.start(time);
-      osc2.start(time);
-      osc1.stop(time + 0.85);
-      osc2.stop(time + 0.85);
-    } else if (instrument === "bass") {
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq * 1.5, time);
-      osc.frequency.exponentialRampToValueAtTime(freq, time + 0.02);
-
-      gain.gain.setValueAtTime(0.85, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
-
-      osc.connect(gain);
-      osc.start(time);
-      osc.stop(time + 0.65);
-    } else {
-      const osc = ctx.createOscillator();
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(freq, time);
-
-      gain.gain.setValueAtTime(0.65, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-
-      osc.connect(gain);
-      osc.start(time);
-      osc.stop(time + 0.55);
-    }
+    osc.connect(gain);
+    osc.start(time);
+    osc.stop(time + 0.8);
   }
 }
 
-/**
- * Konversi Web Audio AudioBuffer ke format WAV PCM 16-bit Blob.
- */
 function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM
+  const format = 1;
   const bitDepth = 16;
   const bytesPerSample = bitDepth / 8;
   const blockAlign = numChannels * bytesPerSample;
@@ -890,26 +983,22 @@ function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
   const bufferArray = new ArrayBuffer(44 + length);
   const view = new DataView(bufferArray);
 
-  // RIFF Chunk
   writeString(view, 0, "RIFF");
   view.setUint32(4, 36 + length, true);
   writeString(view, 8, "WAVE");
 
-  // fmt Subchunk
   writeString(view, 12, "fmt ");
-  view.setUint32(16, 16, true); // Subchunk1Size
+  view.setUint32(16, 16, true);
   view.setUint16(20, format, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * blockAlign, true); // ByteRate
+  view.setUint32(28, sampleRate * blockAlign, true);
   view.setUint16(32, blockAlign, true);
   view.setUint16(34, bitDepth, true);
 
-  // data Subchunk
   writeString(view, 36, "data");
   view.setUint32(40, length, true);
 
-  // Interleave channels
   const channels: Float32Array[] = [];
   for (let c = 0; c < numChannels; c++) {
     channels.push(buffer.getChannelData(c));
@@ -934,12 +1023,254 @@ function writeString(view: DataView, offset: number, string: string) {
   }
 }
 
-// Preset Beats FL Studio Bawaan
+// Preset Beats FL Studio & Tradisional Bawaan
 export const FL_STUDIO_PRESETS: BeatPattern[] = [
+  {
+    name: "Sunda Degung Jaipong Trap (128 BPM)",
+    bpm: 128,
+    swing: 0.12,
+    stepCount: 16,
+    instrument: "sundanese_suling",
+    tracks: {
+      kick: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+      snare: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      clap: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+      hihat_open: [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
+      percussion: [false, true, false, true, false, false, true, false, false, true, false, true, false, true, false, false],
+      bass: [
+        { active: true, note: 36 }, // C2
+        { active: false, note: 36 },
+        { active: true, note: 37 }, // C#2 (Pelog Da-Mi)
+        { active: false, note: 37 },
+        { active: true, note: 41 }, // F2
+        { active: false, note: 41 },
+        { active: true, note: 43 }, // G2
+        { active: false, note: 43 },
+        { active: true, note: 44 }, // G#2
+        { active: false, note: 44 },
+        { active: true, note: 41 },
+        { active: false, note: 41 },
+        { active: true, note: 37 },
+        { active: false, note: 37 },
+        { active: true, note: 36 },
+        { active: false, note: 36 },
+      ],
+      melody: [
+        { active: true, note: 60 }, // Da (C4)
+        { active: false, note: 60 },
+        { active: true, note: 61 }, // Mi (C#4)
+        { active: false, note: 61 },
+        { active: true, note: 65 }, // Na (F4)
+        { active: false, note: 65 },
+        { active: true, note: 67 }, // Ti (G4)
+        { active: false, note: 67 },
+        { active: true, note: 68 }, // La (G#4)
+        { active: false, note: 68 },
+        { active: true, note: 67 }, // Ti
+        { active: false, note: 67 },
+        { active: true, note: 65 }, // Na
+        { active: false, note: 65 },
+        { active: true, note: 61 }, // Mi
+        { active: false, note: 61 },
+      ],
+    },
+  },
+  {
+    name: "Jawa Gamelan Rave / Koplo DJ (135 BPM)",
+    bpm: 135,
+    swing: 0.15,
+    stepCount: 16,
+    instrument: "gamelan_saron",
+    tracks: {
+      kick: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+      snare: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      clap: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      hihat_closed: [false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true],
+      hihat_open: [false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true],
+      percussion: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false],
+      bass: [
+        { active: true, note: 33 }, // A1
+        { active: false, note: 33 },
+        { active: true, note: 35 }, // B1
+        { active: false, note: 35 },
+        { active: true, note: 38 }, // D2
+        { active: false, note: 38 },
+        { active: true, note: 40 }, // E2
+        { active: false, note: 40 },
+        { active: true, note: 42 }, // F#2
+        { active: false, note: 42 },
+        { active: true, note: 40 },
+        { active: false, note: 40 },
+        { active: true, note: 38 },
+        { active: false, note: 38 },
+        { active: true, note: 35 },
+        { active: false, note: 35 },
+      ],
+      melody: [
+        { active: true, note: 69 }, // 1 Slendro
+        { active: false, note: 69 },
+        { active: true, note: 71 }, // 2 Slendro
+        { active: false, note: 71 },
+        { active: true, note: 74 }, // 3 Slendro
+        { active: false, note: 74 },
+        { active: true, note: 76 }, // 5 Slendro
+        { active: false, note: 76 },
+        { active: true, note: 78 }, // 6 Slendro
+        { active: false, note: 78 },
+        { active: true, note: 76 },
+        { active: false, note: 76 },
+        { active: true, note: 74 },
+        { active: false, note: 74 },
+        { active: true, note: 71 },
+        { active: false, note: 71 },
+      ],
+    },
+  },
+  {
+    name: "Japan Cyber Taiko & Koto (140 BPM)",
+    bpm: 140,
+    swing: 0.05,
+    stepCount: 16,
+    instrument: "koto",
+    tracks: {
+      kick: [true, false, false, false, false, false, true, false, false, false, true, false, false, false, false, false],
+      snare: [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
+      clap: [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
+      hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+      hihat_open: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false],
+      percussion: [true, false, false, true, false, false, true, false, false, true, false, false, true, false, false, false],
+      bass: [
+        { active: true, note: 33 }, // A1
+        { active: false, note: 33 },
+        { active: true, note: 35 }, // B1
+        { active: false, note: 35 },
+        { active: true, note: 36 }, // C2
+        { active: false, note: 36 },
+        { active: true, note: 40 }, // E2
+        { active: false, note: 40 },
+        { active: true, note: 41 }, // F2
+        { active: false, note: 41 },
+        { active: true, note: 40 },
+        { active: false, note: 40 },
+        { active: true, note: 36 },
+        { active: false, note: 36 },
+        { active: true, note: 35 },
+        { active: false, note: 35 },
+      ],
+      melody: [
+        { active: true, note: 69 }, // A4
+        { active: true, note: 71 }, // B4
+        { active: true, note: 72 }, // C5
+        { active: false, note: 72 },
+        { active: true, note: 76 }, // E5
+        { active: false, note: 76 },
+        { active: true, note: 77 }, // F5 (Hirajoshi)
+        { active: false, note: 77 },
+        { active: true, note: 76 }, // E5
+        { active: false, note: 76 },
+        { active: true, note: 72 }, // C5
+        { active: false, note: 72 },
+        { active: true, note: 71 }, // B4
+        { active: false, note: 71 },
+        { active: true, note: 69 }, // A4
+        { active: false, note: 69 },
+      ],
+    },
+  },
+  {
+    name: "13-Step Polyrhythmic Odd Groove (126 BPM)",
+    bpm: 126,
+    swing: 0.08,
+    stepCount: 13, // 13-STEP ODD METER!
+    instrument: "pluck",
+    tracks: {
+      kick: [true, false, false, true, false, false, true, false, false, true, false, false, false],
+      snare: [false, false, false, false, true, false, false, false, false, false, true, false, false],
+      clap: [false, false, false, false, false, false, false, false, false, false, true, false, false],
+      hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true],
+      hihat_open: [false, false, true, false, false, true, false, false, true, false, false, true, false],
+      percussion: [false, true, false, false, true, false, false, true, false, false, true, false, false],
+      bass: [
+        { active: true, note: 36 }, // C2
+        { active: false, note: 36 },
+        { active: true, note: 39 }, // D#2
+        { active: false, note: 39 },
+        { active: true, note: 41 }, // F2
+        { active: false, note: 41 },
+        { active: true, note: 43 }, // G2
+        { active: false, note: 43 },
+        { active: true, note: 46 }, // A#2
+        { active: false, note: 46 },
+        { active: true, note: 43 },
+        { active: false, note: 43 },
+        { active: true, note: 39 },
+      ],
+      melody: [
+        { active: true, note: 60 },
+        { active: true, note: 63 },
+        { active: false, note: 63 },
+        { active: true, note: 67 },
+        { active: false, note: 67 },
+        { active: true, note: 70 },
+        { active: false, note: 70 },
+        { active: true, note: 72 },
+        { active: false, note: 72 },
+        { active: true, note: 70 },
+        { active: false, note: 70 },
+        { active: true, note: 67 },
+        { active: true, note: 63 },
+      ],
+    },
+  },
+  {
+    name: "12-Step Afrobeat Triplet (120 BPM)",
+    bpm: 120,
+    swing: 0.18,
+    stepCount: 12, // 12-STEP TRIPLET / WALTZ!
+    instrument: "organ",
+    tracks: {
+      kick: [true, false, false, true, false, false, true, false, false, true, false, false],
+      snare: [false, false, false, false, false, false, true, false, false, false, false, false],
+      clap: [false, false, false, false, false, false, true, false, false, false, false, false],
+      hihat_closed: [true, false, true, true, false, true, true, false, true, true, false, true],
+      hihat_open: [false, false, true, false, false, true, false, false, true, false, false, true],
+      percussion: [false, true, false, false, true, false, false, true, false, false, true, false],
+      bass: [
+        { active: true, note: 36 },
+        { active: false, note: 36 },
+        { active: false, note: 36 },
+        { active: true, note: 41 },
+        { active: false, note: 41 },
+        { active: false, note: 41 },
+        { active: true, note: 43 },
+        { active: false, note: 43 },
+        { active: false, note: 43 },
+        { active: true, note: 41 },
+        { active: false, note: 41 },
+        { active: true, note: 39 },
+      ],
+      melody: [
+        { active: true, note: 60 },
+        { active: false, note: 60 },
+        { active: true, note: 63 },
+        { active: true, note: 65 },
+        { active: false, note: 65 },
+        { active: true, note: 67 },
+        { active: true, note: 72 },
+        { active: false, note: 72 },
+        { active: true, note: 70 },
+        { active: true, note: 67 },
+        { active: false, note: 67 },
+        { active: true, note: 63 },
+      ],
+    },
+  },
   {
     name: "House 4-on-the-Floor (128 BPM)",
     bpm: 128,
     swing: 0.1,
+    stepCount: 16,
     instrument: "piano",
     tracks: {
       kick: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
@@ -947,40 +1278,41 @@ export const FL_STUDIO_PRESETS: BeatPattern[] = [
       clap: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
       hihat_closed: [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
       hihat_open: [false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true],
+      percussion: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
       bass: [
-        { active: true, note: 36 }, // C2
+        { active: true, note: 36 },
         { active: false, note: 36 },
         { active: false, note: 36 },
         { active: true, note: 36 },
         { active: false, note: 36 },
         { active: false, note: 36 },
-        { active: true, note: 39 }, // D#2
+        { active: true, note: 39 },
         { active: false, note: 39 },
-        { active: true, note: 41 }, // F2
+        { active: true, note: 41 },
         { active: false, note: 41 },
         { active: false, note: 41 },
-        { active: true, note: 43 }, // G2
+        { active: true, note: 43 },
         { active: false, note: 43 },
         { active: true, note: 41 },
         { active: false, note: 41 },
         { active: false, note: 41 },
       ],
       melody: [
-        { active: true, note: 60 }, // C4
+        { active: true, note: 60 },
         { active: false, note: 60 },
-        { active: true, note: 63 }, // D#4
+        { active: true, note: 63 },
         { active: false, note: 63 },
-        { active: true, note: 67 }, // G4
+        { active: true, note: 67 },
         { active: false, note: 67 },
-        { active: true, note: 72 }, // C5
+        { active: true, note: 72 },
         { active: false, note: 72 },
-        { active: true, note: 70 }, // A#4
+        { active: true, note: 70 },
         { active: false, note: 70 },
-        { active: true, note: 67 }, // G4
+        { active: true, note: 67 },
         { active: false, note: 67 },
-        { active: true, note: 63 }, // D#4
+        { active: true, note: 63 },
         { active: false, note: 63 },
-        { active: true, note: 65 }, // F4
+        { active: true, note: 65 },
         { active: false, note: 65 },
       ],
     },
@@ -989,6 +1321,7 @@ export const FL_STUDIO_PRESETS: BeatPattern[] = [
     name: "EDM Festival Anthem (130 BPM)",
     bpm: 130,
     swing: 0.05,
+    stepCount: 16,
     instrument: "lead",
     tracks: {
       kick: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
@@ -996,90 +1329,42 @@ export const FL_STUDIO_PRESETS: BeatPattern[] = [
       clap: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
       hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
       hihat_open: [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
+      percussion: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
       bass: [
-        { active: true, note: 33 }, // A1
-        { active: true, note: 33 },
-        { active: false, note: 33 },
-        { active: true, note: 33 },
         { active: true, note: 33 },
         { active: true, note: 33 },
         { active: false, note: 33 },
         { active: true, note: 33 },
-        { active: true, note: 29 }, // F1
+        { active: true, note: 33 },
+        { active: true, note: 33 },
+        { active: false, note: 33 },
+        { active: true, note: 33 },
+        { active: true, note: 29 },
         { active: true, note: 29 },
         { active: false, note: 29 },
         { active: true, note: 29 },
-        { active: true, note: 31 }, // G1
+        { active: true, note: 31 },
         { active: true, note: 31 },
         { active: false, note: 31 },
         { active: true, note: 31 },
       ],
       melody: [
-        { active: true, note: 69 }, // A4
+        { active: true, note: 69 },
         { active: false, note: 69 },
         { active: true, note: 69 },
-        { active: true, note: 72 }, // C5
+        { active: true, note: 72 },
         { active: false, note: 72 },
-        { active: true, note: 76 }, // E5
+        { active: true, note: 76 },
         { active: false, note: 76 },
-        { active: true, note: 74 }, // D5
-        { active: true, note: 72 }, // C5
+        { active: true, note: 74 },
+        { active: true, note: 72 },
         { active: false, note: 72 },
-        { active: true, note: 69 }, // A4
+        { active: true, note: 69 },
         { active: false, note: 69 },
-        { active: true, note: 71 }, // B4
+        { active: true, note: 71 },
         { active: false, note: 71 },
-        { active: true, note: 67 }, // G4
+        { active: true, note: 67 },
         { active: false, note: 67 },
-      ],
-    },
-  },
-  {
-    name: "Hip Hop / Trap 808 (140 BPM)",
-    bpm: 140,
-    swing: 0.15,
-    instrument: "bass",
-    tracks: {
-      kick: [true, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false],
-      snare: [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
-      clap: [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
-      hihat_closed: [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
-      hihat_open: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false],
-      bass: [
-        { active: true, note: 36 }, // C2
-        { active: false, note: 36 },
-        { active: false, note: 36 },
-        { active: false, note: 36 },
-        { active: false, note: 36 },
-        { active: false, note: 36 },
-        { active: true, note: 36 },
-        { active: false, note: 36 },
-        { active: false, note: 36 },
-        { active: false, note: 36 },
-        { active: true, note: 39 }, // D#2
-        { active: false, note: 39 },
-        { active: false, note: 39 },
-        { active: true, note: 34 }, // A#1
-        { active: false, note: 34 },
-        { active: false, note: 34 },
-      ],
-      melody: [
-        { active: true, note: 60 }, // C4
-        { active: false, note: 60 },
-        { active: false, note: 60 },
-        { active: true, note: 63 }, // D#4
-        { active: false, note: 63 },
-        { active: false, note: 63 },
-        { active: true, note: 67 }, // G4
-        { active: false, note: 67 },
-        { active: true, note: 65 }, // F4
-        { active: false, note: 65 },
-        { active: false, note: 65 },
-        { active: true, note: 63 }, // D#4
-        { active: false, note: 63 },
-        { active: true, note: 58 }, // A#3
-        { active: false, note: 58 },
-        { active: false, note: 58 },
       ],
     },
   },
@@ -1087,15 +1372,17 @@ export const FL_STUDIO_PRESETS: BeatPattern[] = [
     name: "Blank Canvas (Buat Sendiri dari Nol)",
     bpm: 128,
     swing: 0,
+    stepCount: 16,
     instrument: "piano",
     tracks: {
-      kick: Array(16).fill(false),
-      snare: Array(16).fill(false),
-      clap: Array(16).fill(false),
-      hihat_closed: Array(16).fill(false),
-      hihat_open: Array(16).fill(false),
-      bass: Array(16).fill(null).map(() => ({ active: false, note: 36 })),
-      melody: Array(16).fill(null).map(() => ({ active: false, note: 60 })),
+      kick: Array(32).fill(false),
+      snare: Array(32).fill(false),
+      clap: Array(32).fill(false),
+      hihat_closed: Array(32).fill(false),
+      hihat_open: Array(32).fill(false),
+      percussion: Array(32).fill(false),
+      bass: Array(32).fill(null).map(() => ({ active: false, note: 36 })),
+      melody: Array(32).fill(null).map(() => ({ active: false, note: 60 })),
     },
   },
 ];
