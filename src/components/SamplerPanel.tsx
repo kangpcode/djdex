@@ -101,7 +101,7 @@ export function SamplerPanel() {
   return (
     <Panel
       title="REMIXER / SAMPLER & STEP SEQUENCER"
-      subtitle="16 Sample Pads per Bank · 8 Sound Kits (EDM, 808, House, FX, Sunda, Jawa, Japan, World) · Step Sequencer & FL Studio Engine"
+      subtitle="16 Sample Pads per Bank · 12 Sound Kits (EDM, 808, House, FX, Angklung 16 Nada, Gendang Master, Goong 16 Nada, Sunda, Jawa, Japan, World, Remix Drops)"
       className="border-deck-800 bg-deck-950/80"
     >
       {/* Header Panel */}
