@@ -60,6 +60,8 @@ crossbeam-channel = "0.5.17"
 
 # Ring buffer SPSC untuk decode -> audio (dipakai mulai Fase 2)
 rtrb = "0.4.1"
+hound = "3.5"
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
 
 [features]
 default = []
