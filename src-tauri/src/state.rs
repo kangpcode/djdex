@@ -21,12 +21,17 @@ use crate::library::db::{
 };
 use crate::library::preview::PreviewStatus;
 use crate::library::scanner::{ScanProgress, ScannerManager};
+use crate::midi::{
+    DjAction, KeyboardBinding, MidiLearnStatus, MidiMapping, MidiPortInfo, MidiStatus,
+    MidiManager,
+};
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
 
 pub struct AppState {
-    engine: Mutex<Option<AudioEngine>>,
+    engine: Arc<Mutex<Option<AudioEngine>>>,
     library: Arc<LibraryDb>,
     scanner: ScannerManager,
+    midi: Arc<MidiManager>,
 }
 
 impl Default for AppState {
@@ -36,11 +41,29 @@ impl Default for AppState {
             LibraryDb::new(db_path).unwrap_or_else(|_| LibraryDb::in_memory().unwrap()),
         );
         let scanner = ScannerManager::new();
+        let engine = Arc::new(Mutex::new(None));
+        let presets_dir = default_presets_dir();
+        let midi = MidiManager::new(Some(presets_dir), Arc::clone(&engine));
         Self {
-            engine: Mutex::new(None),
+            engine,
             library: db,
             scanner,
+            midi,
         }
+    }
+}
+
+fn default_presets_dir() -> std::path::PathBuf {
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        std::path::PathBuf::from(appdata).join("djdex").join("presets")
+    } else if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home)
+            .join(".local")
+            .join("share")
+            .join("djdex")
+            .join("presets")
+    } else {
+        std::path::PathBuf::from("presets")
     }
 }
 
@@ -616,5 +639,93 @@ impl AppState {
         } else {
             PreviewStatus::default()
         }
+    }
+
+    // ---- MIDI & Keyboard (Fase 9) --------------------------------------------
+
+    pub fn list_midi_inputs(&self) -> Result<Vec<MidiPortInfo>, String> {
+        self.midi.list_inputs()
+    }
+
+    pub fn list_midi_outputs(&self) -> Result<Vec<MidiPortInfo>, String> {
+        self.midi.list_outputs()
+    }
+
+    pub fn connect_midi_device(
+        &self,
+        input_index: Option<usize>,
+        output_index: Option<usize>,
+    ) -> Result<MidiStatus, String> {
+        self.midi.connect_device(input_index, output_index)
+    }
+
+    pub fn disconnect_midi_device(&self) -> MidiStatus {
+        self.midi.disconnect_device()
+    }
+
+    pub fn get_midi_status(&self) -> MidiStatus {
+        self.midi.status()
+    }
+
+    pub fn start_midi_learn(&self, action: DjAction) -> MidiLearnStatus {
+        self.midi.start_learn(action)
+    }
+
+    pub fn cancel_midi_learn(&self) -> MidiLearnStatus {
+        self.midi.cancel_learn()
+    }
+
+    pub fn get_midi_mappings(&self) -> Vec<MidiMapping> {
+        self.midi.get_mappings()
+    }
+
+    pub fn set_midi_mapping(&self, mapping: MidiMapping) {
+        self.midi.set_mapping(mapping);
+    }
+
+    pub fn remove_midi_mapping(&self, id: &str) -> bool {
+        self.midi.remove_mapping(id)
+    }
+
+    pub fn clear_midi_mappings(&self) {
+        self.midi.clear_mappings();
+    }
+
+    pub fn load_midi_preset(&self, name: &str) -> Result<MidiStatus, String> {
+        self.midi.load_preset(name)
+    }
+
+    pub fn save_midi_preset(&self, name: &str) -> Result<MidiStatus, String> {
+        self.midi.save_preset(name)
+    }
+
+    pub fn list_midi_presets(&self) -> Vec<String> {
+        self.midi.list_presets()
+    }
+
+    pub fn get_keyboard_mappings(&self) -> Vec<KeyboardBinding> {
+        self.midi.get_keyboard_bindings()
+    }
+
+    pub fn set_keyboard_mapping(&self, binding: KeyboardBinding) {
+        self.midi.set_keyboard_binding(binding);
+    }
+
+    pub fn remove_keyboard_mapping(&self, key: &str, ctrl: bool, shift: bool, alt: bool) -> bool {
+        self.midi.remove_keyboard_binding(key, ctrl, shift, alt)
+    }
+
+    pub fn reset_keyboard_mappings(&self) -> Vec<KeyboardBinding> {
+        self.midi.reset_keyboard_bindings()
+    }
+
+    pub fn handle_keyboard_shortcut(
+        &self,
+        key: &str,
+        ctrl: bool,
+        shift: bool,
+        alt: bool,
+    ) -> Result<Option<DjAction>, String> {
+        self.midi.handle_keyboard_shortcut(key, ctrl, shift, alt)
     }
 }
