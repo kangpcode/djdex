@@ -156,7 +156,6 @@ export function Header({ status }: { status: EngineStatus | null }) {
         </div>
 
         <StatusPill status={status} />
-        <span className="chip border-cyan/30 text-cyan-soft">FASE 12</span>
         <span className="chip">v0.12.0</span>
       </div>
     </header>
