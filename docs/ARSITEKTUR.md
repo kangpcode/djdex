@@ -1,8 +1,13 @@
 # Arsitektur DJDeX
 
-Dokumen ini menjelaskan arsitektur target lengkap (12 fase) sekaligus status
-implementasi Fase 1. Bagian yang belum ada ditandai **rencana** dan tidak boleh
-dianggap sudah berfungsi.
+Dokumen ini menjelaskan arsitektur lengkap (12 fase) sekaligus status
+implementasi **Fase 11 (v0.11.0)**. Bagian yang belum ada ditandai **rencana**
+dan tidak boleh dianggap sudah berfungsi.
+
+Catatan perangkat (Fase 11): pembukaan stream memakai daftar kandidat dari
+`supported_output_configs()` dengan urutan channel pilihan pengguna → stereo →
+default perangkat → mono, serta fallback format f32/i16/u16. Ini mencegah error
+ALSA `pcm_route.c ... find_matching_chmap` menggagalkan inisialisasi engine.
 
 ## 1. Prinsip desain
 
@@ -428,18 +433,18 @@ Rencana pengukuran:
 
 | Fase | Fokus | Status |
 | --- | --- | --- |
-| 1 | Scaffold Tauri, IPC, CPAL, deteksi device, test tone | **selesai** |
-| 2 | Decoder + satu deck + waveform | **selesai** |
-| 3 | Time-stretch, pitch, key lock, BPM/key/beatgrid | **selesai** |
-| 4 | Mixer, EQ, filter, crossfader, limiter, cue | **selesai** |
-| 5 | Dua deck penuh, platter, hot cue, loop, beat jump | berikutnya |
-| 6 | FX chain + Auto DJ | rencana |
-| 7 | Remixer, sampler, sequencer | rencana |
-| 8 | Library SQLite, scan, playlist, analisis batch | rencana |
-| 9 | MIDI Learn + keyboard mapping | rencana |
-| 10 | Skin engine + 4 template + editor tema | rencana |
-| 11 | Rekaman, audio settings, polish, optimasi | rencana |
-| 12 | Packaging semua OS + CI/CD + dokumentasi final | rencana |
+| 1 | Scaffold Tauri, IPC, CPAL, deteksi device, test tone | **selesai (v0.1.0)** |
+| 2 | Decoder + satu deck + waveform | **selesai (v0.2.0)** |
+| 3 | Time-stretch, pitch, key lock, BPM/key/beatgrid | **selesai (v0.3.0)** |
+| 4 | Mixer, EQ, filter, crossfader, limiter, cue | **selesai (v0.4.0)** |
+| 5 | Dua deck penuh, platter, hot cue, loop, beat jump | **selesai (v0.5.0)** |
+| 6 | FX chain + Auto DJ (transisi beat-synced) | **selesai (v0.6.0)** |
+| 7 | Remixer, sampler, 16-step sequencer, drum kit | **selesai (v0.7.0)** |
+| 8 | Library SQLite, scanner musik, playlist M3U, analisis batch | **selesai (v0.8.0)** |
+| 9 | MIDI Controller, MIDI Learn interaktif, keyboard mapping | **selesai (v0.9.0)** |
+| 10 | Skin engine + 4 factory skins + visual theme editor | **selesai (v0.10.0)** |
+| 11 | Rekaman mix master WAV + live streaming broadcast (Icecast/SHOUTcast) | **selesai (v0.11.0)** |
+| 12 | Packaging semua OS (MSI/NSIS/DMG/DEB/AppImage/Flatpak) + CI/CD + dokumentasi | **selesai (v0.12.0)** |
 
 Catatan: **sync/beat-match antar-deck** belum bisa diuji dengan satu deck dan
 akan diselesaikan bersama Deck B pada Fase 5. Fase 3 sudah menyediakan BPM,

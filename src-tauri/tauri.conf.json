@@ -44,7 +44,10 @@
     "longDescription": "DJDeX By Kangpcode - software workstation DJ profesional dengan dua hingga empat deck, mixer 4 channel, sampler 16-step sequencer, efek audio, library SQLite, MIDI mapping, dan perekam audio master mix.",
     "copyright": "Copyright (c) 2026 Kangpcode",
     "resources": [
-      "../skins/**"
+      "../skins/classic-club/skin.json",
+      "../skins/battle-scratch/skin.json",
+      "../skins/producer-remix/skin.json",
+      "../skins/tour-pro/skin.json"
     ],
     "windows": {
       "nsis": {

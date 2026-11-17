@@ -12,6 +12,7 @@ import {
 } from "../lib/format";
 import type { DeckId } from "../lib/ipc";
 import { useDeckAStore, useDeckBStore } from "../stores/deckStore";
+import { useSkinStore } from "../stores/skinStore";
 import { Platter, type PlatterMode } from "./Platter";
 import { LevelMeter } from "./ui/LevelMeter";
 import { Panel } from "./ui/Panel";
@@ -83,9 +84,77 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
   const maxSpeed = 1 + pitchRange / 100;
   const bpmKnown = bpm > 0;
 
+  // Skin & Layout Engine: deck mengikuti aksen, ukuran platter, arah waveform,
+  // tinggi waveform, dan visibilitas scratch pad dari template aktif.
+  const activeSkin = useSkinStore((state) => state.activeSkin);
+  const deckAccent =
+    deck === 0
+      ? activeSkin?.theme.accentDeckA ?? "#22d3ee"
+      : activeSkin?.theme.accentDeckB ?? "#e879f9";
+  const skinLayout = activeSkin?.layout;
+  const waveformLayout = skinLayout?.waveform;
+  const waveformHeight = Math.min(320, Math.max(96, waveformLayout?.heightPx ?? 144));
+  const waveformPosition = waveformLayout?.position ?? "top-stacked";
+  const waveformOrientation = waveformLayout?.orientation ?? "horizontal";
+  const platterStyle = skinLayout?.platter;
+  const showScratchPads = skinLayout?.showScratchPads ?? false;
+  const cuePalette = [
+    activeSkin?.theme.accentDeckA ?? "#22d3ee",
+    activeSkin?.theme.accentDeckB ?? "#f472b6",
+    activeSkin?.theme.accentDeckC ?? "#fbbf24",
+    activeSkin?.theme.accentDeckD ?? "#a78bfa",
+  ];
+
+  const renderWaveform = () => (
+    <div
+      className="relative overflow-hidden rounded-lg border border-line bg-[#050a10]"
+      style={{ height: waveformHeight }}
+    >
+      <Waveform
+        peaks={waveform?.peaks ?? []}
+        duration={waveformDuration}
+        position={position}
+        cue={cue}
+        bpm={bpm}
+        firstBeat={firstBeat}
+        enabled={loaded && waveformDuration > 0}
+        orientation={waveformOrientation}
+        showBeatgrid={waveformLayout?.showBeatgrid ?? true}
+        accent={deckAccent}
+        onSeek={(seconds) => void seek(seconds)}
+      />
+
+      {!loaded ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-[#050a10]/80 px-4 text-center">
+          <p className="text-sm font-semibold text-ink">Drag &amp; drop track ke sini</p>
+          <p className="text-[11px] text-ink-faint">
+            MP3 · FLAC · WAV · OGG · AAC/M4A · AIFF · ALAC
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary pointer-events-auto mt-1 px-3 py-1.5 text-xs"
+            onClick={() => void chooseFile()}
+            disabled={loading}
+          >
+            {loading ? "Memuat…" : "Pilih file audio"}
+          </button>
+        </div>
+      ) : null}
+
+      {loaded && !waveform ? (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/35">
+          <span className="chip border-cyan/30 text-cyan-soft">
+            Menganalisis waveform…
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <Panel
       title={`Deck ${deck === 0 ? "A" : "B"}`}
+      accentColor={deckAccent}
       subtitle="Decoder Symphonia → resample → ring buffer lock-free → output"
       actions={
         <>
@@ -104,43 +173,9 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
         </>
       }
     >
-      <div className="relative h-36 overflow-hidden rounded-lg border border-line bg-[#050a10]">
-        <Waveform
-          peaks={waveform?.peaks ?? []}
-          duration={waveformDuration}
-          position={position}
-          cue={cue}
-          bpm={bpm}
-          firstBeat={firstBeat}
-          enabled={loaded && waveformDuration > 0}
-          onSeek={(seconds) => void seek(seconds)}
-        />
-
-        {!loaded ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-[#050a10]/80 px-4 text-center">
-            <p className="text-sm font-semibold text-ink">Drag &amp; drop track ke sini</p>
-            <p className="text-[11px] text-ink-faint">
-              MP3 · FLAC · WAV · OGG · AAC/M4A · AIFF · ALAC
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary pointer-events-auto mt-1 px-3 py-1.5 text-xs"
-              onClick={() => void chooseFile()}
-              disabled={loading}
-            >
-              {loading ? "Memuat…" : "Pilih file audio"}
-            </button>
-          </div>
-        ) : null}
-
-        {loaded && !waveform ? (
-          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/35">
-            <span className="chip border-cyan/30 text-cyan-soft">
-              Menganalisis waveform…
-            </span>
-          </div>
-        ) : null}
-      </div>
+      {waveformPosition !== "hidden" && waveformPosition !== "bottom"
+        ? renderWaveform()
+        : null}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:items-start">
         <Platter
@@ -155,22 +190,16 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
           onBend={setBend}
           onBendEnd={resetBend}
           disabled={!loaded}
+          size={platterStyle?.size ?? "standard"}
+          vinylTexture={platterStyle?.vinylTexture ?? true}
+          centerDisplay={platterStyle?.centerDisplay ?? true}
+          accent={deckAccent}
         />
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-8 gap-1">
             {Array.from({ length: 8 }).map((_, slot) => {
               const cuePos = hotCues[slot] ?? null;
-              const colors = [
-                "#22d3ee",
-                "#f472b6",
-                "#fbbf24",
-                "#a78bfa",
-                "#34d399",
-                "#fb7185",
-                "#60a5fa",
-                "#f97316",
-              ];
-              const color = colors[slot % colors.length];
+              const color = cuePalette[slot % cuePalette.length];
               return (
                 <button
                   key={slot}
@@ -362,7 +391,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
         </div>
 
         <div className="text-right">
-          <div className="readout text-2xl text-cyan-soft">{formatTime(position)}</div>
+          <div className="readout text-2xl text-accent">{formatTime(position)}</div>
           <div className="readout mt-0.5 text-[11px] text-ink-faint">
             sisa −{formatTime(remaining)} · total {formatTime(duration)}
           </div>
@@ -425,6 +454,30 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
           Unload
         </button>
       </div>
+
+      {waveformPosition === "bottom" ? (
+        <div className="mt-3">{renderWaveform()}</div>
+      ) : null}
+
+      {showScratchPads ? (
+        <div className="mt-2 grid grid-cols-4 gap-1">
+          {[-2, -1, 1, 2].map((beats) => (
+            <button
+              key={beats}
+              type="button"
+              className="btn py-2 text-[10px] tracking-[0.08em]"
+              disabled={!loaded || !bpmKnown}
+              onPointerDown={() => setBend(beats < 0 ? 0.92 : 1.08)}
+              onPointerUp={() => resetBend()}
+              onPointerLeave={() => resetBend()}
+              onClick={() => void beatJump(beats)}
+              title={`Scratch pad skin: nudge ${beats} beat (tahan untuk pitch bend)`}
+            >
+              {beats > 0 ? `+${beats}` : beats} BEAT
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <Slider
@@ -528,7 +581,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="field-label">BPM</p>
-              <p className="readout text-lg text-cyan-soft">{formatBpm(bpm)}</p>
+              <p className="readout text-lg text-accent">{formatBpm(bpm)}</p>
               <p className="text-[10px] text-ink-faint">
                 {effectiveBpm > 0
                   ? `efektif ${effectiveBpm.toFixed(2)}`
@@ -624,9 +677,10 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
       ) : null}
 
       <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
-        Time-stretch WSOLA membuat pitch fader berjalan dengan key lock. BPM,
-        key Camelot, dan garis beatgrid berasal dari analisis FFT di background.            Hot cue: Shift+klik/klik pad kosong = set, klik pad terisi = lompat, klik kanan = hapus. Sync ke deck lain tersedia.
-
+        Time-stretch WSOLA membuat pitch fader berjalan dengan key lock. BPM, key
+        Camelot, dan garis beatgrid berasal dari analisis FFT di background. Hot cue:
+        Shift+klik / klik pad kosong = set, klik pad terisi = lompat, klik kanan = hapus.
+        Sync ke deck lain tersedia.
       </p>
     </Panel>
   );

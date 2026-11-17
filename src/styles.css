@@ -32,6 +32,29 @@
 }
 
 @layer base {
+  /*
+   * Jembatan Skin & Layout Engine: skinStore meng-inject --skin-* ke :root.
+   * Token inti diturunkan dari variabel itu, sehingga seluruh utilitas Tailwind
+   * (bg-deck-*, text-ink, border-line, btn-primary, fader, dst.) ikut berganti
+   * tema saat skin diganti tanpa reload.
+   */
+  :root {
+    --color-void: var(--skin-bg, #04060a);
+    --color-deck-950: color-mix(in oklab, var(--skin-surface, #070a11) 82%, black);
+    --color-deck-900: var(--skin-surface, #0b1018);
+    --color-deck-850: color-mix(in oklab, var(--skin-surface, #0e141d) 94%, white);
+    --color-deck-800: color-mix(in oklab, var(--skin-surface, #121a24) 88%, white);
+    --color-deck-700: color-mix(in oklab, var(--skin-surface, #1a2430) 78%, white);
+    --color-deck-600: color-mix(in oklab, var(--skin-surface, #24303e) 70%, white);
+    --color-line: var(--skin-border, #1e2a38);
+    --color-ink: var(--skin-text, #e6f1f7);
+    --color-ink-dim: color-mix(in oklab, var(--skin-text, #e6f1f7) 60%, var(--skin-bg, #04060a));
+    --color-ink-faint: color-mix(in oklab, var(--skin-text, #e6f1f7) 40%, var(--skin-bg, #04060a));
+    --color-cyan: var(--skin-primary, #22d3ee);
+    --color-cyan-soft: color-mix(in oklab, var(--skin-primary, #22d3ee) 65%, white);
+    --color-magenta: var(--skin-accent-b, #e879f9);
+  }
+
   html,
   body,
   #root {
@@ -70,15 +93,20 @@
     background-image:
       radial-gradient(
         1100px 520px at 12% -10%,
-        color-mix(in oklab, var(--color-cyan) 10%, transparent),
+        color-mix(in oklab, var(--color-cyan) 14%, transparent),
         transparent 70%
       ),
       radial-gradient(
         900px 480px at 92% 0%,
-        color-mix(in oklab, var(--color-magenta) 9%, transparent),
+        color-mix(in oklab, var(--color-magenta) 12%, transparent),
         transparent 65%
       ),
-      linear-gradient(180deg, #060910 0%, #04060a 60%, #030508 100%);
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--color-void) 90%, white) 0%,
+        var(--color-void) 60%,
+        color-mix(in oklab, var(--color-void) 82%, black) 100%
+      );
   }
 
   .app-grid::before {
@@ -108,6 +136,19 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.05),
       inset 0 -1px 0 rgba(0, 0, 0, 0.6),
       0 18px 40px -28px rgba(0, 0, 0, 0.9);
+  }
+
+  /* Aksen per panel (deck A/B, mixer) dari skin aktif. */
+  .panel-accent {
+    border-color: color-mix(in oklab, var(--panel-accent) 36%, var(--color-line));
+  }
+
+  .panel-accent .panel-header {
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--panel-accent) 14%, transparent),
+      transparent 72%
+    );
   }
 
   .panel-header {
@@ -196,15 +237,23 @@
   }
 
   .btn-primary {
-    border-color: color-mix(in oklab, var(--color-cyan) 60%, black);
-    background: linear-gradient(180deg, #1ec8e0, #0e8fa6);
+    border-color: color-mix(in oklab, var(--color-cyan) 65%, black);
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--color-cyan) 82%, white),
+      color-mix(in oklab, var(--color-cyan) 70%, black)
+    );
     color: #03151a;
     box-shadow: 0 0 22px -8px color-mix(in oklab, var(--color-cyan) 80%, transparent);
   }
 
   .btn-primary:hover:not(:disabled) {
     border-color: var(--color-cyan-soft);
-    background: linear-gradient(180deg, #35dcf2, #119db6);
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--color-cyan) 70%, white),
+      color-mix(in oklab, var(--color-cyan) 62%, black)
+    );
   }
 
   .btn-danger {
@@ -304,5 +353,14 @@
       color-mix(in oklab, var(--color-magenta) 55%, transparent),
       transparent
     );
+  }
+
+  /* Warna aksen mengikuti panel (deck) atau tema (mixer/skin). */
+  .text-accent {
+    color: var(--panel-accent, var(--color-cyan-soft));
+  }
+
+  .border-accent {
+    border-color: color-mix(in oklab, var(--panel-accent, var(--color-cyan)) 55%, var(--color-line));
   }
 }

@@ -96,6 +96,8 @@ export default function App() {
     }
   }, [activeSkin?.metadata.id, skinDefaultTab]);
 
+  const mixerPosition = activeSkin?.layout.mixer.position ?? "center";
+
   useEffect(() => {
     if (!engineInitialized) {
       return;
@@ -205,12 +207,22 @@ export default function App() {
 
       <main className="relative z-10 flex-1 overflow-y-auto px-5 py-5">
         <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5">
-          {/* Dual Deck & Mixer Section */}
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)_minmax(0,1fr)] xl:items-start">
-            <DeckPanel deck={0} />
-            <MixerPanel />
-            <DeckPanel deck={1} />
-          </div>
+          {/* Dual Deck & Mixer Section — posisi mixer mengikuti skin aktif. */}
+          {mixerPosition === "compact-bottom" ? (
+            <div className="flex flex-col gap-5">
+              <div className="grid gap-5 xl:grid-cols-2">
+                <DeckPanel deck={0} />
+                <DeckPanel deck={1} />
+              </div>
+              <MixerPanel />
+            </div>
+          ) : (
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)_minmax(0,1fr)] xl:items-start">
+              <DeckPanel deck={0} />
+              <MixerPanel />
+              <DeckPanel deck={1} />
+            </div>
+          )}
 
           {/* Lower Performance Panel Tabs */}
           <div className="flex items-center justify-between border-b border-line/60 pb-2">
@@ -278,19 +290,6 @@ export default function App() {
               >
                 <span className="h-2 w-2 rounded-full bg-sky-400" />
                 Skins & Layout
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setLowerTab("record")}
-                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
-                  lowerTab === "record"
-                    ? "border-red-400 bg-red-500/20 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.25)]"
-                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
-                }`}
-              >
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                Record & Live Broadcast
               </button>
 
               <button

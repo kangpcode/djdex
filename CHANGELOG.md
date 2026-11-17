@@ -56,6 +56,37 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 - Versi aplikasi dinaikkan ke `0.11.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, `App.tsx`, dan UI header/footer).
 - Ditambahkan tab panel bawah "Record & Live Broadcast" dengan aksen merah neon di `App.tsx`.
 
+## [0.11.0] - 2026-11-17
+
+### Fixed — Audio engine & ALSA
+
+- **Perbaikan `ALSA lib pcm_route.c:886 find_matching_chmap: Found no matching channel map`**: pemilihan konfigurasi stream tidak lagi memakai `default_output_config()` mentah-mentah. Engine sekarang membangun daftar kandidat dari `supported_output_configs()` (hanya format f32/i16/u16 dan channel count yang benar-benar diekspos driver), lalu mencoba berurutan: pilihan pengguna → stereo → default perangkat → mono. Stereo selalu tersedia sebagai fallback sehingga permintaan channel tanpa channel map tidak lagi menggagalkan inisialisasi.
+- Buffer di luar rentang driver sekarang di-clamp ke batas min/max, bukan ditolak. Sample rate dan channel yang tidak didukung otomatis jatuh ke konfigurasi terdekat yang valid.
+- Pesan error pembukaan stream menyebut kanal map ALSA dan langkah perbaikannya (pilih stereo, split cue, atau perangkat 4 channel).
+- `AudioDeviceInfo` mengekspos `supportedChannels`; panel Audio Output menambahkan pilihan **Channel output** (auto/stereo/4 channel) dan hanya menampilkan channel yang didukung perangkat.
+
+### Added — Inisialisasi engine & antarmuka
+
+- Engine audio (serta subsistem library, MIDI, skin, sampler, recorder) diinisialisasi otomatis saat aplikasi dibuka lewat `ensureEngine` yang idempoten; pengguna tidak perlu menekan tombol untuk mulai bersuara.
+- Panel **Record & Live Broadcast** kini dapat diakses dari navigasi tab bawah (sebelumnya komponen sudah ada tetapi tidak pernah dirender).
+- `Panel` menerima warna aksen skin per panel (deck A/B, mixer).
+
+### Changed — Skin & Layout Engine benar-benar fungsional
+
+- Variabel `--skin-*` sekarang dipakai oleh stylesheet: latar aplikasi, permukaan panel, border, teks, chip, tombol primer, fader, dan fokus mengikuti tema aktif. Sebelumnya variabel di-inject tetapi tidak dikonsumsi CSS, sehingga semua skin tampak sama.
+- Layout skin kini mengubah UI nyata: aksen deck dan palet hot cue, ukuran/tekstur/center platter, orientasi horizontal/vertikal waveform, tinggi waveform, beatgrid on/off, scratch pads, posisi mixer tengah vs compact-bottom, panel bawah awal, dan phase strip.
+- `Waveform` mendukung mode vertikal (alur waktu atas–bawah, drag-to-seek vertikal) dengan warna aksen skin.
+- Template keempat diubah dari "Four-Deck Pro" yang belum didukung engine menjadi **"Tour Pro"** (id `tour-pro`): dua deck, waveform lebar 164 px, platter standard, palet empat aksen, phase strip aktif. Empat template kini berbeda secara visual dan struktural serta jujur terhadap kemampuan engine.
+- Versi aplikasi dinaikkan ke `0.11.0` (Rust, Tauri, npm, footer, header).
+
+### Docs
+
+- README ditulis ulang sesuai status Fase 11: kemampuan nyata, tabel stack, cara pakai, troubleshooting ALSA, spesifikasi skin, struktur proyek, dan roadmap 11/12.
+- `docs/BUILD_PER_OS.md` menambahkan bagian troubleshooting ALSA (`find_matching_chmap`).
+- `docs/ARSITEKTUR.md` diperbarui ke status implementasi Fase 11.
+- PhaseStrip di UI menandai Fase 7–11 selesai dan Fase 12 sebagai berikutnya.
+- 2 unit test baru untuk preferensi channel/fallback stereo dan pesan bantuan ALSA; total **80 unit test Rust**.
+
 ## [0.10.0] - 2026-11-17
 
 ### Added — Fase 10: Sistem Template / Skin "Mesin Tampilan DJ Virtual"
