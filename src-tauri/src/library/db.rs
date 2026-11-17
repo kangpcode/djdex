@@ -268,6 +268,16 @@ impl LibraryDb {
         Ok(())
     }
 
+    pub fn update_color(&self, track_id: i64, color: Option<&str>) -> Result<(), AudioError> {
+        let conn = self.conn();
+        conn.execute(
+            "UPDATE tracks SET color = ?1 WHERE id = ?2",
+            params![color, track_id],
+        )
+        .map_err(|e| AudioError::Io(e.to_string()))?;
+        Ok(())
+    }
+
     pub fn increment_play_count(&self, track_id: i64) -> Result<(), AudioError> {
         let conn = self.conn();
         conn.execute(

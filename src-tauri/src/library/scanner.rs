@@ -69,6 +69,10 @@ impl ScannerManager {
         }
     }
 
+    pub fn progress(&self) -> ScanProgress {
+        self.status()
+    }
+
     /// Pindai folder secara rekursif di background thread dan simpan metadata ke database.
     pub fn start_scan(&self, folder_path: PathBuf, db: Arc<LibraryDb>) -> Result<(), AudioError> {
         if self.is_scanning.load(Ordering::Relaxed) {

@@ -35,7 +35,7 @@ impl Default for AppState {
         let db = Arc::new(
             LibraryDb::new(db_path).unwrap_or_else(|_| LibraryDb::in_memory().unwrap()),
         );
-        let scanner = ScannerManager::new(Arc::clone(&db));
+        let scanner = ScannerManager::new();
         Self {
             engine: Mutex::new(None),
             library: db,
@@ -476,7 +476,7 @@ impl AppState {
 
     pub fn scan_library_folder(&self, folder_path: String) -> Result<ScanProgress, AudioError> {
         let path = std::path::PathBuf::from(folder_path);
-        self.scanner.start_scan(path)?;
+        self.scanner.start_scan(path, Arc::clone(&self.library))?;
         Ok(self.scanner.progress())
     }
 
@@ -484,7 +484,8 @@ impl AppState {
         &self,
         track_ids: Option<Vec<i64>>,
     ) -> Result<ScanProgress, AudioError> {
-        self.scanner.start_batch_analyze(track_ids)?;
+        self.scanner
+            .start_batch_analyze(track_ids, Arc::clone(&self.library))?;
         Ok(self.scanner.progress())
     }
 

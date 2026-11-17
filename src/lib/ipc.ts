@@ -299,6 +299,84 @@ export interface WaveformData {
   peaks: number[];
 }
 
+export interface LibraryTrack {
+  id: number;
+  filePath: string;
+  title: string;
+  artist: string;
+  album: string | null;
+  genre: string | null;
+  year: number | null;
+  bpm: number | null;
+  keyName: string | null;
+  durationSecs: number;
+  rating: number;
+  color: string | null;
+  playCount: number;
+  dateAdded: string;
+  analyzed: boolean;
+  loudnessLufs: number | null;
+}
+
+export interface CrateItem {
+  id: number;
+  name: string;
+  color: string | null;
+  trackCount: number;
+}
+
+export interface SmartFilter {
+  minBpm?: number | null;
+  maxBpm?: number | null;
+  keyName?: string | null;
+  genre?: string | null;
+  minRating?: number | null;
+}
+
+export interface PlaylistItem {
+  id: number;
+  name: string;
+  isSmart: boolean;
+  smartFilter?: SmartFilter | null;
+  trackCount: number;
+}
+
+export interface HistoryItem {
+  id: number;
+  trackId: number;
+  title: string;
+  artist: string;
+  deckSlot: number;
+  playedAt: string;
+  durationSecs: number;
+}
+
+export interface ScanProgress {
+  isScanning: boolean;
+  isAnalyzing: boolean;
+  scannedFiles: number;
+  totalFiles: number;
+  analyzedTracks: number;
+  totalAnalyze: number;
+  currentFile?: string | null;
+}
+
+export interface PreviewStatus {
+  isPlaying: boolean;
+  currentPath: string | null;
+  positionSecs: number;
+  durationSecs: number;
+}
+
+export interface TrackQuery {
+  search?: string | null;
+  sortColumn?: string | null;
+  sortDescending?: boolean | null;
+  crateId?: number | null;
+  playlistId?: number | null;
+  limit?: number | null;
+}
+
 /** True bila UI berjalan di dalam webview Tauri (bukan browser biasa). */
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -470,6 +548,80 @@ export const ipc = {
 
   importSamplePack: (path: string) =>
     invokeCommand<SamplerStatus>("import_sample_pack", { path }),
+
+  // ---- Library, Crates, Playlists & Preview (Fase 8) -----------------------
+
+  getLibraryTracks: (query?: TrackQuery) =>
+    invokeCommand<LibraryTrack[]>("get_library_tracks", { query }),
+
+  scanLibraryFolder: (folderPath: string) =>
+    invokeCommand<ScanProgress>("scan_library_folder", { folderPath }),
+
+  startBatchAnalyze: (trackIds?: number[]) =>
+    invokeCommand<ScanProgress>("start_batch_analyze", { trackIds }),
+
+  getScanProgress: () =>
+    invokeCommand<ScanProgress>("get_scan_progress"),
+
+  createCrate: (name: string, color?: string) =>
+    invokeCommand<number>("create_crate", { name, color }),
+
+  deleteCrate: (id: number) =>
+    invokeCommand<void>("delete_crate", { id }),
+
+  listCrates: () =>
+    invokeCommand<CrateItem[]>("list_crates"),
+
+  addTrackToCrate: (crateId: number, trackId: number) =>
+    invokeCommand<void>("add_track_to_crate", { crateId, trackId }),
+
+  removeTrackFromCrate: (crateId: number, trackId: number) =>
+    invokeCommand<void>("remove_track_from_crate", { crateId, trackId }),
+
+  createPlaylist: (name: string, smartFilter?: SmartFilter) =>
+    invokeCommand<number>("create_playlist", { name, smartFilter }),
+
+  deletePlaylist: (id: number) =>
+    invokeCommand<void>("delete_playlist", { id }),
+
+  listPlaylists: () =>
+    invokeCommand<PlaylistItem[]>("list_playlists"),
+
+  addTrackToPlaylist: (playlistId: number, trackId: number) =>
+    invokeCommand<void>("add_track_to_playlist", { playlistId, trackId }),
+
+  removeTrackFromPlaylist: (playlistId: number, trackId: number) =>
+    invokeCommand<void>("remove_track_from_playlist", { playlistId, trackId }),
+
+  importPlaylist: (filePath: string) =>
+    invokeCommand<number>("import_playlist", { filePath }),
+
+  exportPlaylist: (playlistId: number, destPath: string) =>
+    invokeCommand<void>("export_playlist", { playlistId, destPath }),
+
+  updateTrackRating: (trackId: number, rating: number) =>
+    invokeCommand<void>("update_track_rating", { trackId, rating }),
+
+  updateTrackColor: (trackId: number, color?: string) =>
+    invokeCommand<void>("update_track_color", { trackId, color }),
+
+  deleteLibraryTrack: (trackId: number) =>
+    invokeCommand<void>("delete_library_track", { trackId }),
+
+  getLibraryHistory: (limit?: number) =>
+    invokeCommand<HistoryItem[]>("get_library_history", { limit }),
+
+  previewPlay: (path: string, startSecs?: number) =>
+    invokeCommand<PreviewStatus>("preview_play", { path, startSecs }),
+
+  previewStop: () =>
+    invokeCommand<PreviewStatus>("preview_stop"),
+
+  previewSeek: (seconds: number) =>
+    invokeCommand<PreviewStatus>("preview_seek", { seconds }),
+
+  getPreviewStatus: () =>
+    invokeCommand<PreviewStatus>("get_preview_status"),
 };
 
 export const api = ipc;
