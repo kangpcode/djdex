@@ -278,7 +278,7 @@ export function LibraryPanel() {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span>🎵</span> Semua Track
+                  <IconMusic className="w-3.5 h-3.5" /> Semua Track
                 </div>
                 <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-300">
                   {tracks.length}
@@ -293,7 +293,7 @@ export function LibraryPanel() {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span>🕒</span> Riwayat Putar
+                  <IconClock className="w-3.5 h-3.5" /> Riwayat Putar
                 </div>
                 <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-300">
                   {history.length}
