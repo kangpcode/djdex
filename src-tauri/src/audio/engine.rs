@@ -1185,4 +1185,10 @@ mod tests {
             assert!(hint.contains("SPLIT CUE"));
         }
     }
+
+    #[test]
+    fn start_default_engine_logs_check() {
+        let res = AudioEngine::start(StartRequest::default());
+        eprintln!("AudioEngine::start result: {:?}", res.as_ref().map(|_| "OK"));
+    }
 }
