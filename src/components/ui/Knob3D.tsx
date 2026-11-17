@@ -51,7 +51,6 @@ export function Knob3D({
   // SVG Arc calculation
   const startAngle = -135;
   const endAngle = 135;
-  const currentAngle = angleDeg;
 
   const polarToCartesian = useCallback((centerX: number, centerY: number, radius: number, angleInDegrees: number) => {
     const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
