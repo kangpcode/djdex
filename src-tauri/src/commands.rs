@@ -21,6 +21,7 @@ use crate::midi::{
     DjAction, KeyboardBinding, MidiLearnStatus, MidiMapping, MidiPortInfo, MidiStatus,
 };
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
+use crate::skin::SkinManifest;
 use crate::state::AppState;
 
 type IpcResult<T> = Result<T, String>;

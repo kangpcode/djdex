@@ -26,12 +26,14 @@ use crate::midi::{
     MidiManager,
 };
 use crate::sampler::{PadUpdate, SamplerStatus, SequencerStatus, SequencerUpdate};
+use crate::skin::{default_skins_dir, SkinManager, SkinManifest};
 
 pub struct AppState {
     engine: Arc<Mutex<Option<AudioEngine>>>,
     library: Arc<LibraryDb>,
     scanner: ScannerManager,
     midi: Arc<MidiManager>,
+    skin: Mutex<SkinManager>,
 }
 
 impl Default for AppState {
@@ -44,11 +46,14 @@ impl Default for AppState {
         let engine = Arc::new(Mutex::new(None));
         let presets_dir = default_presets_dir();
         let midi = MidiManager::new(Some(presets_dir), Arc::clone(&engine));
+        let skins_dir = default_skins_dir();
+        let skin = Mutex::new(SkinManager::new(skins_dir));
         Self {
             engine,
             library: db,
             scanner,
             midi,
+            skin,
         }
     }
 }
@@ -727,5 +732,35 @@ impl AppState {
         alt: bool,
     ) -> Result<Option<DjAction>, String> {
         self.midi.handle_keyboard_shortcut(key, ctrl, shift, alt)
+    }
+
+    // ---- Skin & Layout Engine (Fase 10) --------------------------------------
+
+    pub fn list_skins(&self) -> Vec<SkinManifest> {
+        self.skin.lock().list_skins()
+    }
+
+    pub fn get_active_skin(&self) -> SkinManifest {
+        self.skin.lock().get_active_skin()
+    }
+
+    pub fn set_active_skin(&self, skin_id: &str) -> Result<SkinManifest, String> {
+        self.skin.lock().set_active_skin(skin_id)
+    }
+
+    pub fn save_custom_skin(&self, manifest: SkinManifest) -> Result<SkinManifest, String> {
+        self.skin.lock().save_custom_skin(manifest)
+    }
+
+    pub fn delete_skin(&self, skin_id: &str) -> Result<(), String> {
+        self.skin.lock().delete_skin(skin_id)
+    }
+
+    pub fn export_skin_pack(&self, skin_id: &str, dest_path: &std::path::Path) -> Result<(), String> {
+        self.skin.lock().export_skin_pack(skin_id, dest_path)
+    }
+
+    pub fn import_skin_pack(&self, zip_path: &std::path::Path) -> Result<SkinManifest, String> {
+        self.skin.lock().import_skin_pack(zip_path)
     }
 }
