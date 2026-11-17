@@ -118,8 +118,9 @@ mod tests {
             .import_skin_pack(&pack_path)
             .expect("harus berhasil impor skin pack");
 
-        assert_eq!(imported.metadata.id, FACTORY_SKIN_REMIX);
-        assert_eq!(mgr_import.get_active_skin().metadata.id, FACTORY_SKIN_REMIX);
+        let expected_id = format!("{}-imported", FACTORY_SKIN_REMIX);
+        assert_eq!(imported.metadata.id, expected_id);
+        assert_eq!(mgr_import.get_active_skin().metadata.id, expected_id);
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

@@ -268,11 +268,22 @@ impl SkinManager {
             .read_to_string(&mut content)
             .map_err(|e| format!("Gagal membaca isi {}: {}", fname, e))?;
 
-        let manifest = if is_toml {
+        let mut manifest = if is_toml {
             SkinManifest::from_toml(&content)?
         } else {
             SkinManifest::from_json(&content)?
         };
+
+        // Jika ID bentrok dengan factory skin bawaan, beri akhiran '-imported'
+        let id = &manifest.metadata.id;
+        if id == FACTORY_SKIN_CLASSIC
+            || id == FACTORY_SKIN_BATTLE
+            || id == FACTORY_SKIN_REMIX
+            || id == FACTORY_SKIN_FOUR_DECK
+        {
+            manifest.metadata.id = format!("{}-imported", id);
+            manifest.metadata.name = format!("{} (Imported)", manifest.metadata.name);
+        }
 
         // Simpan ke direktori skins
         self.save_custom_skin(manifest)
