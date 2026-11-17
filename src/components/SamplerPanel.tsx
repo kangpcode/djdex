@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useSamplerStore } from "../stores/samplerStore";
 import type { DeckId, PadMode } from "../lib/ipc";
+import { FlStudioStudio } from "./FlStudioStudio";
+import { IconLoop, IconPiano, IconStop } from "./ui/Icons";
 import { Panel } from "./ui/Panel";
 
 const PAD_MODES: { value: PadMode; label: string }[] = [
@@ -37,7 +39,7 @@ export function SamplerPanel() {
   const toggleGridSize = useSamplerStore((state) => state.toggleGridSize);
   const selectPad = useSamplerStore((state) => state.selectPad);
 
-  const [activeTab, setActiveTab] = useState<"pads" | "sequencer">("pads");
+  const [activeTab, setActiveTab] = useState<"pads" | "sequencer" | "flstudio">("pads");
   const [sliceBeats, setSliceBeats] = useState<number>(4);
 
   const pads = status?.pads ?? [];
@@ -112,7 +114,7 @@ export function SamplerPanel() {
             </span>
           </div>
 
-          {/* Tab Sub-View: Pads vs Sequencer */}
+          {/* Tab Sub-View: Pads vs FL Studio vs Sequencer */}
           <div className="flex rounded-md border border-line bg-deck-900 p-0.5 text-[11px]">
             <button
               type="button"
@@ -127,10 +129,22 @@ export function SamplerPanel() {
             </button>
             <button
               type="button"
+              onClick={() => setActiveTab("flstudio")}
+              className={`rounded px-2.5 py-1 font-semibold flex items-center gap-1.5 transition ${
+                activeTab === "flstudio"
+                  ? "bg-fuchsia-500/25 border border-fuchsia-400 text-fuchsia-300 shadow-[0_0_10px_rgba(217,70,239,0.3)]"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              <IconPiano className="w-3.5 h-3.5 text-fuchsia-400" />
+              FL Studio &amp; Piano Roll
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab("sequencer")}
               className={`rounded px-2.5 py-1 font-semibold transition ${
                 activeTab === "sequencer"
-                  ? "bg-fuchsia-500/20 text-fuchsia-300 shadow-sm"
+                  ? "bg-emerald-500/20 text-emerald-300 shadow-sm"
                   : "text-ink-muted hover:text-ink"
               }`}
             >
@@ -272,20 +286,50 @@ export function SamplerPanel() {
                         : "rgba(10, 15, 30, 0.65)",
                     }}
                   >
-                    {/* Top Row: Pad Number, Mode Badge, Mute Group */}
+                    {/* Top Row: Pad Number, Quick Loop Toggle, Mute Group & Stop */}
                     <div className="flex items-center justify-between text-[9px]">
                       <span className="font-mono font-bold text-ink-muted">
                         {(pad.id + 1).toString().padStart(2, "0")}
                       </span>
                       <div className="flex items-center gap-1">
+                        {/* Quick Loop / One-Shot Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const nextMode = pad.mode === "loop" ? "one-shot" : "loop";
+                            void updatePad(pad.id, { mode: nextMode });
+                          }}
+                          className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border transition ${
+                            pad.mode === "loop"
+                              ? "bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                              : "bg-deck-950/80 border-[#202e42] text-slate-400 hover:text-slate-200"
+                          }`}
+                          title={pad.mode === "loop" ? "Mode Loop Aktif (klik untuk One-Shot)" : "Klik untuk Mode Loop"}
+                        >
+                          <IconLoop className="w-2.5 h-2.5" />
+                          <span>{pad.mode === "loop" ? "LOOP" : "SHOT"}</span>
+                        </button>
+
+                        {isPlaying && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void stopPad(pad.id);
+                            }}
+                            className="p-0.5 rounded bg-red-500/30 border border-red-400 text-red-300 hover:bg-red-500/50"
+                            title="Hentikan sample ini"
+                          >
+                            <IconStop className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+
                         {pad.muteGroup !== null && (
                           <span className="rounded bg-amber-500/20 px-1 py-0.2 text-[8px] font-bold text-amber-300">
                             MG{pad.muteGroup}
                           </span>
                         )}
-                        <span className="rounded bg-deck-800/80 px-1 py-0.2 text-[8px] font-bold uppercase tracking-wider text-ink-dim">
-                          {pad.mode.replace("-pad", "")}
-                        </span>
                       </div>
                     </div>
 
