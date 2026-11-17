@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "id": "producer-remix",
+    "name": "Producer Remix",
+    "author": "Kangpcode",
+    "version": "1.0.0",
+    "description": "Tata letak bagi produser & live remixer: panel Sampler 16-Pad dan 16-Step Sequencer menjadi sorotan utama bersama modul FX."
+  },
+  "theme": {
+    "primaryColor": "#a855f7",
+    "accentDeckA": "#a855f7",
+    "accentDeckB": "#ec4899",
+    "backgroundColor": "#0f0b18",
+    "surfaceColor": "#181329",
+    "panelBorderColor": "#30264d",
+    "textColor": "#f8fafc",
+    "fontFamily": "Inter, sans-serif"
+  },
+  "layout": {
+    "deckCount": 2,
+    "waveform": {
+      "position": "top-stacked",
+      "orientation": "horizontal",
+      "heightPx": 80,
+      "showBeatgrid": true
+    },
+    "platter": {
+      "size": "compact",
+      "vinylTexture": false,
+      "centerDisplay": true
+    },
+    "mixer": {
+      "position": "compact-bottom",
+      "channelCount": 2,
+      "vuMeterStyle": "gradient",
+      "crossfaderHeightPx": 48
+    },
+    "lowerPanelDefault": "sampler",
+    "showPhaseStrip": true,
+    "showScratchPads": true
+  }
+}

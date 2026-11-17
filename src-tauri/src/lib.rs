@@ -114,6 +114,13 @@ pub fn run() {
             commands::remove_keyboard_mapping,
             commands::reset_keyboard_mappings,
             commands::handle_keyboard_shortcut,
+            commands::list_skins,
+            commands::get_active_skin,
+            commands::set_active_skin,
+            commands::save_custom_skin,
+            commands::delete_skin,
+            commands::export_skin_pack,
+            commands::import_skin_pack,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan aplikasi DJDeX");

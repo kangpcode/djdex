@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "id": "battle-scratch",
+    "name": "Battle Scratch",
+    "author": "Kangpcode",
+    "version": "1.0.0",
+    "description": "Tata letak khusus turntablist / DJ battle: piringan vinyl ekstra besar, waveform vertikal berdampingan, dan crossfader dominan."
+  },
+  "theme": {
+    "primaryColor": "#eab308",
+    "accentDeckA": "#eab308",
+    "accentDeckB": "#ef4444",
+    "backgroundColor": "#0c0a09",
+    "surfaceColor": "#1c1917",
+    "panelBorderColor": "#44403c",
+    "textColor": "#fafaf9",
+    "fontFamily": "Inter, sans-serif"
+  },
+  "layout": {
+    "deckCount": 2,
+    "waveform": {
+      "position": "deck-integrated",
+      "orientation": "vertical",
+      "heightPx": 240,
+      "showBeatgrid": true
+    },
+    "platter": {
+      "size": "large-battle",
+      "vinylTexture": true,
+      "centerDisplay": false
+    },
+    "mixer": {
+      "position": "center",
+      "channelCount": 2,
+      "vuMeterStyle": "analog",
+      "crossfaderHeightPx": 72
+    },
+    "lowerPanelDefault": "sampler",
+    "showPhaseStrip": false,
+    "showScratchPads": true
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "id": "classic-club",
+    "name": "Classic Club",
+    "author": "Kangpcode",
+    "version": "1.0.0",
+    "description": "Tata letak standar klub profesional: 2 CDJ deck, mixer 2 channel di tengah, dan waveform bertumpuk di bagian atas."
+  },
+  "theme": {
+    "primaryColor": "#00e5ff",
+    "accentDeckA": "#00e5ff",
+    "accentDeckB": "#ff007f",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#0e1526",
+    "panelBorderColor": "#1c2842",
+    "textColor": "#f1f5f9",
+    "fontFamily": "Inter, sans-serif"
+  },
+  "layout": {
+    "deckCount": 2,
+    "waveform": {
+      "position": "top-stacked",
+      "orientation": "horizontal",
+      "heightPx": 110,
+      "showBeatgrid": true
+    },
+    "platter": {
+      "size": "standard",
+      "vinylTexture": true,
+      "centerDisplay": true
+    },
+    "mixer": {
+      "position": "center",
+      "channelCount": 2,
+      "vuMeterStyle": "segmented",
+      "crossfaderHeightPx": 56
+    },
+    "lowerPanelDefault": "library",
+    "showPhaseStrip": true,
+    "showScratchPads": false
+  }
+}

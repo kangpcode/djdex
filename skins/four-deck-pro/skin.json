@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "id": "four-deck-pro",
+    "name": "Four-Deck Pro",
+    "author": "Kangpcode",
+    "version": "1.0.0",
+    "description": "Tata letak 4 deck workstation profesional: Deck A & C di sisi kiri, Deck B & D di sisi kanan, serta mixer 4-channel lengkap."
+  },
+  "theme": {
+    "primaryColor": "#38bdf8",
+    "accentDeckA": "#38bdf8",
+    "accentDeckB": "#f97316",
+    "accentDeckC": "#10b981",
+    "accentDeckD": "#f43f5e",
+    "backgroundColor": "#080c14",
+    "surfaceColor": "#0f172a",
+    "panelBorderColor": "#1e293b",
+    "textColor": "#f8fafc",
+    "fontFamily": "Inter, sans-serif"
+  },
+  "layout": {
+    "deckCount": 4,
+    "waveform": {
+      "position": "top-stacked",
+      "orientation": "horizontal",
+      "heightPx": 96,
+      "showBeatgrid": true
+    },
+    "platter": {
+      "size": "compact",
+      "vinylTexture": true,
+      "centerDisplay": true
+    },
+    "mixer": {
+      "position": "center",
+      "channelCount": 4,
+      "vuMeterStyle": "segmented",
+      "crossfaderHeightPx": 52
+    },
+    "lowerPanelDefault": "library",
+    "showPhaseStrip": true,
+    "showScratchPads": false
+  }
+}

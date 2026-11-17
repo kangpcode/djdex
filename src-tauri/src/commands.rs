@@ -780,3 +780,53 @@ pub fn handle_keyboard_shortcut(
         alt.unwrap_or(false),
     )
 }
+
+// ---- Skin & Layout Engine (Fase 10) --------------------------------------
+
+#[tauri::command]
+pub fn list_skins(state: State<'_, AppState>) -> Vec<SkinManifest> {
+    state.list_skins()
+}
+
+#[tauri::command]
+pub fn get_active_skin(state: State<'_, AppState>) -> SkinManifest {
+    state.get_active_skin()
+}
+
+#[tauri::command]
+pub fn set_active_skin(
+    state: State<'_, AppState>,
+    skin_id: String,
+) -> IpcResult<SkinManifest> {
+    state.set_active_skin(&skin_id)
+}
+
+#[tauri::command]
+pub fn save_custom_skin(
+    state: State<'_, AppState>,
+    manifest: SkinManifest,
+) -> IpcResult<SkinManifest> {
+    state.save_custom_skin(manifest)
+}
+
+#[tauri::command]
+pub fn delete_skin(state: State<'_, AppState>, skin_id: String) -> IpcResult<()> {
+    state.delete_skin(&skin_id)
+}
+
+#[tauri::command]
+pub fn export_skin_pack(
+    state: State<'_, AppState>,
+    skin_id: String,
+    dest_path: String,
+) -> IpcResult<()> {
+    state.export_skin_pack(&skin_id, std::path::Path::new(&dest_path))
+}
+
+#[tauri::command]
+pub fn import_skin_pack(
+    state: State<'_, AppState>,
+    zip_path: String,
+) -> IpcResult<SkinManifest> {
+    state.import_skin_pack(std::path::Path::new(&zip_path))
+}
