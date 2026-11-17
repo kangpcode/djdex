@@ -333,8 +333,8 @@ pub fn synth_kendang(sample_rate: u32, duration_secs: f32, hit_type: usize) -> V
 
         let (sample, env) = match hit_type {
             0 => {
-                // "Tung" / Ketipung slap tinggi: pitch 180 Hz dengan resonansi kulit
-                let freq = 180.0 + 80.0 * (-progress * 15.0).exp();
+                // "Tung" / Ketipung slap tinggi: pitch 220 Hz dengan resonansi kulit
+                let freq = 220.0 + 80.0 * (-progress * 15.0).exp();
                 phase += 2.0 * PI * freq / sample_rate as f32;
                 let tone = phase.sin() * 0.7 + (phase * 2.0).sin() * 0.3;
                 let click = if t < 0.006 { rng.next_f32() * 0.4 } else { 0.0 };
@@ -342,7 +342,7 @@ pub fn synth_kendang(sample_rate: u32, duration_secs: f32, hit_type: usize) -> V
             }
             1 => {
                 // "Pak" / Tepak kendang Sunda: tepi membran dengan transient cepat & snappy
-                let freq = 360.0 * (-progress * 25.0).exp().max(0.4);
+                let freq = 380.0 * (-progress * 25.0).exp().max(0.4);
                 phase += 2.0 * PI * freq / sample_rate as f32;
                 let noise = rng.next_f32() * (-progress * 20.0).exp();
                 let tone = phase.sin() * 0.4 + noise * 0.8;
@@ -354,12 +354,69 @@ pub fn synth_kendang(sample_rate: u32, duration_secs: f32, hit_type: usize) -> V
                 phase += 2.0 * PI * freq / sample_rate as f32;
                 (phase.sin(), (-progress * 6.0).exp())
             }
-            _ => {
+            3 => {
                 // "Dho / Dut" Koplo / Tabla bass: pitch drop khas 110 Hz -> 42 Hz
                 let freq = 42.0 + 75.0 * (-progress * 8.0).exp();
                 phase += 2.0 * PI * freq / sample_rate as f32;
                 let tone = phase.sin() * 0.85 + (phase * 2.0).sin() * 0.15;
                 (tone, (-progress * 5.5).exp())
+            }
+            4 => {
+                // "Tong" / Kulanter tinggi: resonansi 280 Hz ring
+                let freq = 280.0 + 90.0 * (-progress * 12.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.6 + (phase * 2.0).sin() * 0.35 + (phase * 3.0).sin() * 0.1;
+                (tone, (-progress * 7.5).exp())
+            }
+            5 => {
+                // "Plak" / Open slap membran kendang Jaipong 460 Hz
+                let freq = 460.0 * (-progress * 22.0).exp().max(0.3);
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let noise = rng.next_f32() * (-progress * 18.0).exp();
+                let tone = phase.sin() * 0.3 + noise * 0.9;
+                (tone, (-progress * 16.0).exp())
+            }
+            6 => {
+                // "Ketuk" / Kayu bingkai kendang (Wood Rim Knock) 1200 Hz
+                let freq = 1200.0 * (-progress * 30.0).exp().max(0.2);
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.5 + rng.next_f32() * 0.5;
+                (tone, (-progress * 24.0).exp())
+            }
+            7 => {
+                // "Dhot Koplo Deep Sub" (pitch drop 90 Hz -> 34 Hz sub rumble)
+                let freq = 34.0 + 60.0 * (-progress * 6.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.9 + (phase * 2.0).sin() * 0.1;
+                (tone, (-progress * 4.5).exp())
+            }
+            8 => {
+                // "Kendang Indung" (Warm deep body boom 46 Hz)
+                let freq = 46.0 + 25.0 * (-progress * 8.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                (phase.sin(), (-progress * 5.0).exp())
+            }
+            9 => {
+                // "Muted Tepak" (Slap redam / muted rim)
+                let freq = 260.0;
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let click = rng.next_f32() * 0.7;
+                (phase.sin() * 0.3 + click, (-progress * 22.0).exp())
+            }
+            10 => {
+                // "Tung Mid" (175 Hz resonansi nada sedang)
+                let freq = 175.0 + 50.0 * (-progress * 14.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.75 + (phase * 2.0).sin() * 0.25;
+                (tone, (-progress * 8.0).exp())
+            }
+            _ => {
+                // "Rampak Double Roll" (Pukulan rampak beruntun)
+                let sub_hit = ((progress * 32.0 * PI).sin() > 0.0) as i32 as f32;
+                let freq = 200.0 + 80.0 * sub_hit;
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.6 + rng.next_f32() * 0.4;
+                (tone, (-progress * 7.0).exp())
             }
         };
 
