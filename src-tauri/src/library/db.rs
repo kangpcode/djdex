@@ -590,7 +590,11 @@ impl LibraryDb {
             params![track_id, deck_slot as i64, now],
         )
         .map_err(|e| AudioError::Io(e.to_string()))?;
-        self.increment_play_count(track_id)?;
+        conn.execute(
+            "UPDATE tracks SET play_count = play_count + 1 WHERE id = ?1",
+            params![track_id],
+        )
+        .map_err(|e| AudioError::Io(e.to_string()))?;
         Ok(())
     }
 
