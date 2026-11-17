@@ -489,6 +489,8 @@ fn audio_host_loop(
                 [Arc<Deck>; DECK_COUNT],
                 Arc<SamplerController>,
                 Arc<PreviewController>,
+                Arc<RecorderController>,
+                Arc<BroadcastController>,
             ),
             AudioError,
         >,
@@ -517,7 +519,14 @@ fn audio_host_loop(
     }
 
     if ready
-        .send(Ok((opened.report, opened.decks, opened.sampler, opened.preview)))
+        .send(Ok((
+            opened.report,
+            opened.decks,
+            opened.sampler,
+            opened.preview,
+            opened.recorder,
+            opened.broadcast,
+        )))
         .is_err()
     {
         // Pemanggil sudah menyerah; stream akan ditutup saat fungsi kembali.
