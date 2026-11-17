@@ -1,8 +1,23 @@
 import { useEffect, useState } from "react";
-import { useLibraryStore } from "../stores/libraryStore";
 import { useDeckAStore, useDeckBStore } from "../stores/deckStore";
-import { Panel } from "./ui/Panel";
+import { useLibraryStore } from "../stores/libraryStore";
 import type { LibraryTrack } from "../lib/ipc";
+import {
+  IconClose,
+  IconClock,
+  IconExport,
+  IconFlash,
+  IconFolder,
+  IconGear,
+  IconHeadphones,
+  IconImport,
+  IconMusic,
+  IconPlaylist,
+  IconStar,
+  IconStop,
+  IconSearch,
+} from "./ui/Icons";
+import { Panel } from "./ui/Panel";
 
 export function LibraryPanel() {
   const tracks = useLibraryStore((s) => s.tracks);
