@@ -66,4 +66,13 @@ pub enum AudioError {
 
     #[error("Gagal memulai thread Auto DJ: {0}")]
     AutoDjThreadSpawn(String),
+
+    #[error("Error I/O: {0}")]
+    Io(String),
+
+    #[error("Error serialisasi: {0}")]
+    Serialize(String),
+
+    #[error("Error sampler: {0}")]
+    Sampler(String),
 }

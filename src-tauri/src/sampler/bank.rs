@@ -3,7 +3,6 @@
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use zip::write::SimpleFileOptions;
 

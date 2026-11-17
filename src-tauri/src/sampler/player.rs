@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
 use super::bank::{create_default_banks, SampleBank, BANK_COUNT, PADS_PER_BANK};
-use super::pad::{PadDto, PadMode, PadUpdate, SamplePad};
+use super::pad::{PadDto, PadMode, PadUpdate};
 use super::sequencer::{SequencerStatus, SequencerUpdate, StepSequencer, TRACK_COUNT};
 use crate::error::AudioError;
 
@@ -290,25 +290,34 @@ impl SamplerRt {
         let speed = pitch_ratio * tempo_ratio;
 
         // Cari slot voice kosong atau voice tertua
-        let voice_slot = self
-            .voices
-            .iter_mut()
-            .find(|v| !v.active)
-            .or_else(|| self.voices.iter_mut().min_by(|a, b| a.pos.total_cmp(&b.pos)));
-
-        if let Some(v) = voice_slot {
-            v.active = true;
-            v.pad_id = pad_id;
-            v.audio = Arc::clone(&pad.audio);
-            v.pos = 0.0;
-            v.speed = speed;
-            v.volume = (pad.volume * velocity.clamp(0.0, 2.0)).clamp(0.0, 2.0);
-            v.mode = pad.mode;
-            v.mute_group = pad.mute_group;
-            v.holding = true;
-            v.fading_out = false;
-            v.fade_level = 1.0;
+        let mut chosen_idx = None;
+        for (idx, v) in self.voices.iter().enumerate() {
+            if !v.active {
+                chosen_idx = Some(idx);
+                break;
+            }
         }
+        let voice_idx = chosen_idx.unwrap_or_else(|| {
+            self.voices
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| a.pos.total_cmp(&b.pos))
+                .map(|(i, _)| i)
+                .unwrap_or(0)
+        });
+
+        let v = &mut self.voices[voice_idx];
+        v.active = true;
+        v.pad_id = pad_id;
+        v.audio = Arc::clone(&pad.audio);
+        v.pos = 0.0;
+        v.speed = speed;
+        v.volume = (pad.volume * velocity.clamp(0.0, 2.0)).clamp(0.0, 2.0);
+        v.mode = pad.mode;
+        v.mute_group = pad.mute_group;
+        v.holding = true;
+        v.fading_out = false;
+        v.fade_level = 1.0;
     }
 
     fn release_pad(&mut self, pad_id: usize) {
