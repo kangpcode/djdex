@@ -87,38 +87,45 @@ pub struct TrackQuery {
 
 /// Pengelola koneksi dan query SQLite untuk Library.
 pub struct LibraryDb {
+    conn: parking_lot::Mutex<Connection>,
+    #[allow(dead_code)]
     db_path: PathBuf,
 }
 
 impl LibraryDb {
     pub fn new(path: impl Into<PathBuf>) -> Result<Self, AudioError> {
         let db_path = path.into();
-        let db = Self { db_path };
+        if let Some(parent) = db_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let conn = Connection::open(&db_path)
+            .map_err(|e| AudioError::Io(format!("Gagal membuka DB SQLite: {e}")))?;
+        let db = Self {
+            conn: parking_lot::Mutex::new(conn),
+            db_path,
+        };
         db.init_schema()?;
         Ok(db)
     }
 
     pub fn in_memory() -> Result<Self, AudioError> {
+        let conn = Connection::open_in_memory()
+            .map_err(|e| AudioError::Io(format!("Gagal membuka in-memory DB: {e}")))?;
         let db = Self {
+            conn: parking_lot::Mutex::new(conn),
             db_path: PathBuf::from(":memory:"),
         };
         db.init_schema()?;
         Ok(db)
     }
 
-    fn open(&self) -> SqlResult<Connection> {
-        if self.db_path.to_str() == Some(":memory:") {
-            Connection::open_in_memory()
-        } else {
-            if let Some(parent) = self.db_path.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            Connection::open(&self.db_path)
-        }
+    #[inline]
+    fn conn(&self) -> parking_lot::MutexGuard<'_, Connection> {
+        self.conn.lock()
     }
 
     pub fn init_schema(&self) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
 
         conn.execute_batch(
             "
@@ -188,7 +195,7 @@ impl LibraryDb {
     }
 
     pub fn insert_or_update_track(&self, track: &LibraryTrack) -> Result<i64, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
 
         conn.execute(
             "
@@ -235,7 +242,7 @@ impl LibraryDb {
         key_name: String,
         loudness_lufs: f64,
     ) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "
             UPDATE tracks SET
@@ -252,7 +259,7 @@ impl LibraryDb {
     }
 
     pub fn update_rating(&self, track_id: i64, rating: u32) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "UPDATE tracks SET rating = ?1 WHERE id = ?2",
             params![rating.min(5), track_id],
@@ -262,7 +269,7 @@ impl LibraryDb {
     }
 
     pub fn increment_play_count(&self, track_id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "UPDATE tracks SET play_count = play_count + 1 WHERE id = ?1",
             params![track_id],
@@ -272,7 +279,7 @@ impl LibraryDb {
     }
 
     pub fn get_tracks(&self, query: TrackQuery) -> Result<Vec<LibraryTrack>, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
 
         let mut sql = String::from(
             "
@@ -413,7 +420,7 @@ impl LibraryDb {
     }
 
     pub fn delete_track(&self, id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute("DELETE FROM tracks WHERE id = ?1", params![id])
             .map_err(|e| AudioError::Io(e.to_string()))?;
         Ok(())
@@ -422,7 +429,7 @@ impl LibraryDb {
     // ---- Crate Methods ----------------------------------------------------
 
     pub fn create_crate(&self, name: &str, color: Option<&str>) -> Result<i64, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "INSERT INTO crates (name, color) VALUES (?1, ?2) ON CONFLICT(name) DO NOTHING",
             params![name, color],
@@ -432,14 +439,14 @@ impl LibraryDb {
     }
 
     pub fn delete_crate(&self, id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute("DELETE FROM crates WHERE id = ?1", params![id])
             .map_err(|e| AudioError::Io(e.to_string()))?;
         Ok(())
     }
 
     pub fn list_crates(&self) -> Result<Vec<CrateItem>, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(
                 "
@@ -471,7 +478,7 @@ impl LibraryDb {
     }
 
     pub fn add_track_to_crate(&self, crate_id: i64, track_id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "INSERT INTO crate_tracks (crate_id, track_id) VALUES (?1, ?2) ON CONFLICT DO NOTHING",
             params![crate_id, track_id],
@@ -481,7 +488,7 @@ impl LibraryDb {
     }
 
     pub fn remove_track_from_crate(&self, crate_id: i64, track_id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "DELETE FROM crate_tracks WHERE crate_id = ?1 AND track_id = ?2",
             params![crate_id, track_id],
@@ -497,7 +504,7 @@ impl LibraryDb {
         name: &str,
         smart_filter: Option<SmartFilter>,
     ) -> Result<i64, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         let is_smart = smart_filter.is_some();
         let filter_json = smart_filter
             .as_ref()
@@ -512,14 +519,14 @@ impl LibraryDb {
     }
 
     pub fn delete_playlist(&self, id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute("DELETE FROM playlists WHERE id = ?1", params![id])
             .map_err(|e| AudioError::Io(e.to_string()))?;
         Ok(())
     }
 
     pub fn list_playlists(&self) -> Result<Vec<PlaylistItem>, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(
                 "
@@ -554,7 +561,7 @@ impl LibraryDb {
     }
 
     pub fn add_track_to_playlist(&self, playlist_id: i64, track_id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "INSERT INTO playlist_tracks (playlist_id, track_id) VALUES (?1, ?2) ON CONFLICT DO NOTHING",
             params![playlist_id, track_id],
@@ -564,7 +571,7 @@ impl LibraryDb {
     }
 
     pub fn remove_track_from_playlist(&self, playlist_id: i64, track_id: i64) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         conn.execute(
             "DELETE FROM playlist_tracks WHERE playlist_id = ?1 AND track_id = ?2",
             params![playlist_id, track_id],
@@ -576,7 +583,7 @@ impl LibraryDb {
     // ---- History Methods --------------------------------------------------
 
     pub fn add_to_history(&self, track_id: i64, deck_slot: usize) -> Result<(), AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         let now = chrono_or_simple_timestamp();
         conn.execute(
             "INSERT INTO history (track_id, deck_slot, played_at) VALUES (?1, ?2, ?3)",
@@ -588,7 +595,7 @@ impl LibraryDb {
     }
 
     pub fn get_history(&self, limit: usize) -> Result<Vec<HistoryItem>, AudioError> {
-        let conn = self.open().map_err(|e| AudioError::Io(e.to_string()))?;
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(
                 "
