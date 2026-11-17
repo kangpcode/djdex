@@ -366,13 +366,13 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
                     <Knob3D
                       label="PARAM"
                       size="sm"
-                      value={param1}
+                      value={p1}
                       min={0}
                       max={1}
                       step={0.01}
                       defaultValue={0.5}
-                      onChange={(v) => void updateFx({ chain: deck, slot: slotIdx, param1: v })}
-                      display={`${Math.round(param1 * 100)}%`}
+                      onChange={(v) => void updateFx({ chain: deck, slot: slotIdx, p1: v })}
+                      display={`${Math.round(p1 * 100)}%`}
                       accentColor="#e879f9"
                     />
                   </div>
@@ -396,7 +396,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
           <div className="grid grid-cols-4 gap-2">
             {[0, 1, 2, 3].map((slotIdx) => {
               const pad = samplerStatus?.pads[slotIdx];
-              const isPlaying = pad?.playing ?? false;
+              const isPlaying = pad?.isPlaying ?? false;
               const isLoaded = pad?.loaded ?? false;
 
               return (
@@ -958,7 +958,7 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             {padMode === "sampler" &&
               Array.from({ length: 8 }).map((_, slot) => {
                 const pad = samplerStatus?.pads[slot];
-                const isPlaying = pad?.playing ?? false;
+                const isPlaying = pad?.isPlaying ?? false;
                 const isLoaded = pad?.loaded ?? false;
 
                 return (
