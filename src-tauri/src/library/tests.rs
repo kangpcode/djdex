@@ -7,21 +7,21 @@ use super::playlist::*;
 fn sample_track(id: i64, title: &str, artist: &str, bpm: f64, key: &str, genre: &str) -> LibraryTrack {
     LibraryTrack {
         id,
-        filePath: format!("/music/{artist} - {title}.mp3"),
+        file_path: format!("/music/{artist} - {title}.mp3"),
         title: title.to_string(),
         artist: artist.to_string(),
         album: Some("Test Album".to_string()),
         genre: Some(genre.to_string()),
         year: Some(2024),
         bpm: Some(bpm),
-        keyName: Some(key.to_string()),
-        durationSecs: 210.0,
+        key_name: Some(key.to_string()),
+        duration_secs: 210.0,
         rating: 4,
         color: None,
-        playCount: 0,
-        dateAdded: "1700000000".to_string(),
+        play_count: 0,
+        date_added: "1700000000".to_string(),
         analyzed: true,
-        loudnessLufs: Some(-8.5),
+        loudness_lufs: Some(-8.5),
     }
 }
 
@@ -47,8 +47,8 @@ fn test_database_crud_and_search() {
 
     // Sorting by BPM desc
     let sorted = db.get_tracks(TrackQuery {
-        sortColumn: Some("bpm".to_string()),
-        sortDescending: Some(true),
+        sort_column: Some("bpm".to_string()),
+        sort_descending: Some(true),
         ..Default::default()
     }).expect("sorted");
     assert_eq!(sorted.len(), 3);
@@ -73,15 +73,15 @@ fn test_crates_management() {
     let crate_id = db.create_crate("Festival Crates", Some("#00e5ff")).expect("create crate");
     let crates = db.list_crates().expect("list");
     assert_eq!(crates.len(), 1);
-    assert_eq!(crates[0].trackCount, 0);
+    assert_eq!(crates[0].track_count, 0);
 
     db.add_track_to_crate(crate_id, id1).expect("add to crate");
     let crates_after = db.list_crates().expect("list after");
-    assert_eq!(crates_after[0].trackCount, 1);
+    assert_eq!(crates_after[0].track_count, 1);
 
     // Query track di crate
     let tracks_in_crate = db.get_tracks(TrackQuery {
-        crateId: Some(crate_id),
+        crate_id: Some(crate_id),
         ..Default::default()
     }).expect("tracks in crate");
     assert_eq!(tracks_in_crate.len(), 1);
@@ -89,7 +89,7 @@ fn test_crates_management() {
 
     db.remove_track_from_crate(crate_id, id1).expect("remove");
     let crates_empty = db.list_crates().expect("list empty");
-    assert_eq!(crates_empty[0].trackCount, 0);
+    assert_eq!(crates_empty[0].track_count, 0);
 }
 
 #[test]
@@ -105,14 +105,14 @@ fn test_smart_playlists() {
 
     // Buat Smart Playlist untuk BPM 120-130
     let filter = SmartFilter {
-        minBpm: Some(120.0),
-        maxBpm: Some(130.0),
+        min_bpm: Some(120.0),
+        max_bpm: Some(130.0),
         ..Default::default()
     };
     let pl_id = db.create_playlist("House Zone 120-130", Some(filter)).expect("create smart pl");
 
     let tracks = db.get_tracks(TrackQuery {
-        playlistId: Some(pl_id),
+        playlist_id: Some(pl_id),
         ..Default::default()
     }).expect("smart playlist tracks");
 
@@ -130,11 +130,11 @@ fn test_history_logging() {
     let history = db.get_history(10).expect("get history");
     assert_eq!(history.len(), 1);
     assert_eq!(history[0].title, "Opening Track");
-    assert_eq!(history[0].deckSlot, 0);
+    assert_eq!(history[0].deck_slot, 0);
 
     // Play count naik
     let t = db.get_tracks(TrackQuery::default()).expect("tracks");
-    assert_eq!(t[0].playCount, 1);
+    assert_eq!(t[0].play_count, 1);
 }
 
 #[test]
