@@ -187,7 +187,10 @@ mod tests {
 
     #[test]
     fn list_output_devices_returns_cleanly() {
-        let devices = list_output_devices();
-        assert!(devices.is_ok());
+        let devices = list_output_devices().unwrap();
+        for d in &devices {
+            eprintln!("DEV: {} ch={:?} def={:?}", d.name, d.supported_channels, d.default_channels);
+        }
+        assert!(!devices.is_empty());
     }
 }

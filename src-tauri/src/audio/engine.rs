@@ -1189,6 +1189,11 @@ mod tests {
     #[test]
     fn start_default_engine_logs_check() {
         let res = AudioEngine::start(StartRequest::default());
-        eprintln!("AudioEngine::start result: {:?}", res.as_ref().map(|_| "OK"));
+        eprintln!("AudioEngine::start default: {:?}", res.as_ref().map(|_| "OK"));
+        let res4 = AudioEngine::start(StartRequest {
+            channels: Some(4),
+            ..Default::default()
+        });
+        eprintln!("AudioEngine::start 4ch: {:?}", res4.as_ref().map(|_| "OK"));
     }
 }
