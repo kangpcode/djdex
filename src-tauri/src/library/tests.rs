@@ -1,6 +1,5 @@
 //! Unit test untuk Library Database, Crates, Playlists, Smart Playlists, dan M3U.
 
-use std::sync::Arc;
 use super::db::*;
 use super::playlist::*;
 
