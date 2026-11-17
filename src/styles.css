@@ -363,4 +363,114 @@
   .border-accent {
     border-color: color-mix(in oklab, var(--panel-accent, var(--color-cyan)) 55%, var(--color-line));
   }
+
+  /* ============================================================
+     3D Hardware DJ Skeuomorphic Styling (Pioneer / VirtualDJ Style)
+     ============================================================ */
+
+  /* Hardware Chassis 3D Plate */
+  .hardware-chassis-3d {
+    background: linear-gradient(180deg, #182230 0%, #0d1520 40%, #070c14 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.8),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.9),
+      0 12px 30px -10px rgba(0, 0, 0, 0.95);
+    border: 1px solid #223246;
+  }
+
+  /* Pioneer Circular Cue / Play Button Bezel */
+  .pioneer-btn-outer {
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #475569 0%, #1e293b 50%, #0f172a 100%);
+    padding: 3px;
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.7),
+      inset 0 1px 1px rgba(255, 255, 255, 0.4),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.8);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: transform 80ms ease;
+  }
+
+  .pioneer-btn-outer:active:not(:disabled) {
+    transform: translateY(2px) scale(0.98);
+  }
+
+  .pioneer-btn-inner {
+    border-radius: 9999px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    box-shadow:
+      inset 0 2px 4px rgba(255, 255, 255, 0.15),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.8),
+      0 1px 2px rgba(0, 0, 0, 0.5);
+    transition: all 120ms ease;
+  }
+
+  /* Chunky Rubber Backlit Performance Pads 3D */
+  .pad-silicon-3d {
+    position: relative;
+    border-radius: 6px;
+    font-weight: 700;
+    transition: all 90ms ease;
+    user-select: none;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.8),
+      0 2px 4px -1px rgba(0, 0, 0, 0.6),
+      inset 0 1px 1px rgba(255, 255, 255, 0.25),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.7);
+    cursor: pointer;
+  }
+
+  .pad-silicon-3d:active:not(:disabled) {
+    transform: translateY(2px) scale(0.97);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.9),
+      inset 0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+
+  /* 3D Sunken Fader Track Groove */
+  .fader-slot-3d {
+    background: #04080e;
+    border: 1px solid #1a2533;
+    border-radius: 999px;
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.95),
+      inset 0 0 2px rgba(0, 0, 0, 0.9),
+      0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* 3D Pioneer Prism Fader Cap */
+  .fader-cap-3d {
+    background: linear-gradient(180deg, #334155 0%, #1e293b 40%, #0f172a 100%);
+    border: 1px solid #475569;
+    border-radius: 4px;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.8),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.9);
+    cursor: grab;
+    user-select: none;
+  }
+
+  .fader-cap-3d:active {
+    cursor: grabbing;
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* Jog Wheel Metallic Knurling Rim Animation */
+  @keyframes jogStrobeRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 }
