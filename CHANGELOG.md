@@ -3,6 +3,46 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-11-17
+
+### Added — Fase 10: Sistem Template / Skin "Mesin Tampilan DJ Virtual"
+
+- **Skin & Layout Engine Rust (`src-tauri/src/skin/`)**:
+  - `manifest.rs`: Skema dokumen manifest skin komprehensif (`SkinManifest`) dengan dukungan format ganda JSON (`serde_json`) dan TOML (`toml 0.8`).
+  - Definisi gaya piringan `PlatterStyle` (`size`: `compact` | `standard` | `large-battle`, `vinyl_texture`, `center_display`).
+  - Definisi tata letak gelombang suara `WaveformLayout` (`position`: `top-stacked` | `deck-integrated` | `bottom` | `hidden`, `orientation`: `horizontal` | `vertical`, `height_px`, `show_beatgrid`).
+  - Definisi mixer `MixerLayout` (`position`: `center` | `compact-bottom` | `split`, `channel_count`: 2 atau 4, `vu_meter_style`: `segmented` | `analog` | `gradient`, `crossfader_height_px`).
+  - Skema warna tema fleksibel `SkinTheme` (primary accent, accent Deck A, B, C, D, background, surface, panel border, text, font family, serta injeksi custom CSS dinamis).
+- **4 Template Pabrikan Bawaan (Factory Skins)**:
+  1. *Classic Club (`skins/classic-club/skin.json`)*: Tata letak standar club CDJ + DJM, 2 deck, waveform horizontal bertumpuk di bagian atas, mixer 2 channel di tengah dengan aksen sian neon dan magenta.
+  2. *Battle Scratch (`skins/battle-scratch/skin.json`)*: Tata letak khusus turntablist / DJ battle dengan piringan vinyl ekstra besar (12-inch turntable), waveform vertikal berdampingan di dalam deck, crossfader dominan, tombol scratch pads, dan tema dark carbon & gold/crimson.
+  3. *Producer Remix (`skins/producer-remix/skin.json`)*: Tata letak live remixer dengan deck kompak, mixer ringkas, serta sorotan utama pada Remixer Sampler 16-Pad dan 16-Step Sequencer dengan tema electric purple & neon pink.
+  4. *Four-Deck Pro (`skins/four-deck-pro/skin.json`)*: Tata letak 4 deck workstation (Deck A & C di sisi kiri, Deck B & D di sisi kanan) dengan mixer 4 channel lengkap serta aksen sky blue, vivid orange, emerald, dan rose.
+- **Pengelola Pemuatan & Ekspor/Impor Skin (`src-tauri/src/skin/loader.rs`)**:
+  - Pemindaian folder skin kustom otomatis dari folder data aplikasi (`skins/`).
+  - Pengalihan skin aktif secara real-time tanpa perlu me-restart audio engine.
+  - Fitur ekspor paket skin menjadi arsip zip mandiri `.djdex-skin` (berisi `skin.json` dan `skin.toml`).
+  - Fitur impor paket `.djdex-skin` dengan validasi manifest dan penamaan unik otomatis jika ada benturan ID dengan template pabrikan.
+- **Antarmuka Pengguna React & Zustand Store (`src/stores/skinStore.ts`, `src/components/SkinPanel.tsx`)**:
+  - Injeksi variabel CSS dinamis (`--skin-primary`, `--skin-accent-a`, `--skin-accent-b`, `--skin-bg`, `--skin-surface`, `--skin-border`, `--skin-text`) langsung ke root document DOM.
+  - *Galeri Template*: Kartu visual untuk setiap skin dengan lencana aktif, pratinjau palet warna, badge jumlah deck, orientasi waveform, dan tombol "Terapkan Skin".
+  - *Editor Visual & Tata Letak*: Formulir interaktif untuk mengubah warna tema secara langsung (color picker), memilih orientasi waveform (horizontal vs vertikal), ukuran piringan vinyl, jumlah deck, dan opsi tampilan.
+  - *Quick Skin Switcher di Header (`src/components/Header.tsx`)*: Dropdown di bilah navigasi atas untuk berganti tampilan secara instan dengan 1 klik.
+  - *Ekspor / Impor Native*: Terhubung dengan dialog native OS untuk menyimpan dan membuka file `.djdex-skin`.
+- **6 Unit Test Baru di Rust**:
+  - Inisialisasi dan verifikasi 4 factory skins.
+  - Roundtrip serialisasi dan parsing JSON manifest.
+  - Roundtrip serialisasi dan parsing TOML manifest.
+  - Pengalihan skin aktif di `SkinManager`.
+  - Penyimpanan dan penghapusan skin kustom.
+  - Siklus penuh ekspor dan impor arsip zip paket `.djdex-skin`. Total unit test Rust kini mencapai 78 test lulus 100%.
+
+### Changed
+
+- Versi aplikasi dinaikkan ke `0.10.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, `App.tsx`, dan UI header/footer).
+- Ditambahkan dependensi `toml = "0.8"` ke `src-tauri/Cargo.toml`.
+- Navigasi panel bawah di `App.tsx` ditambahkan tab "Skins & Layout" dengan lencana sky blue.
+
 ## [0.9.0] - 2026-11-17
 
 ### Added — Fase 9: Integrasi MIDI Controller & MIDI Learn + Keyboard Mapping

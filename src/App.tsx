@@ -9,6 +9,7 @@ import { MidiPanel } from "./components/MidiPanel";
 import { MixerPanel } from "./components/MixerPanel";
 import { PhaseStrip } from "./components/PhaseStrip";
 import { SamplerPanel } from "./components/SamplerPanel";
+import { SkinPanel } from "./components/SkinPanel";
 import { ToneTestPanel } from "./components/ToneTestPanel";
 import { isTauri } from "./lib/ipc";
 import { useAudioStore } from "./stores/audioStore";
@@ -18,6 +19,7 @@ import { useLibraryStore } from "./stores/libraryStore";
 import { useMidiStore } from "./stores/midiStore";
 import { useMixerStore } from "./stores/mixerStore";
 import { useSamplerStore } from "./stores/samplerStore";
+import { useSkinStore } from "./stores/skinStore";
 
 const STATUS_POLL_MS = 100;
 
@@ -38,7 +40,7 @@ function isAudioPath(path: string): boolean {
   return AUDIO_EXTENSIONS.has(extension);
 }
 
-type LowerTab = "library" | "sampler" | "fx" | "midi" | "engine" | "all";
+type LowerTab = "library" | "sampler" | "fx" | "midi" | "skin" | "engine" | "all";
 
 export default function App() {
   const status = useAudioStore((state) => state.status);
@@ -57,7 +59,14 @@ export default function App() {
   const refreshPreview = useLibraryStore((state) => state.refreshPreview);
   const refreshProgress = useLibraryStore((state) => state.refreshProgress);
 
+  const refreshSkins = useSkinStore((state) => state.refreshSkins);
+  const activeSkin = useSkinStore((state) => state.activeSkin);
+
   const [lowerTab, setLowerTab] = useState<LowerTab>("library");
+
+  useEffect(() => {
+    void refreshSkins();
+  }, [refreshSkins]);
 
   useEffect(() => {
     if (!isTauri()) {
@@ -239,6 +248,19 @@ export default function App() {
 
               <button
                 type="button"
+                onClick={() => setLowerTab("skin")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "skin"
+                    ? "border-sky-400 bg-sky-500/20 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-sky-400" />
+                Skins & Layout
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setLowerTab("engine")}
                 className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
                   lowerTab === "engine"
@@ -273,6 +295,8 @@ export default function App() {
 
           {(lowerTab === "midi" || lowerTab === "all") && <MidiPanel />}
 
+          {(lowerTab === "skin" || lowerTab === "all") && <SkinPanel />}
+
           {(lowerTab === "engine" || lowerTab === "all") && (
             <div className="grid gap-5 lg:grid-cols-2">
               <AudioEnginePanel />
@@ -280,18 +304,18 @@ export default function App() {
             </div>
           )}
 
-          <PhaseStrip />
+          {activeSkin?.layout.showPhaseStrip !== false && <PhaseStrip />}
         </div>
       </main>
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.9.0</span>
+        <span>By Kangpcode · v0.10.0</span>
         <span className="hidden sm:inline">
-          Rust + Tauri 2 · MIDI Controller Learn · Hardware LED Feedback · Keyboard Mapping · SQLite Library
+          Rust + Tauri 2 · Skin & Layout Engine · MIDI Learn · Hardware LED Feedback · SQLite Library
         </span>
         <span className="ml-auto hidden md:inline">
-          MIDI Learn: Active · Space / Shift+Space = Play/Pause · C / V = Cue Jump · Drag Audio to Decks
+          Skin: {activeSkin?.metadata.name ?? "Classic Club"} · Space = Play/Pause · C / V = Cue Jump
         </span>
       </footer>
     </div>

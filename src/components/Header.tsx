@@ -1,5 +1,6 @@
 import { formatInt, formatMs, formatSampleRate } from "../lib/format";
 import type { EngineStatus } from "../lib/ipc";
+import { useSkinStore } from "../stores/skinStore";
 
 function Logo() {
   return (
@@ -85,6 +86,10 @@ function StatusPill({ status }: { status: EngineStatus | null }) {
 }
 
 export function Header({ status }: { status: EngineStatus | null }) {
+  const activeSkin = useSkinStore((s) => s.activeSkin);
+  const skins = useSkinStore((s) => s.skins);
+  const setSkin = useSkinStore((s) => s.setSkin);
+
   return (
     <header className="relative z-20 flex items-center gap-4 border-b border-line bg-deck-950/85 px-5 py-3 backdrop-blur">
       <Logo />
@@ -99,14 +104,30 @@ export function Header({ status }: { status: EngineStatus | null }) {
           </span>
         </div>
         <p className="mt-0.5 text-[11px] text-ink-faint">
-          Virtual DJ workstation · Fase 6: FX chain, Auto DJ, dua deck penuh
+          Virtual DJ workstation · Mesin Tampilan & Skin Layout Engine
         </p>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Quick Skin Switcher */}
+        <div className="hidden sm:flex items-center gap-1.5 rounded-md border border-line bg-deck-900/80 px-2 py-1 text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Skin:</span>
+          <select
+            value={activeSkin?.metadata.id ?? "classic-club"}
+            onChange={(e) => void setSkin(e.target.value)}
+            className="bg-transparent text-cyan-300 font-bold text-xs focus:outline-none cursor-pointer"
+          >
+            {skins.map((s) => (
+              <option key={s.metadata.id} value={s.metadata.id} className="bg-deck-950 text-ink">
+                {s.metadata.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <StatusPill status={status} />
-        <span className="chip border-cyan/30 text-cyan-soft">FASE 6</span>
-        <span className="chip">v0.6.0</span>
+        <span className="chip border-cyan/30 text-cyan-soft">FASE 10</span>
+        <span className="chip">v0.10.0</span>
       </div>
     </header>
   );

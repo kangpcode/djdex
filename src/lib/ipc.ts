@@ -463,6 +463,79 @@ export interface KeyboardBinding {
   description?: string | null;
 }
 
+// ---- Skin & Layout Engine (Fase 10) ----
+
+export type PlatterSize = "compact" | "standard" | "large-battle";
+
+export type WaveformPosition =
+  | "top-stacked"
+  | "deck-integrated"
+  | "bottom"
+  | "hidden";
+
+export type WaveformOrientation = "horizontal" | "vertical";
+
+export type MixerPosition = "center" | "compact-bottom" | "split";
+
+export interface SkinMetadata {
+  id: string;
+  name: string;
+  author: string;
+  version: string;
+  description: string;
+  previewImage?: string | null;
+}
+
+export interface SkinTheme {
+  primaryColor: string;
+  accentDeckA: string;
+  accentDeckB: string;
+  accentDeckC?: string | null;
+  accentDeckD?: string | null;
+  backgroundColor: string;
+  surfaceColor: string;
+  panelBorderColor: string;
+  textColor: string;
+  fontFamily?: string | null;
+  customCss?: string | null;
+}
+
+export interface PlatterStyle {
+  size: PlatterSize;
+  vinylTexture: boolean;
+  centerDisplay: boolean;
+}
+
+export interface WaveformLayout {
+  position: WaveformPosition;
+  orientation: WaveformOrientation;
+  heightPx: number;
+  showBeatgrid: boolean;
+}
+
+export interface MixerLayout {
+  position: MixerPosition;
+  channelCount: number;
+  vuMeterStyle: string;
+  crossfaderHeightPx: number;
+}
+
+export interface SkinLayout {
+  deckCount: number;
+  waveform: WaveformLayout;
+  platter: PlatterStyle;
+  mixer: MixerLayout;
+  lowerPanelDefault: string;
+  showPhaseStrip: boolean;
+  showScratchPads: boolean;
+}
+
+export interface SkinManifest {
+  metadata: SkinMetadata;
+  theme: SkinTheme;
+  layout: SkinLayout;
+}
+
 /** True bila UI berjalan di dalam webview Tauri (bukan browser biasa). */
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -740,6 +813,20 @@ export const ipc = {
     invokeCommand<KeyboardBinding[]>("reset_keyboard_mappings"),
   handleKeyboardShortcut: (key: string, ctrl?: boolean, shift?: boolean, alt?: boolean) =>
     invokeCommand<DjAction | null>("handle_keyboard_shortcut", { key, ctrl, shift, alt }),
+
+  // Skin & Layout Engine (Fase 10)
+  listSkins: () => invokeCommand<SkinManifest[]>("list_skins"),
+  getActiveSkin: () => invokeCommand<SkinManifest>("get_active_skin"),
+  setActiveSkin: (skinId: string) =>
+    invokeCommand<SkinManifest>("set_active_skin", { skinId }),
+  saveCustomSkin: (manifest: SkinManifest) =>
+    invokeCommand<SkinManifest>("save_custom_skin", { manifest }),
+  deleteSkin: (skinId: string) =>
+    invokeCommand<void>("delete_skin", { skinId }),
+  exportSkinPack: (skinId: string, destPath: string) =>
+    invokeCommand<void>("export_skin_pack", { skinId, destPath }),
+  importSkinPack: (zipPath: string) =>
+    invokeCommand<SkinManifest>("import_skin_pack", { zipPath }),
 };
 
 export const api = ipc;
