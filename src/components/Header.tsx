@@ -1,5 +1,6 @@
 import { formatInt, formatMs, formatSampleRate } from "../lib/format";
 import type { EngineStatus } from "../lib/ipc";
+import { formatDuration, useRecordStore } from "../stores/recordStore";
 import { useSkinStore } from "../stores/skinStore";
 
 function Logo() {
@@ -90,6 +91,9 @@ export function Header({ status }: { status: EngineStatus | null }) {
   const skins = useSkinStore((s) => s.skins);
   const setSkin = useSkinStore((s) => s.setSkin);
 
+  const recorder = useRecordStore((s) => s.recorder);
+  const broadcast = useRecordStore((s) => s.broadcast);
+
   return (
     <header className="relative z-20 flex items-center gap-4 border-b border-line bg-deck-950/85 px-5 py-3 backdrop-blur">
       <Logo />
@@ -104,11 +108,37 @@ export function Header({ status }: { status: EngineStatus | null }) {
           </span>
         </div>
         <p className="mt-0.5 text-[11px] text-ink-faint">
-          Virtual DJ workstation · Mesin Tampilan & Skin Layout Engine
+          Virtual DJ workstation · Rekaman Mix Master & Live Streaming Broadcast
         </p>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Recording Active Pill */}
+        {recorder.isRecording && (
+          <span
+            className={`chip font-mono font-bold tracking-wider ${
+              recorder.isPaused
+                ? "border-amber-500/40 bg-amber-950/60 text-amber-300"
+                : "border-red-500/50 bg-red-950/70 text-red-400 shadow-sm shadow-red-500/20"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                recorder.isPaused ? "bg-amber-400" : "bg-red-500 animate-ping"
+              }`}
+            />
+            REC {formatDuration(recorder.durationSecs)}
+          </span>
+        )}
+
+        {/* Live Broadcast Active Pill */}
+        {broadcast.isStreaming && (
+          <span className="chip font-mono font-bold tracking-wider border-emerald-500/50 bg-emerald-950/70 text-emerald-400 shadow-sm shadow-emerald-500/20">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            ON AIR {formatDuration(broadcast.durationSecs)}
+          </span>
+        )}
+
         {/* Quick Skin Switcher */}
         <div className="hidden sm:flex items-center gap-1.5 rounded-md border border-line bg-deck-900/80 px-2 py-1 text-xs">
           <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Skin:</span>
@@ -126,8 +156,8 @@ export function Header({ status }: { status: EngineStatus | null }) {
         </div>
 
         <StatusPill status={status} />
-        <span className="chip border-cyan/30 text-cyan-soft">FASE 10</span>
-        <span className="chip">v0.10.0</span>
+        <span className="chip border-cyan/30 text-cyan-soft">FASE 11</span>
+        <span className="chip">v0.11.0</span>
       </div>
     </header>
   );

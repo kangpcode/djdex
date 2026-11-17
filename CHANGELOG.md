@@ -3,6 +3,59 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/) dan
 [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-11-17
+
+### Added — Fase 11: Modul Rekaman Mix Master & Live Streaming Broadcast (Recording & Broadcast)
+
+- **Perekam Audio Master Mix Tanpa Beban Real-Time (`src-tauri/src/audio/recorder.rs`)**:
+  - Penangkapan sampel stereo murni dari mix bus utama secara lock-free di thread RT audio melalui SPSC ring buffer (`rtrb`, 131.072 frames).
+  - Tanpa alokasi memori, tanpa mutex blocking, dan tanpa syscall disk I/O di dalam thread callback audio.
+  - Background writer thread berdedikasi menggunakan `hound` dengan penulisan ber-buffer efisien.
+  - Dukungan 3 format kualitas WAV:
+    - `WAV 16-bit Linear PCM`: Kualitas standar CD audio tanpa kompresi.
+    - `WAV 24-bit Linear PCM`: Kualitas rekaman studio profesional resolusi tinggi.
+    - `WAV 32-bit IEEE Floating Point`: Rentang dinamis tak terbatas, anti distorsi clipping.
+  - Fitur jeda dan lanjut rekaman (*Pause & Resume*) secara instan.
+  - Fitur *Split Track* instan: pembagian berkas rekaman otomatis (`_part01.wav`, `_part02.wav`, dst.) tanpa kehilangan satu sampel audio pun.
+- **Klien Siaran Langsung (Live Streaming Broadcast Client) (`src-tauri/src/audio/broadcast.rs`)**:
+  - Klien siaran live terintegrasi untuk server **Icecast 2** dan **SHOUTcast**.
+  - Handshake protokol `SOURCE` HTTP 1.0 dengan enkripsi autentikasi mandiri HTTP Basic Base64 murni tanpa dependensi eksternal.
+  - Metadata siaran lengkap: nama stasiun (`ice-name`), genre (`ice-genre`), deskripsi siaran (`ice-description`), bitrate (`ice-bitrate`), info audio samplerate & channel, dan direktori publik (`ice-public`).
+  - Streaming chunk audio PCM berlatensi rendah secara kontinu via soket TCP non-blocking.
+  - Proteksi otomatis terhadap pemutusan koneksi atau server overload dengan pencatatan kesalahan real-time.
+- **Integrasi Penuh ke Audio Engine (`src-tauri/src/audio/engine.rs`)**:
+  - Produser `RecorderProducer` dan `BroadcastProducer` disematkan langsung di loop pemrosesan blok master stereo `render_block`.
+  - Rekaman dan siaran mengambil master bus murni (`soft_clip(mix.master_l/r)`) terpisah dari saluran split-cue headphone DJ, sehingga audio rekaman dan streaming tidak terkontaminasi oleh audio headphone cue DJ.
+- **Komunikasi IPC Tauri & State Manager (`src-tauri/src/state.rs`, `src-tauri/src/commands.rs`, `src-tauri/src/lib.rs`)**:
+  - 9 command Tauri baru: `start_recording`, `stop_recording`, `pause_recording`, `resume_recording`, `split_recording`, `get_recorder_status`, `start_broadcast`, `stop_broadcast`, dan `get_broadcast_status`.
+  - Otomatisasi direktori penyimpanan rekaman (`~/Music/DJDeX Recordings` atau konfigurasi custom path).
+- **Antarmuka Pengguna React & Zustand Store (`src/stores/recordStore.ts`, `src/components/RecordPanel.tsx`)**:
+  - Store Zustand reaktif untuk memantau status perekaman, durasi waktu berjalan, byte terkirim, dan level VU meter secara real-time.
+  - Tab *Master Mix Recorder*:
+    - Tombol rekam besar warna merah dengan animasi pulsa menyala saat aktif.
+    - Timer durasi rekaman besar monospace (`00:00:00`), indikator bagian rekaman (*Part X*), dan penghitung ukuran berkas live (MB).
+    - Stereo VU Meter animasi responsif (L & R) dengan gradient hijau, kuning, hingga merah.
+    - Kontrol jeda/lanjut (*Pause/Resume*) dan tombol *Split Track*.
+    - Selektor format berkas WAV 16-bit / 24-bit / 32-bit Float serta input path kustom.
+  - Tab *Live Streaming Broadcast*:
+    - Status badge interaktif: "SIARAN LANGSUNG ON AIR" hijau berkedip saat terhubung.
+    - Penghitung waktu siaran on-air dan jumlah data audio yang telah dialirkan (MB sent).
+    - Formulir konfigurasi server lengkap: Protokol (Icecast2 / SHOUTcast), Alamat Host:Port, Mount Point, Password (dengan toggle tampilkan/sembunyikan), Bitrate (128 - 320 kbps), Nama Stasiun, Genre, dan Deskripsi.
+    - Tombol "Mulai Siaran (Go Live)" dan "Akhiri Siaran (Disconnect)".
+  - Bilah Status Header (`src/components/Header.tsx`):
+    - Badge indikator *REC* merah berkedip saat merekam dan *ON AIR* hijau saat streaming langsung.
+- **Unit Test Komprehensif**:
+  - Pengujian workflow perekam WAV 16-bit, pause, resume, dan validasi header WAV via `hound`.
+  - Pengujian transisi tanpa jeda *Split Track* ke berkas part berikutnya.
+  - Pengujian fungsi encoding Base64 RFC 4648.
+  - Pengujian siklus inisialisasi controller dan isolasi buffer audio RT.
+  - Total unit test Rust kini mencapai 82 test dan seluruhnya lulus 100%.
+
+### Changed
+
+- Versi aplikasi dinaikkan ke `0.11.0` (Rust `Cargo.toml`, `tauri.conf.json`, `package.json`, `App.tsx`, dan UI header/footer).
+- Ditambahkan tab panel bawah "Record & Live Broadcast" dengan aksen merah neon di `App.tsx`.
+
 ## [0.10.0] - 2026-11-17
 
 ### Added — Fase 10: Sistem Template / Skin "Mesin Tampilan DJ Virtual"

@@ -8,6 +8,7 @@ import { LibraryPanel } from "./components/LibraryPanel";
 import { MidiPanel } from "./components/MidiPanel";
 import { MixerPanel } from "./components/MixerPanel";
 import { PhaseStrip } from "./components/PhaseStrip";
+import { RecordPanel } from "./components/RecordPanel";
 import { SamplerPanel } from "./components/SamplerPanel";
 import { SkinPanel } from "./components/SkinPanel";
 import { ToneTestPanel } from "./components/ToneTestPanel";
@@ -40,7 +41,7 @@ function isAudioPath(path: string): boolean {
   return AUDIO_EXTENSIONS.has(extension);
 }
 
-type LowerTab = "library" | "sampler" | "fx" | "midi" | "skin" | "engine" | "all";
+type LowerTab = "library" | "sampler" | "fx" | "midi" | "skin" | "record" | "engine" | "all";
 
 export default function App() {
   const status = useAudioStore((state) => state.status);
@@ -261,6 +262,19 @@ export default function App() {
 
               <button
                 type="button"
+                onClick={() => setLowerTab("record")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "record"
+                    ? "border-red-400 bg-red-500/20 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                Record & Live Broadcast
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setLowerTab("engine")}
                 className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
                   lowerTab === "engine"
@@ -297,6 +311,8 @@ export default function App() {
 
           {(lowerTab === "skin" || lowerTab === "all") && <SkinPanel />}
 
+          {(lowerTab === "record" || lowerTab === "all") && <RecordPanel />}
+
           {(lowerTab === "engine" || lowerTab === "all") && (
             <div className="grid gap-5 lg:grid-cols-2">
               <AudioEnginePanel />
@@ -310,9 +326,9 @@ export default function App() {
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.10.0</span>
+        <span>By Kangpcode · v0.11.0</span>
         <span className="hidden sm:inline">
-          Rust + Tauri 2 · Skin & Layout Engine · MIDI Learn · Hardware LED Feedback · SQLite Library
+          Rust + Tauri 2 · Master Mix Recorder · Icecast 2 & SHOUTcast Live Broadcast · Skin Engine · SQLite Library
         </span>
         <span className="ml-auto hidden md:inline">
           Skin: {activeSkin?.metadata.name ?? "Classic Club"} · Space = Play/Pause · C / V = Cue Jump
