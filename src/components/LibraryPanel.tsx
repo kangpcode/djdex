@@ -735,9 +735,9 @@ export function LibraryPanel() {
                                     e.stopPropagation();
                                     void updateRating(track.id, star === track.rating ? 0 : star);
                                   }}
-                                  className="hover:scale-125 transition-transform"
+                                  className="hover:scale-125 transition-transform p-0.5 inline-flex"
                                 >
-                                  {star <= track.rating ? "★" : "☆"}
+                                  <IconStar filled={star <= track.rating} className="w-3 h-3 text-amber-400" />
                                 </button>
                               ))}
                             </div>
@@ -882,9 +882,9 @@ export function LibraryPanel() {
             {/* Stop Preview Button */}
             <button
               onClick={() => previewStop()}
-              className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 rounded font-semibold text-xs flex items-center gap-1"
+              className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 rounded font-semibold text-xs flex items-center gap-1.5"
             >
-              <span>⏹</span> Stop Cue
+              <IconStop className="w-3 h-3" /> Stop Cue
             </button>
           </div>
         )}
