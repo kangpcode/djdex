@@ -33,11 +33,13 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
 use crate::audio::autodj::{AutoDj, AutoDjStatus, AutoDjUpdate};
+use crate::audio::broadcast::{BroadcastController, BroadcastProducer};
 use crate::audio::deck::{Deck, DeckReader, DeckStatus};
 use crate::audio::device::{find_output_device, host_label, sample_format_label};
 use crate::audio::fx::{FxControls, FxParams, FxSlotUpdate};
 use crate::audio::gain::{db_to_linear, linear_to_db};
 use crate::audio::mixer::{Mixer, MixerControls, MixerParams, MixerUpdate};
+use crate::audio::recorder::{RecorderController, RecorderProducer};
 use crate::error::AudioError;
 use crate::library::preview::{PreviewController, PreviewPlayerRt};
 use crate::sampler::{SamplerController, SamplerRt};
@@ -211,6 +213,8 @@ struct OpenedStream {
     decks: [Arc<Deck>; DECK_COUNT],
     sampler: Arc<SamplerController>,
     preview: Arc<PreviewController>,
+    recorder: Arc<RecorderController>,
+    broadcast: Arc<BroadcastController>,
     report: StreamReport,
 }
 
@@ -223,6 +227,8 @@ pub struct AudioEngine {
     decks: [Arc<Deck>; DECK_COUNT],
     sampler: Arc<SamplerController>,
     preview: Arc<PreviewController>,
+    recorder: Arc<RecorderController>,
+    broadcast: Arc<BroadcastController>,
     auto_dj: AutoDj,
 }
 
@@ -246,7 +252,7 @@ impl AudioEngine {
             .map_err(|err| AudioError::StreamThreadSpawn(err.to_string()))?;
 
         match ready_rx.recv_timeout(OPEN_TIMEOUT) {
-            Ok(Ok((_report, decks, sampler, preview))) => {
+            Ok(Ok((_report, decks, sampler, preview, recorder, broadcast))) => {
                 let auto_dj = match AutoDj::start(
                     [Arc::clone(&decks[0]), Arc::clone(&decks[1])],
                     Arc::clone(&rt.mixer),
@@ -266,6 +272,8 @@ impl AudioEngine {
                     decks,
                     sampler,
                     preview,
+                    recorder,
+                    broadcast,
                     auto_dj,
                 })
             }
