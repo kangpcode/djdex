@@ -5,6 +5,7 @@ import { DeckPanel } from "./components/DeckPanel";
 import { FxPanel } from "./components/FxPanel";
 import { Header } from "./components/Header";
 import { LibraryPanel } from "./components/LibraryPanel";
+import { MidiPanel } from "./components/MidiPanel";
 import { MixerPanel } from "./components/MixerPanel";
 import { PhaseStrip } from "./components/PhaseStrip";
 import { SamplerPanel } from "./components/SamplerPanel";
@@ -14,6 +15,7 @@ import { useAudioStore } from "./stores/audioStore";
 import { useAutoDjStore } from "./stores/autoDjStore";
 import { useDeckAStore, useDeckBStore } from "./stores/deckStore";
 import { useLibraryStore } from "./stores/libraryStore";
+import { useMidiStore } from "./stores/midiStore";
 import { useMixerStore } from "./stores/mixerStore";
 import { useSamplerStore } from "./stores/samplerStore";
 
@@ -36,7 +38,7 @@ function isAudioPath(path: string): boolean {
   return AUDIO_EXTENSIONS.has(extension);
 }
 
-type LowerTab = "library" | "sampler" | "fx" | "engine" | "all";
+type LowerTab = "library" | "sampler" | "fx" | "midi" | "engine" | "all";
 
 export default function App() {
   const status = useAudioStore((state) => state.status);
@@ -46,13 +48,11 @@ export default function App() {
 
   const refreshDeckA = useDeckAStore((state) => state.refresh);
   const loadTrackA = useDeckAStore((state) => state.load);
-  const togglePlayA = useDeckAStore((state) => state.toggle);
   const refreshDeckB = useDeckBStore((state) => state.refresh);
   const refreshMixer = useMixerStore((state) => state.refresh);
   const refreshAutoDj = useAutoDjStore((state) => state.refresh);
 
   const refreshSampler = useSamplerStore((state) => state.refresh);
-  const triggerSamplerPad = useSamplerStore((state) => state.triggerPad);
 
   const refreshPreview = useLibraryStore((state) => state.refreshPreview);
   const refreshProgress = useLibraryStore((state) => state.refreshProgress);
@@ -155,22 +155,19 @@ export default function App() {
         return;
       }
 
-      if (event.code === "Space" && !event.repeat) {
+      if (event.code === "Space") {
         event.preventDefault();
-        void togglePlayA();
-        return;
       }
 
-      // Tombol angka 1-8 memicu Pad 1-8
-      if (/^[1-8]$/.test(event.key)) {
-        const padIdx = parseInt(event.key, 10) - 1;
-        void triggerSamplerPad(padIdx, 1.0);
-      }
+      const key = event.code === "Space" ? "Space" : event.key;
+      void useMidiStore
+        .getState()
+        .handleKeyShortcut(key, event.ctrlKey, event.shiftKey, event.altKey);
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [togglePlayA, triggerSamplerPad]);
+  }, []);
 
   return (
     <div className="app-shell app-grid relative flex h-full flex-col overflow-hidden">
@@ -229,6 +226,19 @@ export default function App() {
 
               <button
                 type="button"
+                onClick={() => setLowerTab("midi")}
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
+                  lowerTab === "midi"
+                    ? "border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.25)]"
+                    : "border-line bg-deck-900/60 text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                MIDI & Keyboard Mapping
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setLowerTab("engine")}
                 className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold transition ${
                   lowerTab === "engine"
@@ -261,6 +271,8 @@ export default function App() {
 
           {(lowerTab === "fx" || lowerTab === "all") && <FxPanel />}
 
+          {(lowerTab === "midi" || lowerTab === "all") && <MidiPanel />}
+
           {(lowerTab === "engine" || lowerTab === "all") && (
             <div className="grid gap-5 lg:grid-cols-2">
               <AudioEnginePanel />
@@ -274,12 +286,12 @@ export default function App() {
 
       <footer className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-deck-950/70 px-5 py-2 text-[10.5px] text-ink-faint">
         <span className="font-display tracking-[0.18em] text-ink-dim">DJDeX</span>
-        <span>By Kangpcode · v0.8.0</span>
+        <span>By Kangpcode · v0.9.0</span>
         <span className="hidden sm:inline">
-          Rust + Tauri 2 · SQLite Library · Batch Analyzer · Crates & Playlists · Cue Preview
+          Rust + Tauri 2 · MIDI Controller Learn · Hardware LED Feedback · Keyboard Mapping · SQLite Library
         </span>
         <span className="ml-auto hidden md:inline">
-          Space = play/pause · Headphone = Cue Preview · Drag to Deck A/B
+          MIDI Learn: Active · Space / Shift+Space = Play/Pause · C / V = Cue Jump · Drag Audio to Decks
         </span>
       </footer>
     </div>

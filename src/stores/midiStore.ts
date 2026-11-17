@@ -1,10 +1,8 @@
 import { create } from "zustand";
-import {
-  api,
+import { api, errorMessage } from "../lib/ipc";
+import type {
   DjAction,
-  errorMessage,
   KeyboardBinding,
-  MidiEvent,
   MidiLearnStatus,
   MidiMapping,
   MidiPortInfo,
