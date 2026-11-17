@@ -575,16 +575,18 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
     let sampler = Arc::new(sampler_controller);
     let (preview_controller, preview_rt) = PreviewController::new(sample_rate);
     let preview = Arc::new(preview_controller);
+    let (recorder, recorder_rt) = RecorderController::new(sample_rate);
+    let (broadcast, broadcast_rt) = BroadcastController::new(sample_rate);
 
     let stream = match sample_format {
         SampleFormat::F32 => {
-            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt)?
+            build_output::<f32>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt, recorder_rt, broadcast_rt)?
         }
         SampleFormat::I16 => {
-            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt)?
+            build_output::<i16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt, recorder_rt, broadcast_rt)?
         }
         SampleFormat::U16 => {
-            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt)?
+            build_output::<u16>(&device, config, Arc::clone(&rt), [reader_a, reader_b], sampler_rt, preview_rt, recorder_rt, broadcast_rt)?
         }
         other => {
             return Err(AudioError::UnsupportedSampleFormat(sample_format_label(
@@ -602,6 +604,8 @@ fn open_stream(request: &StartRequest, rt: Arc<RtState>) -> Result<OpenedStream,
         decks,
         sampler,
         preview,
+        recorder,
+        broadcast,
         report: StreamReport {
             device_name,
             host: host_label().to_string(),
