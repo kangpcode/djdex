@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMidiStore } from "../stores/midiStore";
+import { IconRefresh } from "./ui/Icons";
 import { Panel } from "./ui/Panel";
 import type { DjAction, JogWheelMode } from "../lib/ipc";
 
@@ -217,10 +218,10 @@ export function MidiPanel() {
           <button
             type="button"
             onClick={() => void refreshPorts()}
-            className="rounded border border-line bg-deck-800 px-2.5 py-1 text-xs font-medium text-ink-muted hover:text-ink"
+            className="flex items-center gap-1.5 rounded border border-line bg-deck-800 px-2.5 py-1 text-xs font-medium text-ink-muted hover:text-ink"
             title="Pindai ulang port MIDI yang tersedia"
           >
-            ↻ Pindai Ulang
+            <IconRefresh className="w-3.5 h-3.5" /> Pindai Ulang
           </button>
 
           {status.connectedInput || status.connectedOutput ? (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSkinStore } from "../stores/skinStore";
+import { IconEdit, IconExport, IconImport, IconTrash } from "./ui/Icons";
 import { Panel } from "./ui/Panel";
 import type { PlatterSize, SkinManifest, WaveformOrientation, WaveformPosition } from "../lib/ipc";
 
@@ -183,18 +184,18 @@ export function SkinPanel() {
             type="button"
             onClick={handleImport}
             disabled={isLoading}
-            className="rounded border border-line bg-deck-800 px-3 py-1.5 text-xs font-semibold text-ink-dim hover:text-ink hover:bg-deck-700"
+            className="flex items-center gap-1.5 rounded border border-line bg-deck-800 px-3 py-1.5 text-xs font-semibold text-ink-dim hover:text-ink hover:bg-deck-700"
           >
-            📥 Impor .djdex-skin
+            <IconImport className="w-3.5 h-3.5" /> Impor .djdex-skin
           </button>
           {activeSkin && (
             <button
               type="button"
               onClick={() => handleExport(activeSkin.metadata.id)}
               disabled={isLoading}
-              className="rounded border border-line bg-deck-800 px-3 py-1.5 text-xs font-semibold text-ink-dim hover:text-ink hover:bg-deck-700"
+              className="flex items-center gap-1.5 rounded border border-line bg-deck-800 px-3 py-1.5 text-xs font-semibold text-ink-dim hover:text-ink hover:bg-deck-700"
             >
-              📤 Ekspor Skin Aktif
+              <IconExport className="w-3.5 h-3.5" /> Ekspor Skin Aktif
             </button>
           )}
         </div>
@@ -317,10 +318,10 @@ export function SkinPanel() {
                   <button
                     type="button"
                     onClick={() => handleOpenEditorWithSkin(s)}
-                    className="rounded border border-line bg-deck-850 px-2 py-1.5 text-xs font-medium text-ink-muted hover:text-ink"
+                    className="flex items-center justify-center rounded border border-line bg-deck-850 p-2 text-xs font-medium text-ink-muted hover:text-ink"
                     title="Kustomisasi skin ini di editor"
                   >
-                    ✏️
+                    <IconEdit className="w-3.5 h-3.5" />
                   </button>
 
                   {!isFactorySkin(s.metadata.id) && (
@@ -331,10 +332,10 @@ export function SkinPanel() {
                           void deleteSkin(s.metadata.id);
                         }
                       }}
-                      className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-xs text-red-300 hover:bg-red-500/20"
+                      className="flex items-center justify-center rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300 hover:bg-red-500/20"
                       title="Hapus skin kustom"
                     >
-                      🗑️
+                      <IconTrash className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
