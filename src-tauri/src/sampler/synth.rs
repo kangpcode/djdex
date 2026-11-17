@@ -319,3 +319,243 @@ pub fn synth_chord_stab(sample_rate: u32, duration_secs: f32, root_freq: f32) ->
     }
     out
 }
+
+/// Menghasilkan suara Kendang Sunda & Jawa sintetis (Tung, Pak, Bem, Dho/Dut).
+pub fn synth_kendang(sample_rate: u32, duration_secs: f32, hit_type: usize) -> Vec<f32> {
+    let frames = (sample_rate as f32 * duration_secs) as usize;
+    let mut out = Vec::with_capacity(frames * 2);
+    let mut phase = 0.0_f32;
+    let mut rng = SimpleRng::new(445566 + hit_type as u32);
+
+    for i in 0..frames {
+        let t = i as f32 / sample_rate as f32;
+        let progress = t / duration_secs;
+
+        let (sample, env) = match hit_type {
+            0 => {
+                // "Tung" / Ketipung slap tinggi: pitch 180 Hz dengan resonansi kulit
+                let freq = 180.0 + 80.0 * (-progress * 15.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.7 + (phase * 2.0).sin() * 0.3;
+                let click = if t < 0.006 { rng.next_f32() * 0.4 } else { 0.0 };
+                (tone + click, (-progress * 8.5).exp())
+            }
+            1 => {
+                // "Pak" / Tepak kendang Sunda: tepi membran dengan transient cepat & snappy
+                let freq = 360.0 * (-progress * 25.0).exp().max(0.4);
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let noise = rng.next_f32() * (-progress * 20.0).exp();
+                let tone = phase.sin() * 0.4 + noise * 0.8;
+                (tone, (-progress * 14.0).exp())
+            }
+            2 => {
+                // "Bem" / Kulanter bass: body rendah kendang 55 Hz
+                let freq = 55.0 + 40.0 * (-progress * 10.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                (phase.sin(), (-progress * 6.0).exp())
+            }
+            _ => {
+                // "Dho / Dut" Koplo / Tabla bass: pitch drop khas 110 Hz -> 42 Hz
+                let freq = 42.0 + 75.0 * (-progress * 8.0).exp();
+                phase += 2.0 * PI * freq / sample_rate as f32;
+                let tone = phase.sin() * 0.85 + (phase * 2.0).sin() * 0.15;
+                (tone, (-progress * 5.5).exp())
+            }
+        };
+
+        let val = (sample * env).clamp(-1.0, 1.0);
+        out.push(val);
+        out.push(val);
+    }
+    out
+}
+
+/// Menghasilkan instrumen Gamelan Jawa & Sunda sintetis (Gong Ageng, Saron, Bonang, Kempul).
+pub fn synth_gamelan(sample_rate: u32, duration_secs: f32, freq: f32, is_gong: bool) -> Vec<f32> {
+    let frames = (sample_rate as f32 * duration_secs) as usize;
+    let mut out = Vec::with_capacity(frames * 2);
+
+    // Rasio overtone perunggu inharmonik khas gamelan: 1.0, 2.76, 5.40, 8.93
+    let ratios = [1.0_f32, 2.76, 5.40, 8.93];
+    let mut phases = [0.0_f32; 4];
+    let mut rng = SimpleRng::new(889911);
+
+    for i in 0..frames {
+        let t = i as f32 / sample_rate as f32;
+        let progress = t / duration_secs;
+
+        let mut sum = 0.0_f32;
+        for (idx, &ratio) in ratios.iter().enumerate() {
+            let part_freq = freq * ratio;
+            phases[idx] += 2.0 * PI * part_freq / sample_rate as f32;
+            if phases[idx] > 2.0 * PI {
+                phases[idx] -= 2.0 * PI;
+            }
+            let amp = match idx {
+                0 => 0.65,
+                1 => 0.35,
+                2 => 0.15,
+                _ => 0.08,
+            };
+            sum += phases[idx].sin() * amp;
+        }
+
+        // Ketukan palu kayu / bronze mallet di awal
+        if t < 0.008 {
+            let click = rng.next_f32() * 0.3 * (1.0 - t / 0.008);
+            sum += click;
+        }
+
+        // Shimmer getaran ombak gamelan (beating shimmer ~2.5 Hz untuk Gong Ageng)
+        let shimmer = if is_gong {
+            1.0 + 0.25 * (2.0 * PI * 2.5 * t).sin()
+        } else {
+            1.0
+        };
+
+        let decay_rate = if is_gong { 2.5 } else { 5.5 };
+        let env = (-progress * decay_rate).exp() * shimmer;
+        let val = (sum * env).clamp(-1.0, 1.0);
+
+        out.push(val);
+        out.push(val);
+    }
+    out
+}
+
+/// Menghasilkan suara Angklung bambu Sunda sintetis.
+pub fn synth_angklung(sample_rate: u32, duration_secs: f32, root_freq: f32) -> Vec<f32> {
+    let frames = (sample_rate as f32 * duration_secs) as usize;
+    let mut out = Vec::with_capacity(frames * 2);
+    let mut phase1 = 0.0_f32;
+    let mut phase2 = 0.0_f32;
+    let mut rng = SimpleRng::new(123789);
+
+    for i in 0..frames {
+        let t = i as f32 / sample_rate as f32;
+        let progress = t / duration_secs;
+
+        // Dua tabung bambu berjarak 1 oktaf
+        phase1 += 2.0 * PI * root_freq / sample_rate as f32;
+        phase2 += 2.0 * PI * (root_freq * 2.0) / sample_rate as f32;
+        if phase1 > 2.0 * PI { phase1 -= 2.0 * PI; }
+        if phase2 > 2.0 * PI { phase2 -= 2.0 * PI; }
+
+        let bamboo = phase1.sin() * 0.65 + phase2.sin() * 0.35;
+
+        // Rattle getaran bingkai bambu (bamboo clack)
+        let rattle = if t < 0.035 {
+            rng.next_f32() * 0.25 * (1.0 - t / 0.035)
+        } else {
+            0.0
+        };
+
+        let env = (-progress * 6.0).exp();
+        let val = ((bamboo + rattle) * env).clamp(-1.0, 1.0);
+
+        out.push(val);
+        out.push(val);
+    }
+    out
+}
+
+/// Menghasilkan suara Suling Sunda / Shakuhachi bambu sintetis.
+pub fn synth_suling(sample_rate: u32, duration_secs: f32, freq: f32) -> Vec<f32> {
+    let frames = (sample_rate as f32 * duration_secs) as usize;
+    let mut out = Vec::with_capacity(frames * 2);
+    let mut phase = 0.0_f32;
+    let mut rng = SimpleRng::new(654321);
+
+    for i in 0..frames {
+        let t = i as f32 / sample_rate as f32;
+        let progress = t / duration_secs;
+
+        // Vibrato lembut khas suling ~5 Hz
+        let vib = (2.0 * PI * 5.0 * t).sin() * 4.0;
+        phase += 2.0 * PI * (freq + vib) / sample_rate as f32;
+        if phase > 2.0 * PI { phase -= 2.0 * PI; }
+
+        let tone = phase.sin() * 0.75 + (phase * 2.0).sin() * 0.18 + (phase * 3.0).sin() * 0.07;
+        // Hembusan desis nafas udara bambu
+        let breath = rng.next_f32() * 0.12;
+
+        let attack = (t / 0.06).min(1.0);
+        let decay = (-progress * 3.5).exp();
+        let val = ((tone + breath) * attack * decay).clamp(-1.0, 1.0);
+
+        out.push(val);
+        out.push(val);
+    }
+    out
+}
+
+/// Menghasilkan suara drum Taiko Jepang sintetis (O-Daiko punchy).
+pub fn synth_taiko(sample_rate: u32, duration_secs: f32, punch: f32) -> Vec<f32> {
+    let frames = (sample_rate as f32 * duration_secs) as usize;
+    let mut out = Vec::with_capacity(frames * 2);
+    let mut phase = 0.0_f32;
+    let mut rng = SimpleRng::new(991122);
+
+    for i in 0..frames {
+        let t = i as f32 / sample_rate as f32;
+        let progress = t / duration_secs;
+
+        // Pitch drop dari 95 Hz turun ke 36 Hz (body kayu besar O-Daiko)
+        let freq = 36.0 + 59.0 * (-progress * 12.0).exp();
+        phase += 2.0 * PI * freq / sample_rate as f32;
+        if phase > 2.0 * PI { phase -= 2.0 * PI; }
+
+        let mut body = phase.sin();
+
+        // Bachi stick slap transient di awal (10ms)
+        if t < 0.010 {
+            let stick = rng.next_f32() * punch * (1.0 - t / 0.010);
+            body = body * 0.65 + stick * 0.45;
+        }
+
+        let env = (-progress * 4.2).exp();
+        let val = (body * env).clamp(-1.0, 1.0);
+
+        out.push(val);
+        out.push(val);
+    }
+    out
+}
+
+/// Menghasilkan petikan Koto & Shamisen Jepang sintetis.
+pub fn synth_koto_shamisen(sample_rate: u32, duration_secs: f32, freq: f32, is_shamisen: bool) -> Vec<f32> {
+    let frames = (sample_rate as f32 * duration_secs) as usize;
+    let mut out = Vec::with_capacity(frames * 2);
+    let mut phase = 0.0_f32;
+    let mut rng = SimpleRng::new(332211);
+
+    for i in 0..frames {
+        let t = i as f32 / sample_rate as f32;
+        let progress = t / duration_secs;
+
+        phase += 2.0 * PI * freq / sample_rate as f32;
+        if phase > 2.0 * PI { phase -= 2.0 * PI; }
+
+        // Shamisen lebih bright sawtooth (bachi plucking), Koto lebih mellow triangle/sine
+        let string_tone = if is_shamisen {
+            (phase / PI) - 1.0 // Sawtooth
+        } else {
+            phase.sin() * 0.7 + (phase * 2.0).sin() * 0.3
+        };
+
+        // Plectrum snap
+        let snap = if t < 0.005 {
+            rng.next_f32() * 0.35 * (1.0 - t / 0.005)
+        } else {
+            0.0
+        };
+
+        let decay_rate = if is_shamisen { 8.0 } else { 5.0 };
+        let env = (-progress * decay_rate).exp();
+        let val = ((string_tone + snap) * env).clamp(-1.0, 1.0);
+
+        out.push(val);
+        out.push(val);
+    }
+    out
+}

@@ -11,7 +11,7 @@ use super::synth::*;
 use crate::error::AudioError;
 
 pub const PADS_PER_BANK: usize = 16;
-pub const BANK_COUNT: usize = 4;
+pub const BANK_COUNT: usize = 8;
 
 /// Satu Bank berisi 16 pad.
 #[derive(Clone)]
