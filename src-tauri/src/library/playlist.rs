@@ -87,7 +87,7 @@ pub fn import_pls(file_path: &Path, db: &Arc<LibraryDb>) -> Result<i64, AudioErr
 
 /// Ekspor playlist dari Library database ke file format M3U8.
 pub fn export_m3u(
-    playlist_id: i64,
+    _playlist_id: i64,
     dest_path: &Path,
     tracks: &[LibraryTrack],
 ) -> Result<(), AudioError> {

@@ -8,14 +8,14 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 
-use lofty::file::AudioFile;
+use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
 use lofty::tag::Accessor;
 use serde::{Deserialize, Serialize};
 
 use super::db::{LibraryDb, LibraryTrack};
-use crate::analysis::bpm::detect_bpm;
-use crate::analysis::key::detect_key;
+use crate::analysis::bpm::estimate_bpm;
+use crate::analysis::key::estimate_key;
 use crate::audio::decoder::TrackDecoder;
 use crate::error::AudioError;
 
@@ -124,7 +124,7 @@ impl ScannerManager {
         thread::Builder::new()
             .name("djdex-batch-analyzer".to_string())
             .spawn(move || {
-                let tracks_to_analyze = match track_ids {
+                let tracks_to_analyze: Vec<LibraryTrack> = match track_ids {
                     Some(ids) => {
                         let all = db.get_tracks(Default::default()).unwrap_or_default();
                         all.into_iter().filter(|t| ids.contains(&t.id)).collect()
@@ -189,28 +189,28 @@ pub fn extract_metadata(path: &Path) -> Result<LibraryTrack, AudioError> {
         .to_string();
 
     let title = tag
-        .and_then(|t| t.title().as_deref())
-        .filter(|s| !s.trim().is_empty())
+        .and_then(|t| t.title())
         .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .unwrap_or(file_stem);
 
     let artist = tag
-        .and_then(|t| t.artist().as_deref())
-        .filter(|s| !s.trim().is_empty())
+        .and_then(|t| t.artist())
         .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "Unknown Artist".to_string());
 
     let album = tag
-        .and_then(|t| t.album().as_deref())
-        .filter(|s| !s.trim().is_empty())
-        .map(|s| s.trim().to_string());
+        .and_then(|t| t.album())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
 
     let genre = tag
-        .and_then(|t| t.genre().as_deref())
-        .filter(|s| !s.trim().is_empty())
-        .map(|s| s.trim().to_string());
+        .and_then(|t| t.genre())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
 
-    let year = tag.and_then(|t| t.year());
+    let year = tag.and_then(|t| t.date().map(|d| d.year as u32));
 
     let now_ts = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -257,11 +257,18 @@ pub fn analyze_track_audio(path: &Path) -> Result<(f64, String, f64), AudioError
         return Err(AudioError::TrackDecode("File audio kosong".to_string()));
     }
 
+    let mono: Vec<f32> = samples
+        .chunks_exact(2)
+        .map(|c| 0.5 * (c[0] + c[1]))
+        .collect();
+
     // Deteksi BPM
-    let detected_bpm = detect_bpm(&samples, sample_rate).unwrap_or(128.0) as f64;
+    let detected_bpm = estimate_bpm(&mono, sample_rate)
+        .map(|b| b.bpm)
+        .unwrap_or(128.0);
 
     // Deteksi Key Camelot
-    let detected_key = detect_key(&samples, sample_rate)
+    let detected_key = estimate_key(&mono, sample_rate)
         .map(|k| k.camelot)
         .unwrap_or_else(|| "8A".to_string());
 

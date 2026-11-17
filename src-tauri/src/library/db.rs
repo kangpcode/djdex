@@ -1,6 +1,6 @@
 //! Lapisan database SQLite lokal untuk Library musik, Crate, Playlist, dan History.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use rusqlite::{params, Connection, Result as SqlResult};
 use serde::{Deserialize, Serialize};
 
