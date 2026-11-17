@@ -134,7 +134,7 @@ impl RecorderController {
 
     fn spawn_worker(&self, mut consumer: Consumer<(f32, f32)>) {
         let is_recording = Arc::clone(&self.is_recording);
-        let is_paused = Arc::clone(&self.is_paused);
+        let _is_paused = Arc::clone(&self.is_paused);
         let should_stop = Arc::clone(&self.should_stop);
         let should_split = Arc::clone(&self.should_split);
         let frames_recorded = Arc::clone(&self.frames_recorded);
@@ -232,7 +232,7 @@ impl RecorderController {
                                 peak_r.store(max_r.to_bits(), Ordering::Relaxed);
                             }
                         }
-                    } else if let Some(writer) = current_writer.take() {
+                    } else if let Some(mut writer) = current_writer.take() {
                         // Selesai recording: flush sisa buffer dan tutup file
                         while let Ok((l, r)) = consumer.pop() {
                             match active_format {
