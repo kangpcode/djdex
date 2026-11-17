@@ -724,7 +724,24 @@ fn config_candidates(
         AudioError::UnsupportedConfig(format!("konfigurasi default tidak tersedia: {err}"))
     })?;
     let default_rate = default_config.sample_rate();
-    let channel_prefs = channel_preference(request.channels, default_config.channels());
+    let default_channels = default_config.channels();
+    let default_format = default_config.sample_format();
+
+    let mut candidates: Vec<ConfigCandidate> = Vec::new();
+
+    // Prioritas #1: Jika pengguna tidak meminta channel atau sample rate berbeda,
+    // pasang default_config di urutan pertama. Ini mencegah ALSA pcm_route mencoba
+    // kombinasi channel/rate yang tidak cocok yang memicu error `find_matching_chmap`.
+    let user_requested_other_channels =
+        request.channels.is_some_and(|c| c > 0 && c != default_channels);
+    let user_requested_other_rate =
+        request.sample_rate.is_some_and(|r| r > 0 && r != default_rate);
+
+    if !user_requested_other_channels && !user_requested_other_rate {
+        push_candidate(&mut candidates, default_config.clone(), request.buffer_size);
+    }
+
+    let channel_prefs = channel_preference(request.channels, default_channels);
     let rate_prefs: Vec<u32> = match request.sample_rate.filter(|rate| *rate > 0) {
         Some(rate) if rate != default_rate => vec![rate, default_rate],
         _ => vec![default_rate],
@@ -735,9 +752,12 @@ fn config_candidates(
         .map_err(|err| AudioError::Enumerate(err.to_string()))?
         .collect();
 
-    let mut candidates: Vec<ConfigCandidate> = Vec::new();
-
-    for sample_format in [SampleFormat::F32, SampleFormat::I16, SampleFormat::U16] {
+    for sample_format in [
+        default_format,
+        SampleFormat::F32,
+        SampleFormat::I16,
+        SampleFormat::U16,
+    ] {
         for channel in &channel_prefs {
             for rate in &rate_prefs {
                 let Some(range) = ranges.iter().find(|range| {

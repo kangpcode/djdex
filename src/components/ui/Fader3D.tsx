@@ -121,7 +121,7 @@ export function Fader3D({
           className={`relative cursor-pointer flex items-center justify-center ${
             isVertical ? "w-8 py-2" : "h-8 px-2"
           }`}
-          style={isVertical ? { height: lengthPx } : { width: lengthPx }}
+          style={isVertical ? { height: lengthPx } : { width: lengthPx, maxWidth: "100%" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

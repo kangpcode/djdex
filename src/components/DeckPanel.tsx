@@ -519,63 +519,8 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
             vinylTexture={platterStyle?.vinylTexture ?? true}
             centerDisplay={platterStyle?.centerDisplay ?? true}
             accent={deckAccent}
+            keyCamelot={camelot}
           />
-
-          {/* Quick Jog Platter Mode Switch & Pitch Bend Strip */}
-          <div className="w-full flex items-center justify-between mt-2 pt-2 border-t border-[#141e2e]">
-            <div className="flex items-center gap-1">
-              <span className="text-[9px] font-mono text-slate-400 font-bold uppercase mr-1">
-                JOG MODE:
-              </span>
-              <button
-                type="button"
-                className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded border transition ${
-                  platterMode === "vinyl"
-                    ? "bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_6px_rgba(245,158,11,0.3)]"
-                    : "bg-[#0b101a] border-[#1b2636] text-slate-500"
-                }`}
-                onClick={() => setPlatterMode("vinyl")}
-              >
-                VINYL
-              </button>
-              <button
-                type="button"
-                className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded border transition ${
-                  platterMode === "cdj"
-                    ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_6px_rgba(0,229,255,0.3)]"
-                    : "bg-[#0b101a] border-[#1b2636] text-slate-500"
-                }`}
-                onClick={() => setPlatterMode("cdj")}
-              >
-                CDJ
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className="px-2 py-0.5 text-[9px] font-mono text-slate-400 hover:text-slate-200 bg-[#0d1420] border border-[#1e2a3c] rounded active:scale-95 transition"
-                onPointerDown={() => setBend(0.92)}
-                onPointerUp={() => resetBend()}
-                onPointerLeave={() => resetBend()}
-                disabled={!loaded}
-                title="Temporary Pitch Bend -"
-              >
-                BEND −
-              </button>
-              <button
-                type="button"
-                className="px-2 py-0.5 text-[9px] font-mono text-slate-400 hover:text-slate-200 bg-[#0d1420] border border-[#1e2a3c] rounded active:scale-95 transition"
-                onPointerDown={() => setBend(1.08)}
-                onPointerUp={() => resetBend()}
-                onPointerLeave={() => resetBend()}
-                disabled={!loaded}
-                title="Temporary Pitch Bend +"
-              >
-                BEND +
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Right: Vertical Pioneer Pitch / Tempo Strip */}

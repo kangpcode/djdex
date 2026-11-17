@@ -48,7 +48,7 @@ export function IconFlash({ className = "w-4 h-4", size, color }: IconProps) {
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="currentColor"
+      fill={color || "currentColor"}
       stroke="none"
     >
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
@@ -221,7 +221,7 @@ export function IconStop({ className = "w-3.5 h-3.5", size, color }: IconProps) 
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="currentColor"
+      fill={color || "currentColor"}
       stroke="none"
     >
       <rect x="5" y="5" width="14" height="14" rx="2" />
@@ -236,7 +236,7 @@ export function IconPlay({ className = "w-3.5 h-3.5", size, color }: IconProps) 
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="currentColor"
+      fill={color || "currentColor"}
       stroke="none"
     >
       <polygon points="5 3 19 12 5 21 5 3" />

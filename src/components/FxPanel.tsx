@@ -4,6 +4,7 @@ import type { AutoDjState, FxParams, FxSlotParams, FxType } from "../lib/ipc";
 import { useAutoDjStore } from "../stores/autoDjStore";
 import { useFxStore } from "../stores/fxStore";
 import { Panel } from "./ui/Panel";
+import { Knob3D } from "./ui/Knob3D";
 import { Slider } from "./ui/Slider";
 
 const FX_OPTIONS: Array<{ value: FxType; label: string }> = [
@@ -139,60 +140,62 @@ export function FxPanel() {
               ))}
             </select>
 
-            <div className="mt-2">
-              <Slider
-                id={`fx-${chainIndex}-${slotIndex}-wet`}
-                label="Wet/Dry"
+            <div className="mt-3 flex items-center justify-around gap-2 p-2 rounded-lg bg-[#070b13] border border-[#162130]">
+              <Knob3D
+                label="WET/DRY"
+                size="sm"
                 value={slot.wet}
                 min={0}
                 max={1}
                 step={0.01}
+                defaultValue={0}
                 onChange={(value) =>
                   updateSlot(useFxStore.getState(), chainIndex, slotIndex, { wet: value })
                 }
-                display={`${Math.round(slot.wet * 100)} %`}
+                display={`${Math.round(slot.wet * 100)}%`}
+                accentColor="#c084fc"
               />
-            </div>
-            <div className="mt-2">
-              <Slider
-                id={`fx-${chainIndex}-${slotIndex}-p1`}
-                label="Param 1"
+              <Knob3D
+                label="PARAM 1"
+                size="sm"
                 value={slot.p1}
                 min={1}
                 max={2000}
                 step={1}
+                defaultValue={100}
                 onChange={(value) =>
                   updateSlot(useFxStore.getState(), chainIndex, slotIndex, { p1: value })
                 }
                 display={slot.p1.toFixed(0)}
+                accentColor="#e879f9"
               />
-            </div>
-            <div className="mt-2">
-              <Slider
-                id={`fx-${chainIndex}-${slotIndex}-p2`}
-                label="Param 2"
+              <Knob3D
+                label="PARAM 2"
+                size="sm"
                 value={slot.p2}
                 min={0}
                 max={1}
                 step={0.01}
+                defaultValue={0.5}
                 onChange={(value) =>
                   updateSlot(useFxStore.getState(), chainIndex, slotIndex, { p2: value })
                 }
                 display={slot.p2.toFixed(2)}
+                accentColor="#38bdf8"
               />
-            </div>
-            <div className="mt-2">
-              <Slider
-                id={`fx-${chainIndex}-${slotIndex}-p3`}
-                label="Param 3"
+              <Knob3D
+                label="PARAM 3"
+                size="sm"
                 value={slot.p3}
                 min={0.01}
                 max={32}
                 step={0.01}
+                defaultValue={1}
                 onChange={(value) =>
                   updateSlot(useFxStore.getState(), chainIndex, slotIndex, { p3: value })
                 }
                 display={slot.p3.toFixed(2)}
+                accentColor="#a3e635"
               />
             </div>
           </section>
