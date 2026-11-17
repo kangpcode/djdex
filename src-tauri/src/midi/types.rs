@@ -97,6 +97,22 @@ impl MidiEvent {
             _ => None,
         }
     }
+
+    /// Konversi event MIDI ke rentetan biner (1–3 byte) untuk dikirim ke perangkat (LED feedback).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let ch = self.channel & 0x0F;
+        match self.message_type {
+            MidiMessageType::NoteOff => vec![0x80 | ch, self.control & 0x7F, self.value & 0x7F],
+            MidiMessageType::NoteOn => vec![0x90 | ch, self.control & 0x7F, self.value & 0x7F],
+            MidiMessageType::ControlChange => vec![0xB0 | ch, self.control & 0x7F, self.value & 0x7F],
+            MidiMessageType::PitchBend => {
+                let val14 = ((self.value as u16) & 0x7F) << 7;
+                let lsb = (val14 & 0x7F) as u8;
+                let msb = ((val14 >> 7) & 0x7F) as u8;
+                vec![0xE0 | ch, lsb, msb]
+            }
+        }
+    }
 }
 
 /// Mode decoding gerakan jog wheel relatif controller DJ.
