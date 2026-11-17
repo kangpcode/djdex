@@ -732,18 +732,70 @@ export function LibraryPanel() {
                             {track.playCount}
                           </td>
 
-                          {/* Delete Action */}
+                          {/* Delete & Add Actions */}
                           <td className="py-1.5 px-2 text-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void deleteTrack(track.id);
-                              }}
-                              className="text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Hapus dari Library"
-                            >
-                              ✕
-                            </button>
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {crates.length > 0 && (
+                                <select
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    const cId = parseInt(e.target.value);
+                                    if (cId) {
+                                      void addTrackToCrate(cId, track.id);
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                  defaultValue=""
+                                  className="text-[9px] bg-slate-900 text-slate-300 border border-slate-700 rounded px-1 py-0.5"
+                                  title="Tambahkan ke Crate"
+                                >
+                                  <option value="" disabled>
+                                    + Crate
+                                  </option>
+                                  {crates.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                              {playlists.filter((p) => !p.isSmart).length > 0 && (
+                                <select
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    const pId = parseInt(e.target.value);
+                                    if (pId) {
+                                      void addTrackToPlaylist(pId, track.id);
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                  defaultValue=""
+                                  className="text-[9px] bg-slate-900 text-slate-300 border border-slate-700 rounded px-1 py-0.5"
+                                  title="Tambahkan ke Playlist"
+                                >
+                                  <option value="" disabled>
+                                    + List
+                                  </option>
+                                  {playlists
+                                    .filter((p) => !p.isSmart)
+                                    .map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.name}
+                                      </option>
+                                    ))}
+                                </select>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void deleteTrack(track.id);
+                                }}
+                                className="text-slate-600 hover:text-rose-400 p-0.5 text-xs"
+                                title="Hapus dari Library"
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
