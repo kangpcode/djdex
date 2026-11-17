@@ -9,11 +9,13 @@ use parking_lot::Mutex;
 
 use crate::analysis::waveform::WaveformDto;
 use crate::audio::autodj::{AutoDjStatus, AutoDjUpdate};
+use crate::audio::broadcast::{BroadcastConfig, BroadcastStatus};
 use crate::audio::deck::{Deck, DeckStatus};
 use crate::audio::decoder::TrackDecoder;
 use crate::audio::engine::{AudioEngine, EngineStatus};
 use crate::audio::fx::{FxParams, FxSlotUpdate};
 use crate::audio::mixer::{MixerParams, MixerUpdate};
+use crate::audio::recorder::{RecordFormat, RecorderStatus};
 use crate::audio::resampler::StereoResampler;
 use crate::error::AudioError;
 use crate::library::db::{

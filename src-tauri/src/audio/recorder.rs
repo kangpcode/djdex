@@ -410,12 +410,12 @@ fn make_split_path(base_path: &Path, split_idx: u32) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
 
     #[test]
     fn test_recorder_workflow_wav16() {
-        let dir = tempdir().expect("temp dir");
-        let file_path = dir.path().join("test_mix.wav");
+        let dir = std::env::temp_dir().join(format!("djdex_rec_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        let file_path = dir.join("test_mix.wav");
 
         let (controller, mut producer) = RecorderController::new(44100);
         let status = controller.status();
@@ -467,8 +467,9 @@ mod tests {
 
     #[test]
     fn test_recorder_split() {
-        let dir = tempdir().expect("temp dir");
-        let file_path = dir.path().join("split_session.wav");
+        let dir = std::env::temp_dir().join(format!("djdex_split_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        let file_path = dir.join("split_session.wav");
 
         let (controller, mut producer) = RecorderController::new(44100);
         controller.start(file_path.clone(), RecordFormat::Wav32Float).expect("start");
@@ -488,10 +489,12 @@ mod tests {
 
         controller.stop().expect("stop");
 
-        let part1 = dir.path().join("split_session.wav");
-        let part2 = dir.path().join("split_session_part02.wav");
+        let part1 = dir.join("split_session.wav");
+        let part2 = dir.join("split_session_part02.wav");
 
         assert!(part1.exists(), "part1 harus ada");
         assert!(part2.exists(), "part2 harus ada");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -983,6 +983,8 @@ mod tests {
         let mut decks = [deck_a_reader, deck_b_reader];
         let (_sampler_ctrl, mut sampler_rt) = SamplerController::new(48_000);
         let (_preview_ctrl, mut preview_rt) = PreviewController::new(48_000);
+        let (_rec_ctrl, mut rec_rt) = RecorderController::new(48_000);
+        let (_bc_ctrl, mut bc_rt) = BroadcastController::new(48_000);
         let mut mixer = Mixer::new(48_000.0);
         let mut buffer = vec![0.0_f32; 256 * 2];
         // Paksa gain ramp mencapai target supaya peak terdeteksi.
@@ -996,6 +998,8 @@ mod tests {
                 &mut decks,
                 &mut sampler_rt,
                 &mut preview_rt,
+                &mut rec_rt,
+                &mut bc_rt,
                 &mut mixer,
             );
         }
