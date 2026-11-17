@@ -536,6 +536,46 @@ export interface SkinManifest {
   layout: SkinLayout;
 }
 
+// ---- Recording & Live Streaming Broadcast (Fase 11) ------------------------
+
+export type RecordFormat = "wav-16" | "wav-24" | "wav-32-float";
+
+export interface RecorderStatus {
+  isRecording: boolean;
+  isPaused: boolean;
+  filePath: string | null;
+  format: RecordFormat;
+  durationSecs: number;
+  bytesWritten: number;
+  framesRecorded: number;
+  peakL: number;
+  peakR: number;
+  splitCount: number;
+}
+
+export type BroadcastProtocol = "icecast2" | "shoutcast";
+
+export interface BroadcastConfig {
+  server: string;
+  mount: string;
+  password: string;
+  protocol: BroadcastProtocol;
+  stationName: string;
+  genre: string;
+  description: string;
+  bitrateKbps: number;
+  isPublic: boolean;
+}
+
+export interface BroadcastStatus {
+  isStreaming: boolean;
+  serverUrl: string | null;
+  mount: string | null;
+  durationSecs: number;
+  bytesSent: number;
+  lastError: string | null;
+}
+
 /** True bila UI berjalan di dalam webview Tauri (bukan browser biasa). */
 export const isTauri = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -827,6 +867,19 @@ export const ipc = {
     invokeCommand<void>("export_skin_pack", { skinId, destPath }),
   importSkinPack: (zipPath: string) =>
     invokeCommand<SkinManifest>("import_skin_pack", { zipPath }),
+
+  // Recording & Live Streaming Broadcast (Fase 11)
+  startRecording: (outputPath?: string, format?: RecordFormat) =>
+    invokeCommand<RecorderStatus>("start_recording", { outputPath, format }),
+  stopRecording: () => invokeCommand<RecorderStatus>("stop_recording"),
+  pauseRecording: () => invokeCommand<RecorderStatus>("pause_recording"),
+  resumeRecording: () => invokeCommand<RecorderStatus>("resume_recording"),
+  splitRecording: () => invokeCommand<RecorderStatus>("split_recording"),
+  getRecorderStatus: () => invokeCommand<RecorderStatus>("get_recorder_status"),
+  startBroadcast: (config: BroadcastConfig) =>
+    invokeCommand<BroadcastStatus>("start_broadcast", { config }),
+  stopBroadcast: () => invokeCommand<BroadcastStatus>("stop_broadcast"),
+  getBroadcastStatus: () => invokeCommand<BroadcastStatus>("get_broadcast_status"),
 };
 
 export const api = ipc;
