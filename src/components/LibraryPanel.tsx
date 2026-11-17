@@ -455,7 +455,11 @@ export function LibraryPanel() {
                     onClick={() => selectPlaylist(pl.id)}
                   >
                     <div className="flex items-center gap-1.5 truncate">
-                      <span>{pl.isSmart ? "⚡" : "📋"}</span>
+                      {pl.isSmart ? (
+                        <IconFlash className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <IconPlaylist className="w-3.5 h-3.5 text-slate-400" />
+                      )}
                       <span className="truncate">{pl.name}</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -464,20 +468,20 @@ export function LibraryPanel() {
                           e.stopPropagation();
                           void handleExportPlaylist(pl.id, pl.name);
                         }}
-                        className="hidden group-hover:inline-block text-slate-400 hover:text-cyan-300 text-[10px] px-1"
+                        className="hidden group-hover:inline-block text-slate-400 hover:text-cyan-300 p-1"
                         title="Ekspor ke format M3U8"
                       >
-                        📤
+                        <IconExport className="w-3 h-3" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           void deletePlaylist(pl.id);
                         }}
-                        className="hidden group-hover:inline-block text-slate-500 hover:text-rose-400 text-xs px-1"
+                        className="hidden group-hover:inline-block text-slate-500 hover:text-rose-400 p-1"
                         title="Hapus Playlist"
                       >
-                        ✕
+                        <IconClose className="w-3 h-3" />
                       </button>
                       <span className="text-[10px] text-slate-500 group-hover:hidden">
                         {pl.trackCount}
@@ -655,7 +659,7 @@ export function LibraryPanel() {
                                   : "Dengarkan cuplikan headphone cue (PFL)"
                               }
                             >
-                              🎧
+                              <IconHeadphones className="w-3.5 h-3.5 inline-block" />
                             </button>
                           </td>
 
