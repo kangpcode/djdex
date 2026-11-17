@@ -180,3 +180,14 @@ fn push_format(formats: &mut Vec<String>, format: SampleFormat) {
         formats.push(label);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn list_output_devices_returns_cleanly() {
+        let devices = list_output_devices();
+        assert!(devices.is_ok());
+    }
+}
