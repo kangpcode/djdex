@@ -64,6 +64,7 @@ hound = "3.5"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 lofty = "0.24.0"
+midir = "0.11.1"
 
 [features]
 default = []
