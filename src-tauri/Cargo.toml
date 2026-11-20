@@ -11,7 +11,7 @@ default-run = "djdex"
 
 [lib]
 name = "djdex_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

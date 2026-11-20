@@ -501,9 +501,9 @@ export function DeckPanel({ deck }: { deck: DeckId }) {
       </div>
 
       {/* Middle Deck Section: CDJ Jog Wheel (Left) + Vertical Pitch Fader Section (Right) */}
-      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] items-start">
+      <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] items-start">
         {/* Left: 3D Pioneer CDJ Jog Wheel Platter */}
-        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md">
+        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-[#070b13] border border-[#182436] shadow-md min-w-0 overflow-hidden">
           <Platter
             position={position}
             duration={duration}
